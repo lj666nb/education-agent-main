@@ -25,3 +25,8 @@ dashscope
 requests
 neo4j
 pymongo
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+python-dotenv
