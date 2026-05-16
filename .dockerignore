@@ -1,0 +1,32 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+README.md
+CONTRIBUTING.md
+CLAUDE.md
+AGENTS.md
+request/
+test_script/
+migrations/
+transition/
+uploads/*
+!uploads/.gitkeep
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+
+# Frontend (handled by Docker build)
+frontend/node_modules/
+frontend/.vite/
+frontend/.turbo/

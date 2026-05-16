@@ -1,0 +1,5 @@
+export { default as Layout } from './Layout'
+export { default as ChatPlatform } from './ChatPlatform'
+export { default as Sidebar } from './Sidebar'
+export { default as MessageList } from './MessageList'
+export { default as InputArea } from './InputArea'

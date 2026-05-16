@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual Environment
+venv/
+.venv/
+env/
+.env
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.db-journal
+_test_verify.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+*.log.*
+
+# Uploaded files
+uploads/
+
+# Transition documents (AI agent handover, not for repo)
+transition/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.turbo/
+
+# Question Frontend
+question-frontend/
+
+# Test scripts (local testing only, not for remote repo)
+test_script/
+
+# Alembic
+migrations/versions/
+*.tar
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Claude guides
+CLAUDE_GUIDE.md
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
