@@ -117,6 +117,7 @@ frontend/debug_built.js
 test-results/
 frontend/test-results/
 login.json
+login_resp.json
 
 # Claude guides
 CLAUDE_GUIDE.md

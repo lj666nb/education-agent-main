@@ -1,13 +1,8 @@
-"""数据结构（C语言版 第2版）种子数据注入脚本
+"""【已废弃】数据结构（C语言版 第2版）种子数据注入脚本
 
-使用方式：
-    docker exec -it ea-backend python /app/scripts/seed_data_structures.py
-
-效果：
-    1. 创建「数据结构」学科（含 9 大章节、80+ 知识点）
-    2. 创建关联的题库（150+ 道题目）
-    3. 创建 Neo4j 知识图谱节点和关系
-    4. 所有数据对所有用户可见（PUBLIC）
+⚠️ 此脚本已被 app/scripts/seed.py 全面替代。
+   app 启动时自动执行 seed_database()，注入相同（且更完整）的数据。
+   保留此文件仅用于参考，无需手动执行。
 """
 
 import uuid, sys, logging
