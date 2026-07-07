@@ -341,43 +341,43 @@ QUESTIONS_DATA = [
 
 # ── 代码案例定义 ──
 CODE_FILES = [
-    ("01_seqlist.py",            ["顺序表实现", "顺序表操作"],
+    ("01_seqlist.py",            ["顺序表实现", "顺序表的定义和实现", "顺序表操作", "顺序表的基本操作（插入、删除、查找）"],
      "【顺序表】实现与基本操作"),
-    ("02_linkedlist.py",         ["单链表"],
+    ("02_linkedlist.py",         ["单链表", "单链表的定义和实现", "单链表的基本操作"],
      "【单链表】定义与基本操作"),
-    ("03_doubly_linkedlist.py",  ["双向链表"],
+    ("03_doubly_linkedlist.py",  ["双链表", "双向链表"],
      "【双向链表】实现与基本操作"),
-    ("04_stack.py",              ["顺序栈"],
+    ("04_stack.py",              ["顺序栈", "顺序栈的实现"],
      "【顺序栈】实现与基本操作"),
-    ("05_circular_queue.py",     ["循环队列"],
+    ("05_circular_queue.py",     ["循环队列", "循环队列的实现"],
      "【循环队列】实现与基本操作"),
-    ("06_bracket_matching.py",   ["栈的应用"],
+    ("06_bracket_matching.py",   ["栈的应用", "栈的应用（括号匹配、表达式求值）"],
      "【栈的应用】括号匹配与表达式求值"),
-    ("07_binary_tree.py",        ["二叉树定义", "二叉树遍历"],
+    ("07_binary_tree.py",        ["二叉树定义", "二叉树的定义和性质", "二叉树遍历", "二叉树的链式存储"],
      "【二叉树】链式存储与遍历"),
-    ("08_huffman.py",            ["哈夫曼树"],
+    ("08_huffman.py",            ["哈夫曼树", "哈夫曼树和哈夫曼编码"],
      "【哈夫曼树】构建与编码"),
-    ("09_adjacency_matrix.py",   ["邻接矩阵"],
+    ("09_adjacency_matrix.py",   ["邻接矩阵", "邻接矩阵存储"],
      "【邻接矩阵】图的存储结构"),
-    ("10_dfs.py",                ["DFS"],
+    ("10_dfs.py",                ["DFS", "深度优先搜索（DFS）"],
      "【DFS】深度优先搜索"),
-    ("11_bfs.py",                ["BFS"],
+    ("11_bfs.py",                ["BFS", "广度优先搜索（BFS）"],
      "【BFS】广度优先搜索"),
-    ("12_dijkstra.py",           ["Dijkstra"],
+    ("12_dijkstra.py",           ["Dijkstra", "最短路径（Dijkstra 算法）"],
      "【Dijkstra】最短路径算法"),
     ("13_bubble_sort.py",        ["冒泡排序"],
      "【冒泡排序】排序算法"),
     ("14_quick_sort.py",         ["快速排序"],
      "【快速排序】排序算法"),
-    ("15_merge_sort.py",         ["归并排序"],
+    ("15_merge_sort.py",         ["归并排序", "归并排序（二路）"],
      "【归并排序】分治排序"),
     ("16_heap_sort.py",          ["堆排序"],
      "【堆排序】排序算法"),
     ("17_binary_search.py",      ["折半查找"],
      "【折半查找】查找算法"),
-    ("18_bst.py",                ["BST"],
+    ("18_bst.py",                ["BST", "二叉排序树（BST）"],
      "【BST】二叉排序树"),
-    ("19_avl.py",                ["AVL"],
+    ("19_avl.py",                ["AVL", "平衡二叉树（AVL）"],
      "【AVL】平衡二叉树"),
 ]
 
@@ -450,14 +450,18 @@ def seed_database():
     """综合种子数据主入口 — 在 app 启动时自动执行（幂等）"""
     db: Session = SessionLocal()
     try:
-        # ====== 1. 创建测试用户 ======
+        # ====== 1. 创建测试用户和管理员 ======
         _ensure_test_user(db)
+        _ensure_admin_user(db)
 
         # ====== 2. 注入学科数据（使用完整 Python 数据结构） ======
         _seed_comprehensive_data(db)
 
         # ====== 3. 注入代码案例 ======
         _seed_code_cases(db)
+
+        # ====== 4. 注入演示资源（图文讲解/视频脚本/文档/思维导图） ======
+        _seed_demo_resources(db)
 
         db.commit()
         logger.info("🎉 所有种子数据加载完成")
@@ -488,6 +492,25 @@ def _ensure_test_user(db: Session):
     db.add(user)
     db.flush()
     logger.info("✅ 创建测试用户：guoketg / 123456")
+
+
+def _ensure_admin_user(db: Session):
+    """创建管理员用户 admin（如不存在）"""
+    user = db.query(User).filter(User.username == "admin").first()
+    if user:
+        logger.info("👤 管理员用户 admin 已存在")
+        return
+
+    user = User(
+        id=_uuid.uuid4(),
+        username="admin",
+        password_hash=get_password_hash("admin123"),
+        role=UserRole.ADMIN.value,
+        status=UserStatus.ACTIVE.value,
+    )
+    db.add(user)
+    db.flush()
+    logger.info("✅ 创建管理员用户：admin / admin123")
 
 
 def _seed_comprehensive_data(db: Session):
@@ -752,3 +775,95 @@ def _seed_code_cases(db: Session):
     logger.info(f"📝 代码案例：新增 {created} 个，跳过 {skipped} 个")
     if not_found_kps:
         logger.info(f"   ⚠️ 未匹配知识点的代码案例: {', '.join(not_found_kps[:5])}")
+
+
+# ── 演示资源（从本地数据库导出 → seed_resources.json） ──
+# 这些是 AI 实时生成的学习资源，导出为种子数据后，新用户无需配置 API Key 即可查看
+
+
+def _seed_demo_resources(db: Session):
+    """为测试用户注入演示资源（从 seed_resources.json 加载），幂等"""
+    user = db.query(User).filter(User.username == "guoketg").first()
+    if not user:
+        logger.warning("跳过演示资源注入：测试用户 guoketg 不存在")
+        return
+
+    # 加载 JSON 数据文件
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(script_dir, "seed_resources.json")
+    if not os.path.isfile(json_path):
+        logger.warning(f"演示资源数据文件不存在: {json_path}")
+        return
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        demo_resources = json.load(f)
+
+    # 获取知识点名称→ID 映射
+    all_kps = db.query(KnowledgePoint).all()
+    kp_by_name: dict[str, str] = {kp.name: str(kp.id) for kp in all_kps}
+
+    type_labels = {
+        "image_text": "图文讲解",
+        "video_script": "视频脚本",
+        "document": "文档",
+        "mind_map": "思维导图",
+        "exercise": "练习题",
+        "video": "视频讲解",
+    }
+
+    created = 0
+    skipped = 0
+    failed_kps = set()
+
+    for item in demo_resources:
+        resource_type = item["resource_type"]
+        title = item["title"]
+        kp_names = item.get("knowledge_points", [])
+        content = item.get("content", "")
+
+        # 查找知识点（取第一个匹配的）
+        matched_kp_name = None
+        for kn in kp_names:
+            if kn in kp_by_name:
+                matched_kp_name = kn
+                break
+
+        if not matched_kp_name:
+            failed_kps.add(kp_names[0] if kp_names else "(空)")
+            continue
+
+        # 检查是否已存在（同标题+同类型+同用户）
+        existing = (
+            db.query(KnowledgeResource)
+            .filter(
+                KnowledgeResource.user_id == user.id,
+                KnowledgeResource.title == title,
+                KnowledgeResource.resource_type == resource_type,
+            )
+            .first()
+        )
+        if existing:
+            skipped += 1
+            continue
+
+        resource = KnowledgeResource(
+            user_id=user.id,
+            title=title,
+            resource_type=resource_type,
+            content=content,
+            knowledge_points=[matched_kp_name],
+            source="seed",
+        )
+        db.add(resource)
+        db.flush()
+        created += 1
+
+    from collections import Counter
+    type_count = Counter(item["resource_type"] for item in demo_resources)
+
+    logger.info(f"🎨 演示资源（来自 seed_resources.json）：新增 {created} 个，跳过 {skipped} 个")
+    for rt, count in sorted(type_count.items()):
+        label = type_labels.get(rt, rt)
+        logger.info(f"   {label}: {count} 个")
+    if failed_kps:
+        logger.info(f"   ⚠️ 未匹配知识点的资源: {', '.join(sorted(failed_kps)[:8])}")
