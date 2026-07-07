@@ -387,8 +387,8 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
             title={action.prompt}
             onMouseEnter={e => {
               if (!loading && code.trim()) {
-                e.currentTarget.style.borderColor = '#0284C7'
-                e.currentTarget.style.color = '#0284C7'
+                e.currentTarget.style.borderColor = '#1677E8'
+                e.currentTarget.style.color = '#1677E8'
                 e.currentTarget.style.background = '#F0F9FF'
               }
             }}
@@ -399,7 +399,7 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
             }}
           >
             <span style={{
-              fontSize: '0.6rem', fontWeight: 700, color: '#0284C7',
+              fontSize: '0.6rem', fontWeight: 700, color: '#1677E8',
               background: '#F0F9FF', padding: '1px 4px', borderRadius: 3,
             }}>
               {action.icon}
@@ -481,11 +481,11 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '12px 14px', background: autoFixLoading ? '#FEF2F2' : '#F0F9FF', borderRadius: 8,
-            fontSize: '0.78rem', color: autoFixLoading ? '#DC2626' : '#0284C7', marginBottom: 8,
+            fontSize: '0.78rem', color: autoFixLoading ? '#DC2626' : '#1677E8', marginBottom: 8,
           }}>
             <span style={{
               display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-              background: autoFixLoading ? '#DC2626' : '#0284C7',
+              background: autoFixLoading ? '#DC2626' : '#1677E8',
               animation: 'agentPulse 1s ease infinite',
             }} />
             {autoFixLoading ? 'AI 正在分析错误并修复...' : 'AI 正在处理...'}
@@ -517,13 +517,13 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               gap: 6, width: '100%',
               padding: '8px 16px', borderRadius: 8, border: 'none',
-              background: '#0284C7', color: '#fff',
+              background: '#1677E8', color: '#fff',
               fontSize: '0.8rem', fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'background 0.15s ease',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = '#0369A1' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#0284C7' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1677E8' }}
           >
             <ApplyIcon />
             应用代码修改
@@ -555,7 +555,7 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
               borderBottom: '1px solid #F3F4F6',
               display: 'flex', gap: 6,
             }}>
-              <span style={{ fontWeight: 600, color: msg.role === 'user' ? '#0284C7' : '#10B981', flexShrink: 0 }}>
+              <span style={{ fontWeight: 600, color: msg.role === 'user' ? '#1677E8' : '#10B981', flexShrink: 0 }}>
                 {msg.role === 'user' ? '你' : 'AI'}:
               </span>
               <span style={{ color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -596,7 +596,7 @@ export default function CodeAgentPanel({ code, language, onApplyCode, errorOutpu
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 32, height: 32, borderRadius: 6,
             border: 'none',
-            background: (loading || !input.trim() || !code.trim()) ? '#D1D5DB' : '#0284C7',
+            background: (loading || !input.trim() || !code.trim()) ? '#D1D5DB' : '#1677E8',
             color: '#fff', cursor: (loading || !input.trim() || !code.trim()) ? 'default' : 'pointer',
             flexShrink: 0,
           }}

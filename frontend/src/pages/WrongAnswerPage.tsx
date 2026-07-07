@@ -399,7 +399,7 @@ export default function WrongAnswerPage() {
                         padding: '10px 14px', borderRadius: 10,
                         background: 'rgba(2,132,199,0.08)', border: '1px solid rgba(2,132,199,0.15)',
                       }}>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#0284C7', marginBottom: '2px' }}>🎯 推荐下一步</div>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#1677E8', marginBottom: '2px' }}>🎯 推荐下一步</div>
                         <div style={{ fontSize: '13px', color: '#0369A1' }}>
                           {diagnoses[item.id].recommended_action}
                         </div>

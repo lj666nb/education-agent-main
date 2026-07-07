@@ -550,7 +550,7 @@ export default function DynamicProfilePage() {
             <TrendChart
               data={buildTrendData(profile.knowledge_mastery)}
               height={220}
-              color="#0284C7"
+              color="#1677E8"
             />
           ) : (
             <div className="empty-state" style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

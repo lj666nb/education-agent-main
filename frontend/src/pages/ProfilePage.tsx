@@ -121,14 +121,14 @@ export default function ProfilePage() {
             width: '80px', height: '80px', borderRadius: '50%',
             background: profile?.profile?.avatar_url
               ? 'transparent'
-              : '#0284C7',
+              : '#1677E8',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', fontSize: '1.5rem', fontWeight: 600,
             cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
             border: '3px solid #EDE9E3',
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284C7'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(2,132,199,0.15)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1677E8'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(2,132,199,0.15)' }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#EDE9E3'; e.currentTarget.style.boxShadow = 'none' }}
           title="点击更换头像"
         >

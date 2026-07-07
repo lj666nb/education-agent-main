@@ -20,7 +20,7 @@ const STEPS = [
 ]
 
 const SLOW_THRESHOLD_MS = 30000
-const COLOR_BRAND = '#0284C7'
+const COLOR_BRAND = '#1677E8'
 
 interface Props {
   /** 是否正在生成 */

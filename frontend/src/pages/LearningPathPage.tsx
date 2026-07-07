@@ -5,7 +5,7 @@ import { questionBankApi } from '../api/questionBank'
 import { SparklesIcon } from '../components/Icons'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 
-const BRAND = '#0284C7', T1 = '#1F2937', T2 = '#6B7280', T3 = '#9CA3AF', BL = '#E5E7EB'
+const BRAND = '#1677E8', T1 = '#2C3A52', T2 = '#64748B', T3 = '#94A3B8', BL = '#E5EDF7'
 
 function BackIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -22,7 +22,7 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick }: {
   return <div style={{ overflow: 'auto', maxHeight: 460, background: '#F8FAFC' }}>
     <svg width={w} height={Math.max(180, h)} style={{ minWidth: '100%', fontFamily: 'inherit' }}>
       <defs>
-        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#0284C7"/></marker>
+        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#1677E8"/></marker>
         <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#9CA3AF"/></marker>
         <marker id="agr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#10B981"/></marker>
       </defs>
@@ -30,8 +30,8 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick }: {
       {groups.map((g, li) => {
         const y = PD + N_H / 2 + li * (N_H + GY)
         return <g key={g.domain}>
-          <rect x={6} y={y - 13} width={78} height={26} rx={6} fill="#0284C7" opacity="0.08"/>
-          <text x={45} y={y + 3} textAnchor="middle" fontSize="11" fontWeight={700} fill="#0284C7">{g.domain.length > 6 ? g.domain.slice(0, 5) + '…' : g.domain}</text>
+          <rect x={6} y={y - 13} width={78} height={26} rx={6} fill="#1677E8" opacity="0.08"/>
+          <text x={45} y={y + 3} textAnchor="middle" fontSize="11" fontWeight={700} fill="#1677E8">{g.domain.length > 6 ? g.domain.slice(0, 5) + '…' : g.domain}</text>
           {g.nodes.map((n, ni) => {
             const s = n.mastery_score || 0
             const [bg, bd, tx, ba] = col(s)
@@ -39,9 +39,9 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick }: {
             const act = n.status === 'learning'
             return <g key={n.point_id} style={{ cursor: 'pointer' }} onClick={() => onNodeClick(n)}>
               <rect x={x + 1} y={ny + 1} width={N_W} height={N_H} rx={7} fill="#00000008"/>
-              <rect x={x} y={ny} width={N_W} height={N_H} rx={7} fill={bg} stroke={act ? '#0284C7' : bd} strokeWidth={act ? 2 : 1.2}/>
-              {act && <rect x={x} y={ny} width={N_W} height={N_H} rx={7} fill="none" stroke="#0284C7" strokeWidth="2" opacity="0.3"><animate attributeName="opacity" values="0.2;0.5;0.2" dur="2s" repeatCount="indefinite"/></rect>}
-              <rect x={x + 5} y={ny + 4} width={42} height={13} rx={3} fill={act ? '#0284C7' : ba} opacity="0.9"/>
+              <rect x={x} y={ny} width={N_W} height={N_H} rx={7} fill={bg} stroke={act ? '#1677E8' : bd} strokeWidth={act ? 2 : 1.2}/>
+              {act && <rect x={x} y={ny} width={N_W} height={N_H} rx={7} fill="none" stroke="#1677E8" strokeWidth="2" opacity="0.3"><animate attributeName="opacity" values="0.2;0.5;0.2" dur="2s" repeatCount="indefinite"/></rect>}
+              <rect x={x + 5} y={ny + 4} width={42} height={13} rx={3} fill={act ? '#1677E8' : ba} opacity="0.9"/>
               <text x={x + 26} y={ny + 14} textAnchor="middle" fontSize="8" fontWeight={700} fill="#fff">{act ? '进行中' : s >= 80 ? '已掌握' : s > 0 ? '学习中' : '未开始'}</text>
               <text x={x + N_W / 2} y={ny + N_H / 2 + 3} textAnchor="middle" fontSize="11" fontWeight={700} fill={tx}>{(n.point_name || '').length > 8 ? (n.point_name || '').slice(0, 7) + '…' : n.point_name}</text>
               <rect x={x + 5} y={ny + N_H - 9} width={N_W - 10} height={4} rx={2} fill="#E5E7EB"/>
@@ -124,7 +124,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, onBa
           <span style={{ padding: '4px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: detailData.status === 'mastered' ? '#D1FAE5' : '#F3F4F6', color: detailData.status === 'mastered' ? '#166534' : T2 }}>{detailData.status === 'mastered' ? '已掌握' : '学习中'}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span style={{ color: T2 }}>掌握度（{detailData.total_correct || 0}/{detailData.total_practiced > 0 ? detailData.total_practiced : (detailData.total_questions || 0)}题）</span><span style={{ fontWeight: 700, color: detailData.mastery_score >= 80 ? '#10B981' : '#F59E0B' }}>{detailData.mastery_score || 0}%</span></div>
-        <div style={{ height: 10, background: '#F3F4F6', borderRadius: 5, overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 5, background: detailData.mastery_score >= 80 ? '#10B981' : 'linear-gradient(90deg,#EF4444,#F59E0B,#0284C7)', width: (detailData.mastery_score || 0) + '%', transition: 'width 0.6s' }}/></div>
+        <div style={{ height: 10, background: '#F3F4F6', borderRadius: 5, overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 5, background: detailData.mastery_score >= 80 ? '#10B981' : 'linear-gradient(90deg,#EF4444,#F59E0B,#1677E8)', width: (detailData.mastery_score || 0) + '%', transition: 'width 0.6s' }}/></div>
       </div>
 
       {/* Video */}
@@ -345,7 +345,7 @@ export default function LearningPathPage() {
   const phases = useMemo(() => {
     const p: [string,PathNodeStatus[]][] = [['基础入门',[]],['强化提升',[]],['巩固复习',[]]]
     nodes.forEach(n => { if(n.mastery_score>=80) p[2][1].push(n); else if(n.mastery_score>0) p[1][1].push(n); else p[0][1].push(n) })
-    return p.filter(([,nds]) => nds.length>0).map(([name,nds],i) => ({ name, color: ['#0284C7','#3B82F6','#10B981'][i], progress: nds.length?Math.round(nds.filter(n=>n.mastery_score>=80).length/nds.length*100):0 }))
+    return p.filter(([,nds]) => nds.length>0).map(([name,nds],i) => ({ name, color: ['#1677E8','#3B82F6','#10B981'][i], progress: nds.length?Math.round(nds.filter(n=>n.mastery_score>=80).length/nds.length*100):0 }))
   }, [nodes])
 
   if (!init) return null

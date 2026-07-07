@@ -172,7 +172,7 @@ export default function ReviewCenterPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
         {/* 待复习知识点 */}
         <div className="card" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 14, border: '1px solid var(--gray-200)' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#F0F9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284C7', flexShrink: 0 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#F0F9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1677E8', flexShrink: 0 }}>
             <BrainIcon />
           </div>
           <div>
@@ -218,7 +218,7 @@ export default function ReviewCenterPage() {
             </div>
             {/* 进度条 */}
             <div style={{ marginTop: 8, height: 6, background: '#E5E7EB', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.max(progressPct, 4)}%`, background: progressPct >= 100 ? '#10B981' : '#0284C7', borderRadius: 3, transition: 'width 0.4s ease' }} />
+              <div style={{ height: '100%', width: `${Math.max(progressPct, 4)}%`, background: progressPct >= 100 ? '#10B981' : '#1677E8', borderRadius: 3, transition: 'width 0.4s ease' }} />
             </div>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default function ReviewCenterPage() {
                   </button>
                   <button onClick={() => handleMarkComplete(point)}
                     disabled={completingIds.has(point.point_id || '')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: 'none', background: '#0284C7', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: completingIds.has(point.point_id || '') ? 'default' : 'pointer', opacity: completingIds.has(point.point_id || '') ? 0.6 : 1, fontFamily: 'inherit' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: 'none', background: '#1677E8', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: completingIds.has(point.point_id || '') ? 'default' : 'pointer', opacity: completingIds.has(point.point_id || '') ? 0.6 : 1, fontFamily: 'inherit' }}
                   >
                     <CheckIcon /> {completingIds.has(point.point_id || '') ? '处理中...' : '标记已复习'}
                   </button>

@@ -27,7 +27,7 @@ CHINA_TZ = timezone(timedelta(hours=8))
 
 
 def _now() -> datetime:
-    return datetime.now(CHINA_TZ)
+    return datetime.now()
 
 
 @router.get("/dashboard")

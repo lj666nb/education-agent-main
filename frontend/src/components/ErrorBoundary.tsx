@@ -52,7 +52,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button onClick={this.handleReset}
-                style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: '#0284C7', color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: '#1677E8', color: '#fff', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 重试
               </button>

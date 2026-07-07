@@ -44,13 +44,13 @@ export const recommendationsCenterApi = {
 export const RESOURCE_TYPE_CONFIG: Record<string, {
   label: string; icon: string; color: string; bg: string; section: string
 }> = {
-  mind_map:           { label: '思维导图', icon: '导图', color: '#0284C7', bg: 'rgba(2,132,199,0.1)', section: '知识梳理' },
+  mind_map:           { label: '思维导图', icon: '导图', color: '#1677E8', bg: 'rgba(2,132,199,0.1)', section: '知识梳理' },
   document:           { label: '知识文档', icon: '文档', color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', section: '知识梳理' },
   image_text:         { label: '图文讲解', icon: '图文', color: '#0EA5E9', bg: 'rgba(14,165,233,0.1)', section: '知识梳理' },
   explanation:        { label: '知识讲解', icon: '讲解', color: '#0EA5E9', bg: 'rgba(14,165,233,0.1)', section: '知识梳理' },
   exercise:           { label: '练习题',   icon: '练习', color: '#10B981', bg: 'rgba(16,185,129,0.1)', section: '练习巩固' },
   review_question:    { label: '复习题',   icon: '复习', color: '#14B8A6', bg: 'rgba(20,184,166,0.1)', section: '练习巩固' },
-  variation_exercise: { label: '变式练习', icon: '变式', color: '#0284C7', bg: 'rgba(2,132,199,0.1)', section: '练习巩固' },
+  variation_exercise: { label: '变式练习', icon: '变式', color: '#1677E8', bg: 'rgba(2,132,199,0.1)', section: '练习巩固' },
   code_case:          { label: '代码案例', icon: '代码', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', section: '实践应用' },
   video_script:       { label: '视频脚本', icon: '脚本', color: '#7C3AED', bg: 'rgba(124,58,237,0.1)', section: '视频学习' },
   video:              { label: '视频讲解', icon: '视频', color: '#EC4899', bg: 'rgba(236,72,153,0.1)', section: '视频学习' },

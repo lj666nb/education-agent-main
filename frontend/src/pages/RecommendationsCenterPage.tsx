@@ -25,7 +25,7 @@ const TYPE_FILTERS: Array<{ key: string; label: string }> = [
 ]
 
 const TYPE_COLORS: Record<string, string> = {
-  mind_map: '#0284C7',
+  mind_map: '#1677E8',
   video: '#BE185D',
   video_script: '#7C3AED',
   document: '#3B82F6',
@@ -35,7 +35,7 @@ const TYPE_COLORS: Record<string, string> = {
   explanation: '#0EA5E9',
   review_question: '#14B8A6',
   memory_card: '#F97316',
-  variation_exercise: '#0284C7',
+  variation_exercise: '#1677E8',
   knowledge_comic: '#EF4444',
   infographic: '#06B6D4',
   summary_report: '#84CC16',
@@ -362,7 +362,7 @@ export default function RecommendationsCenterPage() {
               style={{
                 padding: '6px 16px', borderRadius: 8, border: 'none',
                 fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                background: typeFilter === 'video' || typeFilter === 'video_script' ? '#EC4899' : typeFilter === 'code_case' ? '#F59E0B' : typeFilter === 'document' ? '#3B82F6' : typeFilter === 'image_text' ? '#0EA5E9' : '#0284C7',
+                background: typeFilter === 'video' || typeFilter === 'video_script' ? '#EC4899' : typeFilter === 'code_case' ? '#F59E0B' : typeFilter === 'document' ? '#3B82F6' : typeFilter === 'image_text' ? '#0EA5E9' : '#1677E8',
                 color: '#fff', display: 'flex', alignItems: 'center', gap: 4,
               }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -599,7 +599,7 @@ export default function RecommendationsCenterPage() {
                 <button onClick={handleGenerateMindmap} disabled={generating}
                   style={{
                     padding: '8px 16px', borderRadius: 8, border: 'none',
-                    background: generating ? '#9CA3AF' : '#0284C7', color: '#fff',
+                    background: generating ? '#9CA3AF' : '#1677E8', color: '#fff',
                     fontSize: '0.8125rem', fontWeight: 600, cursor: generating ? 'default' : 'pointer',
                     fontFamily: 'inherit',
                   }}>

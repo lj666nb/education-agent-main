@@ -1,57 +1,157 @@
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/auth'
+import ParticleBackground from './ParticleBackground'
 
 interface HeroSectionProps {
   onLoginClick: () => void
 }
 
-/* ── Floating geometric decor cubes (unchanged) ── */
-function FloatingCubes() {
-  const cubes = [
-    { size: 60, color: 'rgba(167,139,250,0.15)', anim: 'floatCube1', dur: '12s', top: '15%', left: '8%', delay: '0s', radius: '16px' },
-    { size: 40, color: 'rgba(129,140,248,0.18)', anim: 'floatCube2', dur: '14s', top: '65%', left: '5%', delay: '1s', radius: '12px' },
-    { size: 50, color: 'rgba(196,181,253,0.12)', anim: 'floatCube3', dur: '16s', top: '20%', right: '10%', delay: '0.5s', radius: '14px' },
-    { size: 35, color: 'rgba(165,180,252,0.14)', anim: 'floatCube4', dur: '11s', bottom: '25%', right: '15%', delay: '2s', radius: '10px' },
-    { size: 45, color: 'rgba(199,210,254,0.10)', anim: 'floatCube1', dur: '15s', top: '50%', left: '50%', delay: '1.5s', radius: '12px' },
-    { size: 30, color: 'rgba(99,102,241,0.12)', anim: 'floatCube2', dur: '10s', top: '10%', left: '40%', delay: '3s', radius: '8px' },
-  ]
+/* ── Feature Tag Carousel ── */
+const tags = [
+  'AI个性化学习', '多模态答疑', '智能题库', '自适应路径',
+  '学习画像', '知识图谱', 'AI资源生成', '数据分析',
+  '多模型切换', '代码辅导', '科研辅助', '学习规划',
+]
 
+function TagCarousel() {
   return (
-    <>
-      {cubes.map((c, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            width: c.size,
-            height: c.size,
-            borderRadius: c.radius,
-            background: c.color,
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(1px)',
-            top: c.top,
-            left: c.left,
-            right: (c as any).right,
-            bottom: (c as any).bottom,
-            animation: `${c.anim} ${c.dur} ease-in-out infinite`,
-            animationDelay: c.delay,
-            zIndex: 1,
-            pointerEvents: 'none',
-          }}
-        />
-      ))}
-    </>
+    <div style={{
+      position: 'absolute',
+      bottom: '80px',
+      left: 0,
+      right: 0,
+      zIndex: 2,
+      overflow: 'hidden',
+      maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
+      WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
+    }}>
+      <div className="tag-scroll-track" style={{
+        display: 'flex',
+        gap: '12px',
+        width: 'max-content',
+        padding: '0 20px',
+      }}>
+        {/* Double the tags for seamless loop */}
+        {[...tags, ...tags].map((tag, i) => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 16px 6px 14px',
+              borderRadius: '20px',
+              background: 'rgba(167,139,250,0.08)',
+              border: '1px solid rgba(167,139,250,0.12)',
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: '0.8125rem',
+              fontWeight: 400,
+              whiteSpace: 'nowrap',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(167,139,250,0.18)'
+              e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.85)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(167,139,250,0.08)'
+              e.currentTarget.style.borderColor = 'rgba(167,139,250,0.12)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
+            }}
+          >
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%',
+              background: '#A78BFA', opacity: 0.5, display: 'inline-block',
+            }} />
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 
 export default function HeroSection({ onLoginClick }: HeroSectionProps) {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragOffset = useRef({ x: 0, y: 0 })
+  const [titleStyle, setTitleStyle] = useState({})
 
   const handleStart = () => {
     if (isAuthenticated) navigate('/home')
     else onLoginClick()
   }
+
+  /* ── Drag-Stretch Title Effect ── */
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!titleRef.current) return
+    const rect = titleRef.current.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const deltaX = (e.clientX - centerX) / (rect.width / 2)
+    const deltaY = (e.clientY - centerY) / (rect.height / 2)
+
+    // Clamp values
+    const clampedX = Math.max(-1, Math.min(1, deltaX))
+    const clampedY = Math.max(-1, Math.min(1, deltaY))
+
+    if (isDragging) {
+      // When "dragging" - more extreme deformation
+      setTitleStyle({
+        transform: `
+          perspective(800px)
+          rotateY(${clampedX * 12}deg)
+          rotateX(${-clampedY * 8}deg)
+          translateX(${dragOffset.current.x + clampedX * 8}px)
+          translateY(${dragOffset.current.y + clampedY * 5}px)
+          scale(${1 + Math.abs(clampedX) * 0.03})
+        `,
+        filter: `blur(${Math.abs(clampedX) * 0.5}px)`,
+        transition: 'transform 0.08s ease-out, filter 0.08s ease-out',
+        letterSpacing: `${0.06 + Math.abs(clampedX) * 0.04}em`,
+      })
+    } else {
+      // Normal hover - subtle parallax
+      setTitleStyle({
+        transform: `
+          perspective(800px)
+          rotateY(${clampedX * 4}deg)
+          rotateX(${-clampedY * 3}deg)
+        `,
+        filter: 'blur(0px)',
+        transition: 'transform 0.2s ease-out, filter 0.2s ease-out',
+      })
+    }
+  }, [isDragging])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true)
+    dragOffset.current = { x: 0, y: 0 }
+    e.preventDefault()
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+    setTitleStyle({
+      transform: 'perspective(800px) rotateY(0deg) rotateX(0deg)',
+      filter: 'blur(0px)',
+      letterSpacing: '0.06em',
+      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    })
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
 
   return (
     <section
@@ -69,27 +169,28 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
         animation: 'bgFlow 6s ease infinite',
       }}
     >
-      {/* Subtle overlay (unchanged) */}
+      {/* Particle Background (enhanced version) */}
+      <ParticleBackground />
+
+      {/* Gradient overlay */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: 'radial-gradient(ellipse at 20% 50%, rgba(167,139,250,0.12) 0%, transparent 60%), radial-gradient(ellipse at 80% 50%, rgba(129,140,248,0.08) 0%, transparent 60%)',
-        zIndex: 1,
+        background: 'radial-gradient(ellipse at 20% 50%, rgba(167,139,250,0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 50%, rgba(129,140,248,0.1) 0%, transparent 60%)',
+        zIndex: 2,
         pointerEvents: 'none',
       }} />
 
-      {/* Floating cubes (unchanged) */}
-      <FloatingCubes />
-
-      {/* Content — typography-optimized */}
+      {/* Content */}
       <div style={{
         position: 'relative',
-        zIndex: 2,
+        zIndex: 3,
         textAlign: 'center',
         maxWidth: 860,
         padding: '0 32px',
+        marginTop: '-40px',
       }}>
-        {/* ═══ ② 副标题胶囊 Badge ═══ */}
+        {/* Badge */}
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -109,18 +210,27 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           transform: 'translateY(-16px)',
           animation: 'fadeInSlideDown 0.6s ease-out 0.1s forwards',
         }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#A78BFA', opacity: 0.7, display: 'inline-block' }} />
+          <span style={{
+            width: 5, height: 5, borderRadius: '50%',
+            background: '#A78BFA', opacity: 0.7, display: 'inline-block',
+          }} />
           AI驱动的个性化学习平台
         </div>
 
-        {/* ═══ ① 主标题 — 两行错落排版 ═══ */}
-        <h1 style={{
-          marginBottom: '28px',
-          opacity: 0,
-          transform: 'translateY(-20px)',
-          animation: 'fadeInSlideDown 0.7s ease-out 0.28s forwards',
-        }}>
-          {/* 上半句：纯白加粗，偏左错落 */}
+        {/* Main Title — with drag-stretch effect */}
+        <h1
+          ref={titleRef}
+          onMouseDown={handleMouseDown}
+          style={{
+            marginBottom: '28px',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            opacity: 0,
+            transform: 'translateY(-20px)',
+            animation: 'fadeInSlideDown 0.7s ease-out 0.28s forwards',
+            ...titleStyle,
+          }}
+        >
           <span
             style={{
               display: 'block',
@@ -137,7 +247,6 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           >
             让AI理解你的学习，
           </span>
-          {/* 下半句：浅紫渐变柔化，偏右错落，字号略小 */}
           <span
             style={{
               display: 'block',
@@ -157,7 +266,7 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           </span>
         </h1>
 
-        {/* ═══ ③ 介绍正文 — 拆分短句、纤细轻盈 ═══ */}
+        {/* Subtitle */}
         <p style={{
           fontSize: 'clamp(0.88rem, 1.3vw, 1.05rem)',
           fontWeight: 200,
@@ -178,13 +287,12 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           让学习效率提升 300%
         </p>
 
-        {/* ═══ ④ 按钮组 ═══ */}
+        {/* Buttons */}
         <div style={{
           display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap',
           opacity: 0, transform: 'translateY(-16px)',
           animation: 'fadeInSlideDown 0.6s ease-out 0.64s forwards',
         }}>
-          {/* 主按钮：立即开始体验 — 粗圆体 */}
           <button onClick={handleStart}
             style={{
               padding: '16px 44px',
@@ -204,6 +312,8 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
               alignItems: 'center',
               gap: '8px',
               transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-4px) scale(1.03)'
@@ -214,14 +324,20 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
               e.currentTarget.style.boxShadow = '0 4px 15px rgba(99,102,241,0.3)'
             }}
           >
-            立即开始体验
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* Shimmer overlay */}
+            <span className="shimmer-bg" style={{
+              position: 'absolute', inset: 0, borderRadius: '14px',
+              pointerEvents: 'none',
+            }} />
+            <span style={{ position: 'relative', zIndex: 1 }}>
+              立即开始体验
+            </span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />
             </svg>
           </button>
 
-          {/* 次按钮：了解更多 — 常规细圆体 */}
           <button
             onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
             style={{
@@ -255,7 +371,7 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           </button>
         </div>
 
-        {/* ═══ ⑤ 底部小字：已有账号？立即登录 ═══ */}
+        {/* Login link */}
         <div style={{
           marginTop: '52px',
           opacity: 0,
@@ -282,11 +398,14 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* Scroll indicator (unchanged) */}
+      {/* Tag Carousel */}
+      <TagCarousel />
+
+      {/* Scroll indicator */}
       <div style={{
         position: 'absolute',
-        bottom: '32px',
-        zIndex: 2,
+        bottom: '162px',
+        zIndex: 3,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -301,7 +420,6 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
       }}
         onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
       >
-        <span>向下滚动</span>
         <div style={{
           width: '20px',
           height: '30px',

@@ -14,14 +14,14 @@ import {
 /* ─────────────────────────────────────────────
    Brand Design Tokens
    ───────────────────────────────────────────── */
-const BRAND_COLOR = '#0284C7'
-const BRAND_COLOR_DARK = '#0369A1'
-const BRAND_COLOR_LIGHT = '#F0F9FF'
-const TEXT_PRIMARY = '#1F2937'
-const TEXT_SECONDARY = '#6B7280'
-const TEXT_MUTED = '#9CA3AF'
-const BORDER_LIGHT = '#E5E7EB'
-const BG_PAGE = '#F0F9FF'
+const BRAND_COLOR = '#1677E8'
+const BRAND_COLOR_DARK = '#0958D9'
+const BRAND_COLOR_LIGHT = '#EFF6FF'
+const TEXT_PRIMARY = '#2C3A52'
+const TEXT_SECONDARY = '#64748B'
+const TEXT_MUTED = '#94A3B8'
+const BORDER_LIGHT = '#E5EDF7'
+const BG_PAGE = '#F7FAFF'
 
 /* ─────────────────────────────────────────────
    CountUp Animation Component
@@ -243,11 +243,11 @@ export default function HomePage() {
           zIndex: 1,
           maxWidth: 1200,
           margin: '0 auto',
-          padding: '0 28px 48px',
+          padding: '0 28px 32px',
         }}>
           {/* ─── ① 数据概览区 — 横向通栏轻量数据条 ─── */}
           <section style={{
-            marginTop: 24,
+            marginTop: 16,
             marginBottom: 28,
             background: '#FFFFFF',
             borderRadius: 16,
@@ -496,7 +496,7 @@ export default function HomePage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     {[
                       { label: '开始练习', desc: '从题库选择题目', to: '/banks', color: '#3B82F6', bg: '#EFF6FF' },
-                      { label: 'AI 对话', desc: '与 AI 讨论问题', to: '/chat/new', color: '#0284C7', bg: '#F0F9FF' },
+                      { label: 'AI 对话', desc: '与 AI 讨论问题', to: '/chat/new', color: '#1677E8', bg: '#F0F9FF' },
                       { label: '学习规划', desc: '规划学习路径', to: '/path', color: '#06B6D4', bg: '#ECFEFF' },
                       { label: '资源推荐', desc: '个性化资源推送', to: '/recommendations', color: '#10B981', bg: '#ECFDF5' },
                     ].map((action, i) => (

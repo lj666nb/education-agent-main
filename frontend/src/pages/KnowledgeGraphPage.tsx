@@ -13,7 +13,7 @@ import { knowledgeGraphApi, type GraphNode, type GraphEdge } from '../api/knowle
 import KnowledgeGraphViz from '../components/KnowledgeGraphViz'
 
 const API_BASE = '/api/v1'
-const BRAND_COLOR = '#0284C7'
+const BRAND_COLOR = '#1677E8'
 
 type KGInfo = {
   id: string
@@ -334,7 +334,7 @@ export default function KnowledgeGraphPage() {
               textAlign: 'center', lineHeight: 1.6,
             }}>
               🤖 AI 服务未配置。知识图谱构建需要 AI 能力，请先在
-              <span style={{ color: '#0284C7', cursor: 'pointer', textDecoration: 'underline' }}
+              <span style={{ color: '#1677E8', cursor: 'pointer', textDecoration: 'underline' }}
                 onClick={() => window.open('/settings', '_blank')}> 「设置」</span>
               中配置 DeepSeek 或 Qwen API Key。
             </div>

@@ -18,7 +18,7 @@ function ChevronDown({ expanded }: { expanded: boolean }) { return (
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
   mastered:    { label: '已掌握', bg: '#F0FDF4', color: '#10B981' },
   reviewing:   { label: '复习中', bg: '#FFFBEB', color: '#D97706' },
-  learning:    { label: '学习中', bg: '#F0F9FF', color: '#0284C7' },
+  learning:    { label: '学习中', bg: '#F0F9FF', color: '#1677E8' },
   not_started: { label: '未开始', bg: '#F9FAFB', color: '#9CA3AF' },
 }
 
@@ -126,7 +126,7 @@ export default function KnowledgePointsPage() {
         </div>
         <div className="card" style={{ padding: '12px 20px', border: '1px solid var(--gray-200)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>学科数</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0284C7' }}>{subjects.length}</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1677E8' }}>{subjects.length}</div>
         </div>
         {/* 筛选 */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto' }}>
@@ -134,7 +134,7 @@ export default function KnowledgePointsPage() {
             <button key={s} onClick={() => setFilter(s)}
               style={{
                 padding: '4px 12px', borderRadius: 16, border: filter === s ? 'none' : '1px solid #D1D5DB',
-                background: filter === s ? '#0284C7' : '#fff',
+                background: filter === s ? '#1677E8' : '#fff',
                 color: filter === s ? '#fff' : '#6B7280',
                 fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'all 0.15s ease',

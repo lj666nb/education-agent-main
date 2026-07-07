@@ -710,7 +710,7 @@ function QuestionDetailModal({ question: q, onClose }: { question: QuestionItem;
             }}>{t === '易错' ? <><AlertTriangleIcon size={11} color="#EF4444" /> 易错</> : `#${t}`}</span>
           ))}
           {q.knowledge_point_uuids?.length > 0 && (
-            <span style={{ fontSize: '11px', padding: '2px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.08)', color: 'var(--app-info)' }}><LinkIcon size={11} color="#0284C7" /> 关联 {q.knowledge_point_uuids.length} 个知识点</span>
+            <span style={{ fontSize: '11px', padding: '2px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.08)', color: 'var(--app-info)' }}><LinkIcon size={11} color="#1677E8" /> 关联 {q.knowledge_point_uuids.length} 个知识点</span>
           )}
         </div>
       </div>
@@ -861,7 +861,7 @@ function QuestionEditorModal({ bankId, editQuestion, onClose, onSaved, llmAvaila
         {!isEditing && (
           <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--app-bg-page)', borderRadius: 10, padding: '3px' }}>
             <button onClick={() => setTab('manual')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: 'pointer', background: tab === 'manual' ? '#fff' : 'transparent', color: tab === 'manual' ? 'var(--app-brand)' : 'var(--app-text-secondary)', fontWeight: 500 }}>手动创建</button>
-            <button onClick={() => setTab('ai')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: llmAvailable ? 'pointer' : 'not-allowed', background: tab === 'ai' ? '#fff' : 'transparent', color: llmAvailable ? (tab === 'ai' ? 'var(--app-info)' : 'var(--app-text-secondary)') : 'var(--app-text-muted)', fontWeight: 500, opacity: llmAvailable ? 1 : 0.5 }}><BotIcon size={14} color={llmAvailable ? '#0284C7' : '#9CA3AF'} /> AI 生成</button>
+            <button onClick={() => setTab('ai')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: llmAvailable ? 'pointer' : 'not-allowed', background: tab === 'ai' ? '#fff' : 'transparent', color: llmAvailable ? (tab === 'ai' ? 'var(--app-info)' : 'var(--app-text-secondary)') : 'var(--app-text-muted)', fontWeight: 500, opacity: llmAvailable ? 1 : 0.5 }}><BotIcon size={14} color={llmAvailable ? '#1677E8' : '#9CA3AF'} /> AI 生成</button>
           </div>
         )}
 
@@ -1323,7 +1323,7 @@ function CreateExamPaperModal({ bankId, onClose, onCreated, llmAvailable }: {
         <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--app-bg-page)', borderRadius: 10, padding: '3px' }}>
           <button onClick={() => setTab('manual')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: 'pointer', background: tab === 'manual' ? '#fff' : 'transparent', color: tab === 'manual' ? 'var(--app-brand)' : 'var(--app-text-secondary)', fontWeight: 500 }}>手动配置</button>
           <button onClick={() => setTab('upload')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: 'pointer', background: tab === 'upload' ? '#fff' : 'transparent', color: tab === 'upload' ? 'var(--app-brand)' : 'var(--app-text-secondary)', fontWeight: 500 }}>上传文件</button>
-          <button onClick={() => setTab('ai')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: llmAvailable ? 'pointer' : 'not-allowed', background: tab === 'ai' ? '#fff' : 'transparent', color: llmAvailable ? (tab === 'ai' ? 'var(--app-info)' : 'var(--app-text-secondary)') : 'var(--app-text-muted)', fontWeight: 500, opacity: llmAvailable ? 1 : 0.5 }}><BotIcon size={14} color={llmAvailable ? '#0284C7' : '#9CA3AF'} /> AI 出题</button>
+          <button onClick={() => setTab('ai')} style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', fontSize: '13px', cursor: llmAvailable ? 'pointer' : 'not-allowed', background: tab === 'ai' ? '#fff' : 'transparent', color: llmAvailable ? (tab === 'ai' ? 'var(--app-info)' : 'var(--app-text-secondary)') : 'var(--app-text-muted)', fontWeight: 500, opacity: llmAvailable ? 1 : 0.5 }}><BotIcon size={14} color={llmAvailable ? '#1677E8' : '#9CA3AF'} /> AI 出题</button>
         </div>
 
         {error && <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', borderRadius: 10, color: 'var(--app-danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
@@ -1580,7 +1580,7 @@ function CreateExamPaperModal({ bankId, onClose, onCreated, llmAvailable }: {
                       </button>
                       <button onClick={() => setAiRegenExpanded(!aiRegenExpanded)}
                         style={{ padding: '12px 16px', background: aiRegenExpanded ? 'var(--app-brand-bg)' : 'var(--app-bg-page)', color: 'var(--app-info)', border: '1.5px solid', borderColor: aiRegenExpanded ? '#A5B4FC' : 'transparent', borderRadius: 10, fontSize: '13px', marginTop: '8px', cursor: 'pointer', fontWeight: 500 }}>
-                        重新生成 <ChevronDownIcon size={12} color="#0284C7" />
+                        重新生成 <ChevronDownIcon size={12} color="#1677E8" />
                       </button>
                     </div>
 

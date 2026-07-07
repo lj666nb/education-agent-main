@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import { pathApi } from '../../api/path'
 
-const COLOR_BRAND = '#0284C7'
+const COLOR_BRAND = '#1677E8'
 
 const QUESTIONS = [
   {

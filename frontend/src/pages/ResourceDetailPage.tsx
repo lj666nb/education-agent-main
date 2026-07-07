@@ -580,7 +580,7 @@ export default function ResourceDetailPage() {
                   }}
                   style={{
                     padding: '8px 20px', borderRadius: 8, border: 'none',
-                    background: '#0284C7', color: '#fff',
+                    background: '#1677E8', color: '#fff',
                     fontSize: '0.8125rem', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
