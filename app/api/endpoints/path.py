@@ -895,23 +895,36 @@ async def check_api_availability(
     """
     user_id = str(current_user.student_id)
 
-    # 检查 API 配置
-    from app.models.api_settings import ApiSettings
-    api_settings = (
-        db.query(ApiSettings)
-        .filter(
-            ApiSettings.user_id == user_id,
-            ApiSettings.is_enabled == True,
-        )
-        .all()
-    )
+    # 检查 API 配置：优先检查系统 .env 配置，其次用户个人配置
+    from app.core.config import settings
 
     has_llm = False
     providers = []
-    for s in api_settings:
-        if s.provider in ("deepseek", "qwen") and s.api_key:
-            has_llm = True
-            providers.append(s.provider)
+
+    # 1. 检查系统全局配置（.env 文件）
+    if settings.DEEPSEEK_API_KEY:
+        has_llm = True
+        providers.append("deepseek")
+    elif settings.QWEN_API_KEY:
+        has_llm = True
+        providers.append("qwen")
+
+    # 2. 如果系统未配置，检查用户个人配置（ApiSettings 表）
+    if not has_llm:
+        from app.models.api_settings import ApiSettings
+        api_settings = (
+            db.query(ApiSettings)
+            .filter(
+                ApiSettings.user_id == user_id,
+                ApiSettings.is_enabled == True,
+            )
+            .all()
+        )
+
+        for s in api_settings:
+            if s.provider in ("deepseek", "qwen") and s.api_key:
+                has_llm = True
+                providers.append(s.provider)
 
     # 检查认知风格数据
     has_cognitive_data = False

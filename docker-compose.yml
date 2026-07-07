@@ -99,6 +99,8 @@ services:
       LOGIN_LOCKOUT_MINUTES: "15"
       DEEPSEEK_MODEL: deepseek-v4-pro
       DATA_DIR: /app/data
+    env_file:
+      - .env
     volumes:
       - ./app:/app/app
       - ./requirements.txt:/app/requirements.txt

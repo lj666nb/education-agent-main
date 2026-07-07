@@ -1290,9 +1290,14 @@ async def call_deepseek_api(messages: List[Dict[str, str]]) -> str:
     base_url = settings.DEEPSEEK_BASE_URL
 
     if not api_key:
+        api_key = settings.QWEN_API_KEY
+        base_url = settings.QWEN_BASE_URL
+        model = settings.QWEN_MODEL
+
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="DeepSeek API Key 未配置"
+            detail="AI 服务未配置，请在「API 设置」页面配置 DeepSeek 或 Qwen API Key 后再使用智能对话功能"
         )
 
     headers = {

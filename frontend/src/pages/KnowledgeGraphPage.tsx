@@ -60,6 +60,25 @@ export default function KnowledgeGraphPage() {
   const [kgList, setKgList] = useState<KGInfo[]>([])
   const [kgListLoading, setKgListLoading] = useState(true)
 
+  // LLM 可用性检查（知识图谱构建需要 AI）
+  const [llmAvailable, setLlmAvailable] = useState(true)
+
+  // 启动时检查 LLM 是否可用
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem('access_token')
+        const res = await fetch(`${API_BASE}/api-settings/available/models`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setLlmAvailable(data.available?.length > 0)
+        }
+      } catch { /* 忽略 */ }
+    })()
+  }, [])
+
   // 图谱可视化
   const [graphModal, setGraphModal] = useState<{ open: boolean; subjectName: string; nodes: GraphNode[]; edges: GraphEdge[]; loading: boolean }>({
     open: false, subjectName: '', nodes: [], edges: [], loading: false,
@@ -308,14 +327,27 @@ export default function KnowledgeGraphPage() {
             </div>
           )}
 
+          {!llmAvailable && (
+            <div style={{
+              padding: '14px 16px', borderRadius: 10, background: '#FFFBEB',
+              border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, marginBottom: 16,
+              textAlign: 'center', lineHeight: 1.6,
+            }}>
+              🤖 AI 服务未配置。知识图谱构建需要 AI 能力，请先在
+              <span style={{ color: '#0284C7', cursor: 'pointer', textDecoration: 'underline' }}
+                onClick={() => window.open('/settings', '_blank')}> 「设置」</span>
+              中配置 DeepSeek 或 Qwen API Key。
+            </div>
+          )}
+
           <button
             onClick={handleUpload}
-            disabled={!selectedFile || uploading}
+            disabled={!selectedFile || uploading || !llmAvailable}
             style={{
               width: '100%', padding: 14, borderRadius: 12, border: 'none',
-              background: selectedFile && !uploading ? BRAND_COLOR : '#D1D5DB',
+              background: selectedFile && !uploading && llmAvailable ? BRAND_COLOR : '#D1D5DB',
               color: '#fff', fontSize: 15, fontWeight: 600,
-              cursor: selectedFile && !uploading ? 'pointer' : 'not-allowed',
+              cursor: selectedFile && !uploading && llmAvailable ? 'pointer' : 'not-allowed',
             }}>
             {uploading ? '⏳ 上传中...' : '🚀 开始构建知识图谱'}
           </button>

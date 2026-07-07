@@ -102,7 +102,7 @@ export default function ChatPage() {
         }, 2000)
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || '对话失败，请重试')
+      setError(err.response?.data?.detail || 'AI 服务未配置，请在「设置」中配置 DeepSeek 或 Qwen API Key 后再使用')
     } finally {
       setIsLoading(false)
     }
