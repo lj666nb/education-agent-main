@@ -56,24 +56,18 @@ AI 对话中内置 **Draw.io 图表编辑器**，支持 AI 自动生成和修改
 git clone <repository-url>
 cd education-agent
 
-# 2. 创建环境变量文件（必须）
-cp .env.example .env
-
-# 3. 一键启动所有服务
+# 2. 一键启动所有服务
 docker-compose up -d
 
-# 4. 查看启动状态
-docker-compose ps
-
-# 5. 访问
+# 3. 访问
 # 前端: http://localhost:3000
 # 后端 API 文档: http://localhost:8000/api/v1/docs
 ```
 > 首次启动时后端会自动创建数据库表并注入种子数据（测试用户、题库、知识图谱等），无需手动初始化。
 
-### 首次配置
+### 启用 AI 功能（可选）
 
-从 `.env.example` 复制并编辑 `.env`，至少配置一个 LLM API Key 才能使用 AI 对话和出题功能：
+如果需要使用 AI 对话、AI 出题、学习路径生成等功能，创建 `.env` 并配置 API Key：
 
 ```bash
 cp .env.example .env
@@ -88,7 +82,9 @@ DEEPSEEK_API_KEY=sk-your-key-here
 QWEN_API_KEY=your-key-here
 ```
 
-> Docker 模式下数据库连接已自动配置，无需修改。只需修改 API Key 相关配置。修改 `.env` 后需要重启：`docker-compose restart backend`
+> 修改 `.env` 后重启生效：`docker-compose restart backend`
+> 
+> 不配置 API Key 也能正常使用：浏览种子题库、查看学习资源、练习题目等离线功能完全可用。
 
 ### 种子数据
 
