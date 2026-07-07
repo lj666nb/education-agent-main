@@ -356,3 +356,29 @@ PPT/Word 文档解析支持上传和自动分块索引。RAG 参考来源在 AI 
 | `request/prd-7-*.md` | 更新 AI 状态表（LP-15） |
 | `request/prd-9-*.md` | 更新 AI 状态表（BE-04 动态权重 + BE-15 遗忘曲线） |
 ```
+
+
+---
+
+## 2026-07-07 - 种子数据整合（自动初始化完整数据）
+
+整合了分散的种子数据脚本，新克隆项目的用户**启动容器后即可获得完整数据**，无需手动执行种子脚本。
+
+### 背景
+
+项目数据存储在 Docker 卷中（PostgreSQL/Neo4j/MongoDB），git 不跟踪卷数据。之前：
+- `app/scripts/seed.py` 自动运行但只注入 82 题（从 JSON 文件读取）
+- `scripts/seed_data_structures.py` 有完整数据（132+ 题、9 章节）但需手动 `docker exec`
+- `app/scripts/seed_code_cases.py` 提供 19 个代码案例，也需手动执行
+- 测试用户 guoketg 需要手动注册
+
+### 变更
+
+- **`app/scripts/seed.py`**：重写为综合种子脚本，启动时自动执行：
+  1. 创建测试用户 guoketg（如不存在）
+  2. 注入完整数据结构数据（9 章节、80+ 知识点、132+ 题）
+  3. 注入 19 个代码案例资源到 guoketg
+  4. 构建 Neo4j 知识图谱（PREREQUISITE + RELATED_TO 关系）
+  5. 所有操作幂等（已存在则跳过）
+- **README.md**：新增「种子数据」说明表格
+- 保留 `scripts/seed_data_structures.py` 和 `app/scripts/seed_code_cases.py` 作为独立脚本（可用于重新注入）
