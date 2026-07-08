@@ -295,3 +295,103 @@ async def get_knowledge_points(
         })
 
     return {"subjects": result}
+
+
+@router.get("/trends")
+async def get_review_trends(
+    days: int = Query(30, description="统计天数，默认30天"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """获取近N天复习趋势数据"""
+    user_id = str(current_user.student_id)
+    now = _now()
+    start_date = now - timedelta(days=days)
+
+    # 查询复习记录按天分组
+    records = (
+        db.query(KnowledgePointRecord)
+        .filter(
+            KnowledgePointRecord.user_id == user_id,
+            KnowledgePointRecord.last_study_at >= start_date,
+            KnowledgePointRecord.last_study_at.isnot(None),
+        )
+        .order_by(KnowledgePointRecord.last_study_at.asc())
+        .all()
+    )
+
+    # 按天聚合
+    from collections import defaultdict
+    daily: dict = defaultdict(lambda: {"review_count": 0, "total_mastery": 0, "count": 0})
+    for r in records:
+        day_key = r.last_study_at.strftime("%Y-%m-%d") if r.last_study_at else None
+        if day_key:
+            daily[day_key]["review_count"] += 1
+            daily[day_key]["total_mastery"] += (r.mastery_score or 0)
+            daily[day_key]["count"] += 1
+
+    trends = []
+    for i in range(days):
+        d = (start_date + timedelta(days=i + 1)).strftime("%Y-%m-%d")
+        info = daily.get(d, {"review_count": 0, "total_mastery": 0, "count": 0})
+        trends.append({
+            "date": d,
+            "review_count": info["review_count"],
+            "avg_mastery": round(info["total_mastery"] / info["count"], 1) if info["count"] > 0 else 0,
+        })
+
+    total_reviews = sum(t["review_count"] for t in trends)
+    avg_mastery = round(sum(t["avg_mastery"] for t in trends if t["review_count"] > 0) / max(1, len([t for t in trends if t["review_count"] > 0])), 1)
+
+    return {
+        "total_reviews": total_reviews,
+        "avg_mastery": avg_mastery,
+        "daily": trends,
+    }
+
+
+@router.get("/weak-points")
+async def get_weak_points(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    threshold: int = Query(30, description="掌握度阈值，低于此值视为薄弱"),
+):
+    """获取用户的薄弱知识点（掌握度低于阈值）"""
+    user_id = str(current_user.student_id)
+
+    records = (
+        db.query(KnowledgePointRecord)
+        .filter(
+            KnowledgePointRecord.user_id == user_id,
+            KnowledgePointRecord.mastery_score <= threshold,
+        )
+        .order_by(KnowledgePointRecord.mastery_score.asc())
+        .all()
+    )
+
+    weak_points = []
+    for r in records:
+        # 尝试获取知识点的领域信息
+        domain_name = "未知领域"
+        subject_name = "未知学科"
+        if r.point_id:
+            pt = db.query(KnowledgePoint).filter(KnowledgePoint.id == r.point_id).first()
+            if pt:
+                domain = db.query(KnowledgeDomain).filter(KnowledgeDomain.id == pt.domain_id).first()
+                if domain:
+                    domain_name = domain.name
+                    subj = db.query(Subject).filter(Subject.id == domain.subject_id).first()
+                    if subj:
+                        subject_name = subj.name
+
+        weak_points.append({
+            "point_id": str(r.point_id) if r.point_id else None,
+            "point_name": r.point_name or "未知知识点",
+            "mastery_score": r.mastery_score or 0,
+            "consecutive_errors": r.consecutive_errors or 0,
+            "domain_name": domain_name,
+            "subject_name": subject_name,
+            "needs_review": bool(r.next_review_at and r.next_review_at <= _now()) if r.next_review_at else False,
+        })
+
+    return {"weak_points": weak_points, "total": len(weak_points)}

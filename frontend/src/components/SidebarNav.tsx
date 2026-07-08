@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { profileApi } from '../api'
 import { useTheme } from '../store/theme'
@@ -225,27 +225,6 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
     return cp === item.path || cp.startsWith(item.path + '/')
   }
 
-  /** 智能导航处理 */
-  const handleNavClick = (item: NavItem) => {
-    const currentPath = location.pathname
-    const itemPath = item.path
-
-    // 情况1：已在主界面 → 刷新加载
-    if (currentPath === itemPath) {
-      window.location.href = itemPath
-      return
-    }
-
-    // 情况2：在次级界面 → 回到主界面
-    if (itemPath !== '/' && currentPath.startsWith(itemPath + '/')) {
-      navigate(itemPath)
-      return
-    }
-
-    // 情况3：其他 → 标准导航
-    navigate(itemPath)
-  }
-
   const sidebarW = isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH
 
   return (
@@ -404,26 +383,17 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
           {topNavItems.map((item) => {
             const active = isNavActive(item)
             return (
-              <button
+              <Link
                 key={item.path}
-                onClick={() => {
-                  handleNavClick(item)
-                  onMobileToggle?.()
-                }}
+                to={item.path}
+                prefetch="intent"
+                onClick={() => onMobileToggle?.()}
                 className={`sn-nav-link${active ? ' active' : ''}`}
                 style={{
                   justifyContent: isCollapsed ? 'center' : 'flex-start',
                   padding: isCollapsed ? '12px 0' : '10px 14px',
                   margin: isCollapsed ? '2px 8px' : '2px 10px',
                   width: isCollapsed ? 'auto' : 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  border: 'none',
-                  background: 'none',
-                  fontFamily: 'inherit',
-                  fontSize: '0.875rem',
-                  textAlign: 'left' as const,
-                  cursor: 'pointer',
                 }}
                 title={isCollapsed ? item.label : undefined}
               >
@@ -431,7 +401,7 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
                 {!isCollapsed && (
                   <span style={{ lineHeight: 1 }}>{item.label}</span>
                 )}
-              </button>
+              </Link>
             )
           })}
         </nav>

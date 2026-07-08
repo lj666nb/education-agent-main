@@ -44,6 +44,7 @@
   --app-text-placeholder: #D1D5DB;
   --app-border: #E5E7EB;
   --app-bg-page: #F3F4F6;
+  --app-bg-card: #FFFFFF;
   --app-bg-card-alt: #F9FAFB;
   --app-bg-danger: #FEF2F2;
   --app-success: #10B981;
@@ -599,6 +600,7 @@ hr {
   --app-text-muted: #6B7280;
   --app-border: #374151;
   --app-bg-page: #111827;
+  --app-bg-card: #1F2937;
   --app-bg-card-alt: #1F2937;
   --app-brand-bg: #0C4A6E;
 }
@@ -1224,3 +1226,172 @@ hr {
     padding-right: 12px !important;
   }
 }
+
+/* ──────────────── Page Transition ──────────────── */
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ──────────────── Page Skeleton ──────────────── */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.page-skeleton {
+  min-height: 100vh;
+  display: flex;
+  animation: pageFadeIn 0.25s ease-out;
+}
+
+.page-skeleton-sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--gray-200, #E5E7EB);
+  background: #FAFBFC;
+}
+
+.page-skeleton-content {
+  flex: 1;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-skeleton-block {
+  border-radius: 10px;
+  background: var(--gray-200, #E5E7EB);
+  animation: skeletonPulse 1.6s ease-in-out infinite;
+}
+
+@media screen and (max-width: 640px) {
+  .page-skeleton-sidebar {
+    width: 60px;
+  }
+  .page-skeleton-content {
+    padding: 20px 16px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Review Center Animations & Components
+   ═══════════════════════════════════════════════════════ */
+@keyframes reviewPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(2,132,199,0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(2,132,199,0); }
+}
+
+@keyframes reviewSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reviewShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.review-card {
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.review-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.review-card-pulse {
+  animation: reviewPulse 2s ease-in-out infinite;
+}
+
+.review-stat-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.review-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: var(--radius-full);
+  font-size: 0.7rem; font-weight: 600;
+  line-height: 1.4;
+}
+
+.review-progress-bar {
+  height: 8px; border-radius: 4px; background: var(--app-border);
+  overflow: hidden;
+}
+
+.review-progress-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.review-calendar-cell {
+  text-align: center; padding: 8px 4px; border-radius: var(--radius-md);
+  cursor: pointer; transition: all var(--transition-fast);
+  font-size: 0.8rem; min-height: 64px;
+}
+
+.review-calendar-cell:hover {
+  background: var(--app-brand-bg);
+}
+
+.review-calendar-cell.today {
+  border: 2px solid var(--app-brand);
+  background: var(--app-brand-bg);
+}
+
+.review-calendar-cell.overdue {
+  background: #FEF2F2;
+}
+
+.review-calendar-cell .day-num {
+  font-weight: 700; font-size: 1rem;
+}
+
+.review-calendar-cell .badge-count {
+  margin-top: 4px; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; border-radius: var(--radius-full);
+  font-size: 0.7rem; font-weight: 700;
+}
+
+.review-wrong-tab {
+  padding: 8px 16px; border-radius: var(--radius-full);
+  border: 1px solid var(--app-border); background: var(--app-bg-card);
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.review-wrong-tab.active {
+  background: var(--app-brand);
+  color: #fff; border-color: var(--app-brand);
+}
+
+.review-filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+.review-filter-select {
+  padding: 5px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--app-border); background: var(--app-bg-card);
+  font-size: 0.78rem; color: var(--app-text-body);
+  cursor: pointer; font-family: inherit;
+}
+
+/* Dark mode overrides for review center */
+.dark .review-card { background: #1F2937; border-color: #374151; }
+.dark .review-calendar-cell:hover { background: #0C4A6E; }
+.dark .review-calendar-cell.today { background: #0C4A6E; }
+.dark .review-calendar-cell.overdue { background: #3B1219; }
+.dark .review-wrong-tab { background: #1F2937; border-color: #374151; color: #D1D5DB; }
+.dark .review-wrong-tab.active { background: #0369A1; border-color: #0369A1; color: #fff; }
+.dark .review-filter-select { background: #1F2937; border-color: #374151; color: #D1D5DB; }

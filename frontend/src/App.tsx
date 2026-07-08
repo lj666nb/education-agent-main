@@ -43,9 +43,23 @@ const ReviewWrongPage = lazy(() => import('./pages/ReviewWrongPage'))
 const KnowledgePointsPage = lazy(() => import('./pages/KnowledgePointsPage'))
 const KnowledgeGraphPage = lazy(() => import('./pages/KnowledgeGraphPage'))
 
-const PageFallback = () => (
-  <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gray-400)', fontSize: '14px' }}>
-    加载中...
+const PageSkeleton = () => (
+  <div className="page-skeleton">
+    {/* Sidebar placeholder — matches SidebarNav width */}
+    <div className="page-skeleton-sidebar" />
+    {/* Content area skeleton */}
+    <div className="page-skeleton-content">
+      {/* Title bar */}
+      <div className="page-skeleton-block" style={{ height: 32, width: '40%' }} />
+      {/* Card blocks */}
+      <div className="page-skeleton-block" style={{ height: 160, width: '100%' }} />
+      <div style={{ display: 'flex', gap: 16 }}>
+        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
+        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
+        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
+      </div>
+      <div className="page-skeleton-block" style={{ height: 200, width: '100%' }} />
+    </div>
   </div>
 )
 
@@ -57,7 +71,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function LazyRoute({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageFallback />}>{children}</Suspense>
+      <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
     </ErrorBoundary>
   )
 }

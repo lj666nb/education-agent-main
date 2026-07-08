@@ -12,6 +12,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['echarts', 'echarts-for-react', 'reactflow'],
+          'editor-vendor': ['@monaco-editor/react', 'monaco-editor'],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     host: true,

@@ -51,9 +51,42 @@ export interface SubjectData {
   domains: KnowledgeDomainData[]
 }
 
+// 复习趋势
+export interface DailyTrend {
+  date: string
+  review_count: number
+  avg_mastery: number
+}
+
+export interface ReviewTrendsResponse {
+  total_reviews: number
+  avg_mastery: number
+  daily: DailyTrend[]
+}
+
+// 薄弱知识点
+export interface WeakPoint {
+  point_id: string | null
+  point_name: string
+  mastery_score: number
+  consecutive_errors: number
+  domain_name: string
+  subject_name: string
+  needs_review: boolean
+}
+
+export interface WeakPointsResponse {
+  weak_points: WeakPoint[]
+  total: number
+}
+
 export const reviewApi = {
   getDashboard: () => api.get<DashboardResponse>('/review/dashboard'),
   markComplete: (pointId: string) => api.post(`/review/${pointId}/complete`),
   getKnowledgePoints: (subjectId?: string) =>
     api.get<{subjects: SubjectData[]}>('/review/knowledge-points', { params: subjectId ? { subject_id: subjectId } : {} }),
+  getTrends: (days: number = 30) =>
+    api.get<ReviewTrendsResponse>('/review/trends', { params: { days } }),
+  getWeakPoints: (threshold: number = 30) =>
+    api.get<WeakPointsResponse>('/review/weak-points', { params: { threshold } }),
 }
