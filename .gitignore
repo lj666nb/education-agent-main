@@ -42,8 +42,9 @@ Thumbs.db
 *.log
 *.log.*
 
-# Uploaded files
-uploads/
+# Uploaded files (but track plot images needed for seed data)
+uploads/*
+!uploads/plots/
 
 # Runtime data (videos, audio, etc.)
 data/
@@ -129,3 +130,5 @@ test_new_pages.spec.ts
 *.png
 *.jpg
 *.jpeg
+# But track seed data plot images
+!uploads/plots/*.png
