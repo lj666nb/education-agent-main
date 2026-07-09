@@ -1104,12 +1104,6 @@ export default function ChatPlatform() {
             />
           </div>
 
-          {/* Floating Diagram Window */}
-          {/* (moved to root level below) */}
-
-          {/* Floating Code Runner Window */}
-          {/* (moved to root level below) */}
-
           {/* 无关内容警告条 */}
           {irrelevantContentWarning && (
             <div style={{
