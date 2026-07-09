@@ -38,6 +38,9 @@ export const recommendationsCenterApi = {
 
   deleteResource: (resourceId: string) =>
     api.delete(`/resources/${resourceId}`),
+
+  getNotebook: (params?: { subject_id?: string }) =>
+    api.get<NotebookResponse>('/recommendations/notebook', { params }),
 }
 
 // Resource type config
@@ -60,4 +63,47 @@ export const RESOURCE_TYPE_CONFIG: Record<string, {
   knowledge_comic:    { label: '知识漫画', icon: '漫画', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', section: '拓展资源' },
   infographic:        { label: '信息图解', icon: '图解', color: '#06B6D4', bg: 'rgba(6,182,212,0.1)', section: '拓展资源' },
   summary_report:     { label: '总结报告', icon: '报告', color: '#84CC16', bg: 'rgba(132,204,22,0.1)', section: '学习报告' },
+}
+
+// ── Notebook types ──
+
+export interface NotebookResource {
+  id: string
+  title: string
+  resource_type: string
+  resource_type_label: string
+  knowledge_points: string[]
+  difficulty_level: number | null
+  source: string | null
+  source_label: string | null
+  tags: string[]
+  created_at: string
+  mastery_score: number | null
+}
+
+export interface NotebookSection {
+  type: string
+  type_label: string
+  resources: NotebookResource[]
+}
+
+export interface NotebookTopic {
+  id: string
+  title: string
+  resource_count: number
+  mastery_score: number | null
+  sections: NotebookSection[]
+}
+
+export interface NotebookCategory {
+  id: string
+  title: string
+  sort_order: number
+  topics: NotebookTopic[]
+}
+
+export interface NotebookResponse {
+  categories: NotebookCategory[]
+  total_resources: number
+  total_topics: number
 }
