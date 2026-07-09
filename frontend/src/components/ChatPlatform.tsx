@@ -143,6 +143,8 @@ export default function ChatPlatform() {
   const messagesRef = useRef<Message[]>([])
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
   const [prefillInput, setPrefillInput] = useState('')
+  const [enableAutoChart, setEnableAutoChart] = useState(false)
+  const [enableAutoMindmap, setEnableAutoMindmap] = useState(false)
 
   // Keep messagesRef in sync with messages
   
@@ -432,6 +434,16 @@ export default function ChatPlatform() {
       await chatApi.saveMessage({ chat_id: activeChatId, role: 'user', content: message })
       const conversationHistory = messagesRef.current.map(msg => ({ role: msg.role, content: msg.content }))
       const diagramContext = diagramOpen && activeDiagramXml ? `\n\n[Current diagram XML for modification reference:\n${activeDiagramXml}\n]` : ''
+
+      // Build system prompt with auto chart/mindmap instructions
+      let systemPrompt = getDrawioSystemPrompt()
+      if (enableAutoChart) {
+        systemPrompt += '\n\n**自动图表模式已开启**：请在每次回复中使用 [PLOT] 代码块生成一张与内容相关的图表（如柱状图、折线图、流程图等），帮助用户可视化理解。'
+      }
+      if (enableAutoMindmap) {
+        systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [DRAWIO] 代码块生成一张思维导图，将回复内容的核心知识点以层级结构展示。'
+      }
+
       abortRef.current = new AbortController()
       const response = await fetch('/api/v1/chat/completions', {
         method: 'POST',
@@ -440,7 +452,7 @@ export default function ChatPlatform() {
         body: JSON.stringify({
           chat_id: activeChatId, model,
           messages: [
-            { role: 'system', content: getDrawioSystemPrompt() },
+            { role: 'system', content: systemPrompt },
             ...conversationHistory,
             { role: 'user', content: message + diagramContext },
           ],
@@ -932,7 +944,7 @@ export default function ChatPlatform() {
     color: active ? 'var(--primary)' : 'var(--gray-500)',
     fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
     display: 'flex', alignItems: 'center', gap: '5px',
-    transition: 'all 0.15s', whiteSpace: 'nowrap',
+    transition: 'all 0.2s ease', whiteSpace: 'nowrap',
   })
 
   return (
@@ -971,7 +983,20 @@ export default function ChatPlatform() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setProjectPanelOpen(!projectPanelOpen)}
-              style={headerBtnStyle(!!selectedProjectForChat)}>
+              style={headerBtnStyle(!!selectedProjectForChat)}
+              onMouseEnter={e => {
+                if (!selectedProjectForChat) {
+                  e.currentTarget.style.borderColor = 'var(--primary)'
+                  e.currentTarget.style.boxShadow = '0 0 0 2px oklch(0.55 0.18 200 / 0.08)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!selectedProjectForChat) {
+                  e.currentTarget.style.borderColor = 'var(--gray-200)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
+              }}
+            >
               <Folder size={14} />
               {selectedProjectForChat ? (projects.find(p => p.id === selectedProjectForChat)?.name || '项目') : '项目'}
             </button>
@@ -1014,7 +1039,20 @@ export default function ChatPlatform() {
             )}
           </div>
           <button onClick={() => { if (!codeRunnerOpen) { setCodeRunnerCode('# 在此编写代码\nprint("Hello World")'); setCodeRunnerLanguage('python') } setCodeRunnerOpen(!codeRunnerOpen) }}
-            style={headerBtnStyle(codeRunnerOpen)}>
+            style={headerBtnStyle(codeRunnerOpen)}
+            onMouseEnter={e => {
+              if (!codeRunnerOpen) {
+                e.currentTarget.style.borderColor = 'var(--primary)'
+                e.currentTarget.style.boxShadow = '0 0 0 2px oklch(0.55 0.18 200 / 0.08)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!codeRunnerOpen) {
+                e.currentTarget.style.borderColor = 'var(--gray-200)'
+                e.currentTarget.style.boxShadow = 'none'
+              }
+            }}
+          >
             <Code size={14} />
             Code
           </button>
@@ -1151,6 +1189,10 @@ export default function ChatPlatform() {
             availableModels={availableModels} pastedFiles={pastedFiles}
             onStopGeneration={handleStopGeneration}
             noApiConfigured={noApiConfigured} prefillText={prefillInput}
+            enableAutoChart={enableAutoChart}
+            onEnableAutoChartChange={setEnableAutoChart}
+            enableAutoMindmap={enableAutoMindmap}
+            onEnableAutoMindmapChange={setEnableAutoMindmap}
           />
         </div>
       </div>

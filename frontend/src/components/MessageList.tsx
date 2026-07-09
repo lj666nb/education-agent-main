@@ -123,7 +123,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
   // ── Icon-only button style ──
   const iconBtnStyle: React.CSSProperties = {
     padding: '6px',
-    border: 'none',
+    border: '2px solid transparent',
     background: 'none',
     color: 'var(--gray-400)',
     cursor: 'pointer',
@@ -131,7 +131,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'color 0.15s, background-color 0.15s',
+    transition: 'color 0.15s, background-color 0.15s, border-color 0.3s',
   }
 
   // ── SpeakingManager ──
@@ -533,12 +533,21 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             { icon: BarChart3, title: '图表生成', desc: 'AI 自动绘制各类图表' },
             { icon: GitBranch, title: '思维导图', desc: '知识结构可视化' },
           ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} style={{
+            <div key={title} className="feature-card-hover" style={{
               padding: '20px', borderRadius: '12px',
               backgroundColor: '#FFFFFF', border: '1px solid #F0F0F0',
               boxShadow: 'var(--chat-bubble-ai-shadow)',
               textAlign: 'center',
-            }}>
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--primary)'
+              e.currentTarget.style.boxShadow = '0 0 0 3px oklch(0.55 0.18 200 / 0.1), 0 4px 12px rgba(0,0,0,0.06)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#F0F0F0'
+              e.currentTarget.style.boxShadow = 'var(--chat-bubble-ai-shadow)'
+            }}
+            >
               <div style={{ marginBottom: '12px', color: 'var(--primary)' }}>
                 <Icon size={28} />
               </div>
@@ -733,6 +742,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   onClick={() => onRollback(message.id)}
                   title="重新生成"
                   style={iconBtnStyle}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
                 >
                   <RefreshCw size={15} />
                 </button>
@@ -745,6 +756,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   ...iconBtnStyle,
                   color: speakingMsgId === message.id ? 'var(--primary)' : 'var(--gray-400)',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
               >
                 <Volume2 size={15} />
               </button>
@@ -753,6 +766,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                 onClick={() => navigator.clipboard.writeText(message.content).catch(() => {})}
                 title="复制"
                 style={iconBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
               >
                 <Copy size={15} />
               </button>
@@ -762,6 +777,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   onClick={() => onGenerateMindmap(message.id, message.content)}
                   title="生成思维导图"
                   style={iconBtnStyle}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.backgroundColor = 'oklch(0.45 0.18 280 / 0.06)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
                 >
                   <GitBranch size={15} />
                 </button>

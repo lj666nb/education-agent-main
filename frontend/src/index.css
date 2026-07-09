@@ -1447,3 +1447,55 @@ hr {
 .sidebar-slide-in {
   animation: sidebar-slide-in 0.25s ease-out;
 }
+
+/* ── Hover border animation ── */
+@keyframes borderColorShift {
+  0%   { border-color: var(--primary); }
+  25%  { border-color: oklch(0.55 0.22 280); }
+  50%  { border-color: oklch(0.55 0.22 340); }
+  75%  { border-color: oklch(0.55 0.22 160); }
+  100% { border-color: var(--primary); }
+}
+
+.btn-hover-border {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.btn-hover-border:hover {
+  animation: borderColorShift 2s ease-in-out infinite;
+  box-shadow: 0 0 0 3px oklch(0.55 0.18 200 / 0.1);
+}
+
+.feature-card-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+.fade-in-up {
+  animation: fade-in-up 0.25s ease-out;
+}
+
+/* ── Input card hover glow ── */
+.chat-input-card {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.chat-input-card:focus-within {
+  box-shadow: var(--chat-input-shadow-focus) !important;
+  border-color: oklch(0.55 0.18 200 / 0.3) !important;
+}
+
+/* ── Tag button hover effect ── */
+.chat-tag-btn {
+  transition: all 0.2s ease;
+}
+.chat-tag-btn:hover {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px oklch(0.55 0.18 200 / 0.08);
+}
+
+/* ── Icon button hover border animation ── */
+.icon-btn-animated {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, background-color 0.3s ease;
+}
+.icon-btn-animated:hover {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px oklch(0.55 0.18 200 / 0.1);
+}

@@ -116,10 +116,10 @@ function SessionItem({ session, isFav, currentChatId, onSelectChat, onDeleteChat
 
 const collapseIconBtnStyle: React.CSSProperties = {
   width: '32px', height: '32px', borderRadius: '8px',
-  border: 'none', backgroundColor: 'transparent',
+  border: '2px solid transparent', backgroundColor: 'transparent',
   color: 'var(--gray-400)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  transition: 'background-color 0.15s, color 0.15s',
+  transition: 'background-color 0.15s, color 0.15s, border-color 0.3s',
 }
 
 // ── Main Sidebar component ──
@@ -220,12 +220,18 @@ export default function Sidebar({
           alignItems: 'center',
           paddingTop: '16px',
           gap: '16px',
-          zIndex: 100,
+          zIndex: 250,
         }}>
-          <button onClick={onToggle} title="展开侧边栏" style={collapseIconBtnStyle}>
+          <button onClick={onToggle} title="展开侧边栏" style={collapseIconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
             <PanelLeftOpen size={18} />
           </button>
-          <button onClick={onNewChat} title="新建对话" style={collapseIconBtnStyle}>
+          <button onClick={onNewChat} title="新建对话" style={collapseIconBtnStyle}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
             <Plus size={18} />
           </button>
           {sessions.filter(s => favorites[s.id]).slice(0, 5).map(s => (
@@ -234,6 +240,18 @@ export default function Sidebar({
                 ...collapseIconBtnStyle,
                 backgroundColor: currentChatId === s.id ? 'oklch(0.55 0.18 200 / 0.08)' : 'transparent',
                 color: currentChatId === s.id ? 'var(--primary)' : 'var(--gray-400)',
+              }}
+              onMouseEnter={e => {
+                if (currentChatId !== s.id) {
+                  e.currentTarget.style.borderColor = 'var(--primary)'
+                  e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (currentChatId !== s.id) {
+                  e.currentTarget.style.borderColor = 'transparent'
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }
               }}
             >
               <MessageSquare size={18} />
@@ -254,7 +272,7 @@ export default function Sidebar({
         boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.04)' : 'none',
         transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
-        zIndex: 100,
+        zIndex: 250,
       }}>
         <div style={{
           width: 'var(--chat-sidebar-width)',
@@ -266,7 +284,10 @@ export default function Sidebar({
         }}>
           {/* Top row: collapse + title + new chat */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-            <button onClick={onToggle} title="收起侧边栏" style={collapseIconBtnStyle}>
+            <button onClick={onToggle} title="收起侧边栏" style={collapseIconBtnStyle}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
               <PanelLeftClose size={18} />
             </button>
             <div style={{

@@ -1,5 +1,5 @@
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { ArrowUp, Paperclip, Brain, Globe, ChevronDown } from 'lucide-react'
+import { ArrowUp, Plus, Brain, Globe, ChevronDown, FileUp, BarChart3, GitBranch } from 'lucide-react'
 import { chatApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 
@@ -30,6 +30,10 @@ interface InputAreaProps {
   pastedFiles: PastedFile[]
   onStopGeneration?: () => void
   prefillText?: string
+  enableAutoChart: boolean
+  onEnableAutoChartChange: (enabled: boolean) => void
+  enableAutoMindmap: boolean
+  onEnableAutoMindmapChange: (enabled: boolean) => void
 }
 
 const MODEL_OPTIONS: { value: ModelType; label: string }[] = [
@@ -60,6 +64,7 @@ function TagButton({ icon: Icon, label, active, onClick, disabled }: {
     <button
       onClick={onClick}
       disabled={disabled}
+      className="chat-tag-btn"
       style={{
         display: 'flex', alignItems: 'center', gap: '4px',
         padding: '5px 10px', borderRadius: '8px', border: '1px solid',
@@ -68,7 +73,7 @@ function TagButton({ icon: Icon, label, active, onClick, disabled }: {
         color: active ? 'var(--primary)' : 'var(--gray-500)',
         fontSize: '0.75rem', cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit', opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.15s', whiteSpace: 'nowrap',
+        whiteSpace: 'nowrap',
       }}
     >
       <Icon size={13} />
@@ -93,6 +98,10 @@ export default function InputArea({
   onStopGeneration,
   noApiConfigured,
   prefillText,
+  enableAutoChart,
+  onEnableAutoChartChange,
+  enableAutoMindmap,
+  onEnableAutoMindmapChange,
 }: InputAreaProps) {
   const [input, setInput] = useState('')
   const [isOcrLoading, setIsOcrLoading] = useState(false)
@@ -104,6 +113,20 @@ export default function InputArea({
   const [isProcessingPaste, setIsProcessingPaste] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const featurePanelRef = useRef<HTMLDivElement>(null)
+  const [showFeaturePanel, setShowFeaturePanel] = useState(false)
+
+  // Close feature panel on click outside
+  useEffect(() => {
+    if (!showFeaturePanel) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (featurePanelRef.current && !featurePanelRef.current.contains(e.target as Node)) {
+        setShowFeaturePanel(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showFeaturePanel])
 
   const handleSend = () => {
     if (input.trim() && !isLoading) {
@@ -307,14 +330,13 @@ export default function InputArea({
       display: 'flex', flexDirection: 'column', alignItems: 'center',
     }}>
       {/* Card container */}
-      <div style={{
+      <div className="chat-input-card" style={{
         width: '100%', maxWidth: 'var(--chat-input-max-width)',
         backgroundColor: 'var(--chat-input-bg)',
         borderRadius: '16px',
         boxShadow: 'var(--chat-input-shadow)',
         border: '1px solid var(--gray-100)',
         overflow: 'hidden',
-        transition: 'box-shadow 0.2s',
       }}>
         {/* Suggestions row — shown when input is empty */}
         {!input.trim() && !isLoading && (
@@ -323,19 +345,164 @@ export default function InputArea({
             flexWrap: 'wrap',
           }}>
             {SUGGESTIONS.map(q => (
-              <button key={q} onClick={() => handleSuggestionClick(q)} style={{
+              <button key={q} onClick={() => handleSuggestionClick(q)} className="chat-tag-btn" style={{
                 padding: '6px 14px', borderRadius: '16px', border: '1px solid var(--gray-200)',
                 background: 'var(--chat-tag-bg)', color: 'var(--gray-600)',
                 fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
-                transition: 'all 0.15s',
                 whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gray-200)'; e.currentTarget.style.color = 'var(--gray-600)' }}
               >
                 {q}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Feature panel — shown when Plus is clicked */}
+        {showFeaturePanel && (
+          <div ref={featurePanelRef} className="fade-in-up" style={{
+            display: 'flex', gap: '10px', padding: '8px 16px 4px',
+            flexWrap: 'wrap',
+          }}>
+            {/* Upload file */}
+            <div
+              onClick={() => { fileInputRef.current?.click(); setShowFeaturePanel(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 14px', borderRadius: '10px',
+                border: '1px solid var(--gray-200)',
+                backgroundColor: '#FFFFFF',
+                cursor: 'pointer',
+                transition: 'all 0.25s ease',
+                flex: '1 1 auto', minWidth: '140px',
+              }}
+              className="feature-card-hover"
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--primary)'
+                e.currentTarget.style.boxShadow = '0 0 0 3px oklch(0.55 0.18 200 / 0.1)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--gray-200)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                backgroundColor: 'oklch(0.55 0.18 200 / 0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--primary)', flexShrink: 0,
+              }}>
+                <FileUp size={16} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--gray-700)' }}>上传文件</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--gray-400)' }}>PDF、Word、PPT</div>
+              </div>
+            </div>
+
+            {/* Chart generation toggle */}
+            <div
+              onClick={() => onEnableAutoChartChange(!enableAutoChart)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 14px', borderRadius: '10px',
+                border: enableAutoChart ? '2px solid var(--primary)' : '1px solid var(--gray-200)',
+                backgroundColor: enableAutoChart ? 'oklch(0.55 0.18 200 / 0.06)' : '#FFFFFF',
+                cursor: 'pointer',
+                transition: 'all 0.25s ease',
+                flex: '1 1 auto', minWidth: '140px',
+              }}
+              className="feature-card-hover"
+              onMouseEnter={e => {
+                if (!enableAutoChart) {
+                  e.currentTarget.style.borderColor = 'var(--primary)'
+                  e.currentTarget.style.boxShadow = '0 0 0 3px oklch(0.55 0.18 200 / 0.1)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!enableAutoChart) {
+                  e.currentTarget.style.borderColor = 'var(--gray-200)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
+              }}
+            >
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                backgroundColor: enableAutoChart ? 'oklch(0.55 0.18 200 / 0.15)' : 'oklch(0.55 0.18 200 / 0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: enableAutoChart ? 'var(--primary)' : 'var(--primary)',
+                flexShrink: 0,
+                transition: 'background-color 0.25s ease',
+              }}>
+                <BarChart3 size={16} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--gray-700)' }}>图表生成</div>
+                <div style={{ fontSize: '0.6875rem', color: enableAutoChart ? 'var(--primary)' : 'var(--gray-400)', transition: 'color 0.25s ease' }}>
+                  {enableAutoChart ? '已开启 · 自动生成' : 'AI 自动绘制图表'}
+                </div>
+              </div>
+              {enableAutoChart && (
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  backgroundColor: 'var(--primary)',
+                  flexShrink: 0,
+                  boxShadow: '0 0 6px oklch(0.55 0.18 200 / 0.5)',
+                }} />
+              )}
+            </div>
+
+            {/* Mind map toggle */}
+            <div
+              onClick={() => onEnableAutoMindmapChange(!enableAutoMindmap)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 14px', borderRadius: '10px',
+                border: enableAutoMindmap ? '2px solid #7C3AED' : '1px solid var(--gray-200)',
+                backgroundColor: enableAutoMindmap ? 'oklch(0.45 0.18 280 / 0.04)' : '#FFFFFF',
+                cursor: 'pointer',
+                transition: 'all 0.25s ease',
+                flex: '1 1 auto', minWidth: '140px',
+              }}
+              className="feature-card-hover"
+              onMouseEnter={e => {
+                if (!enableAutoMindmap) {
+                  e.currentTarget.style.borderColor = '#7C3AED'
+                  e.currentTarget.style.boxShadow = '0 0 0 3px oklch(0.45 0.18 280 / 0.1)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!enableAutoMindmap) {
+                  e.currentTarget.style.borderColor = 'var(--gray-200)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }
+              }}
+            >
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                backgroundColor: enableAutoMindmap ? 'oklch(0.45 0.18 280 / 0.12)' : 'oklch(0.45 0.18 280 / 0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#7C3AED',
+                flexShrink: 0,
+                transition: 'background-color 0.25s ease',
+              }}>
+                <GitBranch size={16} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--gray-700)' }}>思维导图</div>
+                <div style={{ fontSize: '0.6875rem', color: enableAutoMindmap ? '#7C3AED' : 'var(--gray-400)', transition: 'color 0.25s ease' }}>
+                  {enableAutoMindmap ? '已开启 · 自动生成' : '知识结构可视化'}
+                </div>
+              </div>
+              {enableAutoMindmap && (
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  backgroundColor: '#7C3AED',
+                  flexShrink: 0,
+                  boxShadow: '0 0 6px oklch(0.45 0.18 280 / 0.5)',
+                }} />
+              )}
+            </div>
           </div>
         )}
 
@@ -344,24 +511,31 @@ export default function InputArea({
           display: 'flex', alignItems: 'flex-end', gap: '10px',
           padding: '12px 16px',
         }}>
-          {/* Attach button */}
+          {/* Plus button — toggles feature panel */}
           <>
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowFeaturePanel(!showFeaturePanel)}
               disabled={isOcrLoading || isProcessingPaste}
-              title="上传文件"
+              title="添加功能"
+              className="icon-btn-animated"
               style={{
-                padding: '8px', border: 'none', background: 'none',
-                color: 'var(--gray-400)', cursor: 'pointer',
+                padding: '8px', border: '2px solid transparent', background: 'none',
+                color: showFeaturePanel ? 'var(--primary)' : 'var(--gray-400)',
+                cursor: 'pointer',
                 borderRadius: '8px', flexShrink: 0,
                 display: 'flex', alignItems: 'center',
-                transition: 'color 0.15s, background-color 0.15s',
               }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--gray-400)'}
+              onMouseEnter={e => {
+                if (!showFeaturePanel) e.currentTarget.style.color = 'var(--primary)'
+                e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)'
+              }}
+              onMouseLeave={e => {
+                if (!showFeaturePanel) e.currentTarget.style.color = 'var(--gray-400)'
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
             >
-              <Paperclip size={20} />
+              <Plus size={20} />
             </button>
           </>
 
@@ -396,14 +570,14 @@ export default function InputArea({
               <div style={{ width: '14px', height: '14px', borderRadius: '2px', backgroundColor: 'white' }} />
             </button>
           ) : (
-            <button onClick={handleSend} disabled={!input.trim() || isLoading || noApiConfigured} style={{
+            <button onClick={handleSend} disabled={!input.trim() || isLoading || noApiConfigured} className="icon-btn-animated" style={{
               width: '36px', height: '36px', borderRadius: '50%',
-              border: 'none',
+              border: '2px solid transparent',
               backgroundColor: input.trim() && !isLoading && !noApiConfigured ? 'var(--primary)' : 'var(--gray-200)',
               color: input.trim() && !isLoading && !noApiConfigured ? 'white' : 'var(--gray-400)',
               cursor: input.trim() && !isLoading && !noApiConfigured ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, transition: 'background-color 0.15s, transform 0.15s',
+              flexShrink: 0,
             }}>
               <ArrowUp size={20} />
             </button>
