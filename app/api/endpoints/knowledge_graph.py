@@ -7,11 +7,12 @@ GET  /knowledge-graph/list      列出已构建的知识图谱
 
 import asyncio, json, hashlib, logging, os, re, time, uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import fitz  # PyMuPDF
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -43,6 +44,19 @@ EXTRACTION_PROMPT = """你是一个知识图谱构建助手。从以下教材文
 
 规则: 1)只提取学术/技术知识点 2)difficulty: 1=基础 3=中级 5=前沿 3)importance: 1=边缘 3=常规 5=核心 4)PREREQUISITE严格判断 5)每块≤15实体≤10关系"""
 
+CHAT_SYSTEM_PROMPT = """你是一个知识图谱学习助手。根据提供的知识图谱结构和文档内容回答用户问题。
+
+要求：
+1. 回答基于提供的上下文（图谱结构 + 文档片段），不要编造信息
+2. 引用具体的知识点名称和相关文档片段
+3. 如果上下文不足以回答问题，明确说明
+4. 回答使用中文，结构化呈现"""
+
+KEYWORD_EXTRACTION_PROMPT = """从以下问题中提取关键词（用于检索知识图谱），只返回逗号分隔的关键词，不要其他内容：
+
+问题：{question}
+关键词："""
+
 # ── 请求/响应模型 ──
 class KGTaskStatus(BaseModel):
     task_id: str
@@ -53,6 +67,178 @@ class KGTaskStatus(BaseModel):
 
 class KGListResponse(BaseModel):
     knowledge_graphs: list
+
+class KGChatRequest(BaseModel):
+    question: str
+    history: List[Dict[str, str]] = []
+
+
+# ── JSON 解析辅助函数 ──
+
+def sanitize_llm_json(text: str) -> str:
+    """清理 LLM 返回的 JSON 字符串，处理常见格式问题。
+
+    借鉴 GraphRAG llmExtractor.js 的 sanitizeJson 逻辑：
+    - 提取 markdown 代码块中的 JSON
+    - 清理中文标点（全角冒号/逗号/引号 → 半角）
+    - 移除尾随逗号
+    - 提取平衡的 JSON 对象
+    """
+    if not text or not isinstance(text, str):
+        return "{}"
+
+    text = text.strip()
+
+    # Step 1: 从 markdown 代码块提取
+    m = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?\s*```', text, re.IGNORECASE)
+    if m:
+        text = m.group(1).strip()
+
+    # Step 2: 尝试找到最外层的 { } 对
+    if not text.startswith('{') and not text.startswith('['):
+        first_brace = text.find('{')
+        last_brace = text.rfind('}')
+        if first_brace != -1 and last_brace > first_brace:
+            text = text[first_brace:last_brace + 1]
+
+    # Step 3: 提取平衡的 JSON 对象
+    if not text.startswith('{'):
+        text = _extract_json_object(text) or text
+
+    # Step 4: 清理中文标点
+    text = re.sub(r'"\s*：\s*', '": ', text)       # "key"： → "key":
+    text = re.sub(r'：\s*"', ': "', text)           # key：" → key: "
+    text = re.sub(r'：\s*\[', ': [', text)          # key：[ → key: [
+    text = re.sub(r'：\s*\{', ': {', text)          # key：{ → key: {
+    text = re.sub(r'：\s*(\d)', r': \1', text)      # key：123 → key: 123
+    text = re.sub(r'"\s*，\s*"', '", "', text)      # "a"，"b" → "a", "b"
+    text = re.sub(r'"\s*，\s*\{', '", {', text)     # "a"，{ → "a", {
+    text = re.sub(r'\}\s*，\s*\{', '}, {', text)    # }，{ → }, {
+    text = re.sub(r'\]\s*，\s*"', '], "', text)     # ]，" → ], "
+    text = re.sub(r'"\s*，\s*\[', '", [', text)     # "a"，[ → "a", [
+    # 中文引号 → ASCII
+    text = re.sub(r'[“”‘’]', '"', text)
+    # 移除尾随逗号
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    return text
+
+
+def _extract_json_object(text: str) -> Optional[str]:
+    """从字符串中提取最外层平衡的 JSON 对象"""
+    start = text.find('{')
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text[start:], start):
+        if escape:
+            escape = False
+            continue
+        if ch == '\\' and in_string:
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return None
+
+
+def safe_parse_llm_json(content: str) -> dict:
+    """安全解析 LLM 返回的 JSON"""
+    try:
+        return json.loads(content.strip())
+    except json.JSONDecodeError:
+        pass
+    sanitized = sanitize_llm_json(content)
+    try:
+        return json.loads(sanitized)
+    except json.JSONDecodeError:
+        logger.warning(f"Failed to parse LLM JSON. Raw (first 500): {content[:500]}")
+        return {"entities": [], "triples": []}
+
+
+def extract_keywords_simple(question: str) -> List[str]:
+    """简单中文/英文关键词提取（不依赖 LLM）。
+
+    借鉴 GraphRAG textTokenizer.js：
+    - 中文：移除标点和停用词后，提取 2-gram 和长词
+    - 英文：按空格分词，过滤停用词和短词
+    """
+    STOP_WORDS = {'的', '是', '了', '在', '和', '也', '都', '就', '有', '与', '不',
+                  '这', '那', '我', '你', '他', '她', '它', '们', '吗', '呢', '吧',
+                  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+                  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+                  'should', 'may', 'might', 'can', 'shall', 'i', 'you', 'he', 'she',
+                  'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'to', 'of',
+                  'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'about',
+                  '什么', '怎么', '如何', '哪些', '哪个', '为什么', '是不是', '有没有',
+                  '可以', '能', '会', '请', '问', '请问', '多少', '几个', 'and', 'or'}
+
+    # 移除常见标点
+    # 移除中英文标点符号
+    cleaned = re.sub(r'[，。！？、；：""''【】《》（）(){}\[\]{},.!?;:\"\'`\s]+', ' ', question)
+
+    keywords = []
+    # 提取中文词（2-4 字组合）
+    chinese_chars = re.findall(r'[一-鿿]+', cleaned)
+    for word in chinese_chars:
+        word = word.strip()
+        if len(word) >= 2 and word not in STOP_WORDS:
+            keywords.append(word)
+            # 同时拆分为 2-gram
+            if len(word) >= 4:
+                for i in range(len(word) - 1):
+                    bigram = word[i:i+2]
+                    if bigram not in STOP_WORDS:
+                        keywords.append(bigram)
+
+    # 提取英文词
+    english_words = re.findall(r'[a-zA-Z]+', cleaned)
+    for w in english_words:
+        wl = w.lower()
+        if len(wl) >= 2 and wl not in STOP_WORDS:
+            keywords.append(wl)
+
+    # 去重 + 排序（长度优先，长词更有价值）
+    seen = set()
+    unique = []
+    for kw in sorted(keywords, key=len, reverse=True):
+        if kw not in seen:
+            seen.add(kw)
+            unique.append(kw)
+
+    return unique[:20]  # 最多 20 个关键词
+
+
+async def extract_keywords_llm(question: str, api_key: str) -> List[str]:
+    """使用 LLM 提取关键词（更精准）"""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "deepseek-chat",
+                    "messages": [{"role": "user", "content": KEYWORD_EXTRACTION_PROMPT.format(question=question)}],
+                    "temperature": 0.1, "max_tokens": 100,
+                }
+            )
+        if r.status_code == 200:
+            content = r.json()["choices"][0]["message"]["content"].strip()
+            return [kw.strip() for kw in content.replace('，', ',').split(',') if kw.strip()]
+    except Exception:
+        pass
+    return extract_keywords_simple(question)
 
 
 async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: str, api_key: str, user_id: str = None):
@@ -66,12 +252,12 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
         # Extract text by chunks
         chunks = []
         for page_num in range(total_pages):
-            text = doc[page_num].get_text()
-            if not text or len(text.strip()) < 100:
+            page_text = doc[page_num].get_text()
+            if not page_text or len(page_text.strip()) < 20:
                 continue
-            paragraphs = [p.strip() for p in text.split('\n\n') if len(p.strip()) > 100]
+            paragraphs = [p.strip() for p in page_text.split('\n\n') if len(p.strip()) > 30]
             for para in paragraphs:
-                if len(para) < 80:
+                if len(para) < 30:
                     continue
                 chunk_id = hashlib.md5(f'p{page_num}_{len(chunks)}'.encode()).hexdigest()[:10]
                 chunks.append({'id': chunk_id, 'page': page_num + 1, 'text': para[:800], 'char_count': min(len(para), 800)})
@@ -82,6 +268,40 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
         doc.close()
 
         _update_task(task_id, "parsing", 0.15, f"PDF 解析完成：{total_pages} 页, {len(chunks)} 个文本块")
+
+        # ── 创建 subject + 保存文本块（用于 RAG 关键词检索）──
+        subj_id = str(uuid.uuid4())
+        now_time = datetime.now(timezone.utc).isoformat()
+
+        # Step A: 创建 subject（独立事务，确保导入阶段能找到）
+        db_ctx = SessionLocal()
+        try:
+            db_ctx.execute(
+                text("INSERT INTO subjects (id, name, description, creator_id, sort_order, created_at, updated_at) VALUES (:i, :n, :d, :cr, 1, :ca, :ua)"),
+                {'i': subj_id, 'n': f'从{filename[:20]}提取', 'd': f'自动提取自PDF: {filename[:50]}',
+                 'cr': user_id, 'ca': now_time, 'ua': now_time}
+            )
+            db_ctx.commit()
+        except Exception as e:
+            logger.warning(f"Subject creation failed: {e}")
+        finally:
+            db_ctx.close()
+
+        # Step B: 保存文本块（失败不影响 KG 构建）
+        if chunks:
+            db_fc = SessionLocal()
+            try:
+                for ci, chunk in enumerate(chunks):
+                    db_fc.execute(
+                        text("INSERT INTO kg_file_contents (id, subject_id, file_name, chunk_id, page_number, content, chunk_index, created_at) VALUES (:i, :s, :f, :c, :p, :ct, :ci, :ca)"),
+                        {'i': str(uuid.uuid4()), 's': subj_id, 'f': filename, 'c': chunk['id'],
+                         'p': chunk['page'], 'ct': chunk['text'], 'ci': ci, 'ca': now_time}
+                    )
+                db_fc.commit()
+            except Exception as e:
+                logger.warning(f"File content storage failed: {e}")
+            finally:
+                db_fc.close()
 
         # ══ Stage 2: LLM Extraction ══
         _update_task(task_id, "extracting", 0.20, f"开始 LLM 实体抽取（{len(chunks)} 块）...")
@@ -107,16 +327,9 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
                     )
                 if r.status_code == 200:
                     content = r.json()["choices"][0]["message"]["content"]
-                    try:
-                        if content.strip().startswith("{"):
-                            data = json.loads(content.strip())
-                        else:
-                            m = re.search(r'\{[\s\S]*\}', content)
-                            data = json.loads(m.group(0)) if m else {"entities": [], "triples": []}
-                        all_entities.append(data.get("entities", []))
-                        all_triples.append(data.get("triples", []))
-                    except:
-                        pass
+                    data = safe_parse_llm_json(content)
+                    all_entities.append(data.get("entities", []))
+                    all_triples.append(data.get("triples", []))
             except Exception as e:
                 logger.warning(f"Chunk {i} extraction failed: {e}")
 
@@ -179,21 +392,21 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
                               s=t['subject'], o=t['object'])
                     except: pass
 
-        # PostgreSQL
+        # PostgreSQL (subject already created during parsing stage)
         try:
             db = SessionLocal()
-            now = datetime.now(timezone.utc).isoformat()
-            subj_id = str(uuid.uuid4())
-            db.execute(text("INSERT INTO subjects (id, name, description, creator_id, sort_order, created_at, updated_at) VALUES (:i, :n, :d, :u, 1, :c, :u)"),
-                       {'i': subj_id, 'n': f'从{filename[:20]}提取', 'd': f'自动提取自PDF: {filename[:50]}', 'u': user_id, 'c': now})
+            now_ts = datetime.now(timezone.utc).isoformat()
             did = str(uuid.uuid4())
-            db.execute(text("INSERT INTO knowledge_domains (id, subject_id, name, sort_order, created_at, updated_at) VALUES (:i, :s, :n, 1, :c, :u)"),
-                       {'i': did, 's': subj_id, 'n': '自动提取', 'c': now, 'u': now})
+            db.execute(
+                text("INSERT INTO knowledge_domains (id, subject_id, name, sort_order, created_at, updated_at) VALUES (:i, :s, :n, 1, :ca, :ua)"),
+                {'i': did, 's': subj_id, 'n': '自动提取', 'ca': now_ts, 'ua': now_ts}
+            )
             for i, e in enumerate(list(entities.values())[:200]):
-                if e.get('importance', 3) < 3: continue
                 pid = str(uuid.uuid4())
-                db.execute(text("INSERT INTO knowledge_points (id, domain_id, name, difficulty, sort_order, description, created_at, updated_at) VALUES (:i, :d, :n, :diff, :o, :desc, :c, :u)"),
-                           {'i': pid, 'd': did, 'n': e['name'], 'diff': e['difficulty'], 'o': i, 'desc': f'自动提取 · 重要性{e["importance"]}/5', 'c': now, 'u': now})
+                db.execute(
+                    text("INSERT INTO knowledge_points (id, domain_id, name, difficulty, sort_order, description, created_at, updated_at) VALUES (:i, :d, :n, :diff, :o, :desc, :ca, :ua)"),
+                    {'i': pid, 'd': did, 'n': e['name'], 'diff': e['difficulty'], 'o': i, 'desc': f'自动提取 · 重要性{e["importance"]}/5', 'ca': now_ts, 'ua': now_ts}
+                )
             db.commit()
             db.close()
         except Exception as e:
@@ -434,3 +647,282 @@ async def list_knowledge_graphs(db: Session = Depends(get_db), current_user=Depe
             "domains": d_count, "knowledge_points": pts,
         })
     return {"knowledge_graphs": result}
+
+
+# ═══ RAG 端点 ═══
+
+@router.post("/files/{subject_id}/search")
+async def search_file_contents(
+    subject_id: str,
+    keywords: List[str] = Query(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """在已存储的 PDF 文件内容中搜索关键词（用于 RAG 文档检索）。
+
+    借鉴 GraphRAG server/routes/files.js 的搜索逻辑：
+    对每个关键词逐文件匹配，提取上下文片段，按分数排序返回。
+    """
+    from app.models.question_bank import KgFileContent
+
+    rows = db.query(KgFileContent).filter(KgFileContent.subject_id == subject_id).order_by(KgFileContent.chunk_index).all()
+    if not rows:
+        return {"results": [], "total_files": 0}
+
+    # 按文件分组
+    files_map: Dict[str, List[KgFileContent]] = {}
+    for r in rows:
+        files_map.setdefault(r.file_name, []).append(r)
+
+    results = []
+    for fname, chunks in files_map.items():
+        score = 0
+        snippets = []
+        used_ranges: List[tuple] = []
+        full_text = " ".join(c.content for c in chunks)
+
+        for kw in keywords:
+            kw_lower = kw.lower()
+            search_from = 0
+            text_lower = full_text.lower()
+            while search_from < len(text_lower):
+                idx = text_lower.find(kw_lower, search_from)
+                if idx == -1:
+                    break
+                score += 1
+                start = max(0, idx - 200)
+                end = min(len(full_text), idx + len(kw) + 200)
+                overlaps = any(r_start < end and r_end > start for r_start, r_end in used_ranges)
+                if not overlaps:
+                    snippets.append(full_text[start:end])
+                    used_ranges.append((start, end))
+                search_from = idx + len(kw)
+
+        if score > 0:
+            results.append({
+                "file_name": fname,
+                "score": score,
+                "snippets": snippets[:8],
+                "full_content": full_text[:4000] if score >= 2 else None,
+                "page_count": len(set(c.page_number for c in chunks)),
+            })
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return {"results": results[:10], "total_files": len(files_map)}
+
+
+@router.post("/chat/{subject_id}")
+async def kg_rag_chat(
+    subject_id: str,
+    body: KGChatRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """知识图谱 RAG 智能问答（SSE 流式）。
+
+    两阶段 RAG（借鉴 PageIndex chat_service.py）：
+    1. Tree/Graph Search — 关键词提取 + Neo4j 图谱检索 + 文档内容检索
+    2. Answer Generation — 上下文组装 + LLM 流式回答
+
+    响应格式（SSE）：
+        data: {"phase":"searching","message":"..."}
+        data: {"phase":"nodes_found","node_ids":[...],"node_titles":[...]}
+        data: {"phase":"generating","message":"..."}
+        data: {"phase":"answer_chunk","content":"..."}
+        data: {"phase":"done","referenced_nodes":[...],"tokens_used":{...}}
+        data: {"phase":"error","message":"..."}
+    """
+    from app.models.question_bank import KnowledgePoint, KnowledgeDomain, Subject, KgFileContent
+    from app.models.api_settings import ApiSettings
+
+    # 1. 获取 LLM API Key
+    api_setting = db.query(ApiSettings).filter(
+        ApiSettings.user_id == str(current_user.student_id),
+        ApiSettings.provider.in_(["deepseek", "qwen"]),
+        ApiSettings.is_enabled == True,
+    ).first()
+    if not api_setting or not api_setting.api_key:
+        raise HTTPException(400, detail="请先在设置中配置 AI API Key 后再使用问答功能")
+
+    api_key = api_setting.api_key
+    model = "deepseek-chat" if api_setting.provider == "deepseek" else "qwen-turbo"
+
+    async def event_generator():
+        try:
+            # ══ Phase 1: 检索 ══
+            yield f"data: {json.dumps({'phase': 'searching', 'message': '正在提取关键词...'})}\n\n"
+
+            # 1a. 关键词提取
+            keywords = await extract_keywords_llm(body.question, api_key)
+            if not keywords:
+                keywords = extract_keywords_simple(body.question)
+
+            kw_str = chr(34) + ", ".join(keywords[:8]) + chr(34)
+            yield "data: " + json.dumps({"phase": "searching", "message": "关键词: " + kw_str}) + "\n\n"
+
+            # 1b. Graph 检索（从 Neo4j）
+            yield f"data: {json.dumps({'phase': 'searching', 'message': '正在检索知识图谱...'})}\n\n"
+
+            graph_context = {"nodes": [], "edges": []}
+            seed_node_names = set()
+            try:
+                neo4j = get_neo4j()
+                if neo4j.verify_connectivity():
+                    with neo4j.connect().session() as ns:
+                        # 查找匹配关键词的种子节点
+                        for kw in keywords[:10]:
+                            result = ns.run(
+                                "MATCH (k:KnowledgePoint) WHERE k.name CONTAINS $kw RETURN k.name AS name",
+                                kw=kw
+                            )
+                            for rec in result:
+                                name = rec.get("name", "")
+                                if name:
+                                    seed_node_names.add(name)
+
+                        if seed_node_names:
+                            # BFS 扩展子图（深度=1, 从种子节点沿所有关系扩展）
+                            sub_nodes = ns.run(
+                                """
+                                MATCH (k:KnowledgePoint)
+                                WHERE k.name IN $names
+                                OPTIONAL MATCH (k)-[r]-(neighbor:KnowledgePoint)
+                                RETURN DISTINCT k.name AS name, neighbor.name AS neighbor_name,
+                                       type(r) AS relation
+                                """,
+                                names=list(seed_node_names)[:20]
+                            )
+                            seen_nodes = set()
+                            for rec in sub_nodes:
+                                k_name = rec.get("name")
+                                n_name = rec.get("neighbor_name")
+                                rel = rec.get("relation")
+                                if k_name and k_name not in seen_nodes:
+                                    seen_nodes.add(k_name)
+                                    graph_context["nodes"].append({"name": k_name, "is_seed": True})
+                                if n_name and n_name not in seen_nodes:
+                                    seen_nodes.add(n_name)
+                                    graph_context["nodes"].append({"name": n_name, "is_seed": False})
+                                if k_name and n_name and rel:
+                                    graph_context["edges"].append({"source": k_name, "target": n_name, "relation": rel})
+            except Exception as e:
+                logger.warning(f"Neo4j RAG search failed: {e}")
+
+            yield f"data: {json.dumps({'phase': 'nodes_found', 'node_ids': list(seed_node_names)[:20], 'node_titles': list(seed_node_names)[:20]})}\n\n"
+
+            # 1c. 文档检索
+            yield f"data: {json.dumps({'phase': 'searching', 'message': '正在检索文档内容...'})}\n\n"
+
+            chunk_rows = db.query(KgFileContent).filter(
+                KgFileContent.subject_id == subject_id
+            ).order_by(KgFileContent.chunk_index).all()
+
+            doc_results = []
+            if chunk_rows:
+                files_map: Dict[str, List[KgFileContent]] = {}
+                for r in chunk_rows:
+                    files_map.setdefault(r.file_name, []).append(r)
+
+                for fname, chunks in files_map.items():
+                    full_text = " ".join(c.content for c in chunks)
+                    score = 0
+                    snippets = []
+                    text_lower = full_text.lower()
+                    used_ranges = []
+                    for kw in keywords[:8]:
+                        kw_lower = kw.lower()
+                        search_from = 0
+                        while search_from < len(text_lower):
+                            idx = text_lower.find(kw_lower, search_from)
+                            if idx == -1:
+                                break
+                            score += 1
+                            start = max(0, idx - 200)
+                            end = min(len(full_text), idx + len(kw) + 200)
+                            overlaps = any(r_start < end and r_end > start for r_start, r_end in used_ranges)
+                            if not overlaps:
+                                snippets.append(full_text[start:end])
+                                used_ranges.append((start, end))
+                            search_from = idx + len(kw)
+                    if score > 0:
+                        doc_results.append({"file_name": fname, "score": score, "snippets": snippets[:5],
+                                            "full_text": full_text[:3000] if score >= 2 else None})
+                doc_results.sort(key=lambda x: x["score"], reverse=True)
+
+            # ══ Phase 2: 构建上下文并生成答案 ══
+            yield f"data: {json.dumps({'phase': 'generating', 'message': '正在分析结果并生成答案...'})}\n\n"
+
+            # 组装上下文（借鉴 GraphRAG formatCombinedContext）
+            context_lines = []
+
+            # 文档内容（主要参考）
+            if doc_results:
+                context_lines.append("=== 文档内容（主要参考依据）===")
+                for dr in doc_results[:3]:
+                    context_lines.append(f"\n【文件: {dr['file_name']}】")
+                    if dr.get("full_text"):
+                        context_lines.append(dr["full_text"].strip())
+                    else:
+                        for snip in dr["snippets"][:3]:
+                            context_lines.append(snip.strip())
+                            context_lines.append("...")
+
+            # 图谱结构（辅助参考）
+            if graph_context["nodes"]:
+                context_lines.append("\n=== 知识图谱结构（辅助参考）===")
+                context_lines.append("\n【知识点】")
+                for n in graph_context["nodes"][:30]:
+                    marker = " ★" if n.get("is_seed") else ""
+                    context_lines.append(f"- {n['name']}{marker}")
+                if graph_context["edges"]:
+                    context_lines.append("\n【关系】")
+                    for e in graph_context["edges"][:20]:
+                        context_lines.append(f"- {e['source']} --[{e['relation']}]--> {e['target']}")
+
+            context = "\n".join(context_lines)
+            if len(context) > 8000:
+                context = context[:8000] + "\n...（上下文过长，已截断）"
+
+            # 构建消息
+            messages = [
+                {"role": "system", "content": CHAT_SYSTEM_PROMPT},
+                {"role": "user", "content": f"上下文信息：\n{context}\n\n用户问题：{body.question}\n\n请基于以上上下文回答问题。"}
+            ]
+            if body.history:
+                messages = [messages[0]] + body.history[-6:] + [messages[1]]
+
+            # 流式生成
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST",
+                    "https://api.deepseek.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": messages, "temperature": 0.7, "max_tokens": 2048, "stream": True}
+                ) as response:
+                    if response.status_code != 200:
+                        yield f"data: {json.dumps({'phase': 'error', 'message': f'AI API 请求失败: HTTP {response.status_code}'})}\n\n"
+                        return
+
+                    full_answer = ""
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            chunk_data = line[6:]
+                            if chunk_data == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(chunk_data)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    full_answer += content
+                                    yield f"data: {json.dumps({'phase': 'answer_chunk', 'content': content})}\n\n"
+                            except json.JSONDecodeError:
+                                continue
+
+            yield f"data: {json.dumps({'phase': 'done', 'referenced_nodes': list(seed_node_names)[:20], 'full_answer': full_answer, 'tokens_used': {}})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'phase': 'error', 'message': f'问答生成失败: {str(e)[:200]}'})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"})

@@ -1,399 +1,566 @@
 /**
- * KnowledgeGraphViz — 知识图谱可视化组件
+ * KnowledgeGraphViz — D3 力导向知识图谱可视化组件
  *
- * 使用领域分簇列式布局（Domain-Clustered Column Layout）：
- * - 每个领域（章节）为一列，节点纵向均匀分布 → 零重叠
- * - smoothstep 边路由 → 连线整洁不交叉
- * - 半透明细线 → 避免视觉杂乱
+ * 完整迁移自 GraphRAG-Example-master (ZSTP)，包含：
+ * - D3 force-directed/circular/grid/concentric 四种布局
+ * - 缩放/拖拽/平移
+ * - 节点悬浮提示 + 颜色图例
+ * - 关系边 + 标签
+ * - 高亮节点同步（从 RAG 问答传入）
  */
-import { useMemo } from 'react'
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  Node,
-  Edge,
-  NodeProps,
-  Handle,
-  Position,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-} from 'reactflow'
-import 'reactflow/dist/style.css'
+import { useRef, useEffect, useState, useCallback } from 'react'
+import * as d3 from 'd3'
 import type { GraphNode, GraphEdge } from '../api/knowledgeGraph'
+
+// ── 颜色常量 ──
+const TYPE_COLORS = [
+  '#4f6df5', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  '#a855f7', '#e11d48', '#0891b2', '#ca8a04', '#059669',
+]
+
+const BG_COLOR = '#FAFBFC'
+
+// ── 边样式映射 ──
+const RELATION_STYLES: Record<string, { color: string; dash: string }> = {
+  PREREQUISITE: { color: '#4f6df5', dash: 'none' },
+  CONTAINS: { color: '#22c55e', dash: 'none' },
+  RELATED_TO: { color: '#9CA3AF', dash: '6,3' },
+  APPLIES: { color: '#f59e0b', dash: 'none' },
+  DEPENDS_ON: { color: '#ef4444', dash: '4,2' },
+}
+
+function getTypeColor(type: string): string {
+  const key = (type || 'default').toLowerCase()
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0
+  return TYPE_COLORS[Math.abs(hash) % TYPE_COLORS.length]
+}
+
+function getNodeRadius(degree: number): number {
+  return Math.max(8, Math.min(22, 8 + Math.sqrt(degree || 0) * 2.5))
+}
+
+function getRelationStyle(relation: string) {
+  return RELATION_STYLES[relation] || { color: '#D1D5DB', dash: 'none' }
+}
+
+// ── 内部节点数据结构 ──
+interface D3Node extends d3.SimulationNodeDatum {
+  id: string
+  label: string
+  type: string
+  domainName: string
+  difficulty: number
+  color: string
+  radius: number
+  degree: number
+  highlighted: boolean
+  isSeed: boolean
+}
+
+interface D3Link extends d3.SimulationLinkDatum<D3Node> {
+  id: string
+  source: string | D3Node
+  target: string | D3Node
+  label: string
+  relation: string
+  color: string
+  dash: string
+}
+
+type LayoutType = 'force' | 'circular' | 'grid' | 'concentric'
 
 interface Props {
   nodes: GraphNode[]
   edges: GraphEdge[]
   onNodeClick?: (node: GraphNode) => void
+  highlightNodeNames?: string[]
 }
 
-/* ── 领域配色（按索引循环） ── */
-const DOMAIN_COLORS = [
-  { bg: '#EFF6FF', border: '#3B82F6', text: '#1E40AF' },   // 蓝
-  { bg: '#F0FDF4', border: '#22C55E', text: '#166534' },   // 绿
-  { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },   // 金
-  { bg: '#FDF2F8', border: '#EC4899', text: '#9D174D' },   // 粉
-  { bg: '#EDE9FE', border: '#8B5CF6', text: '#5B21B6' },   // 紫
-  { bg: '#FEF2F2', border: '#EF4444', text: '#991B1B' },   // 红
-  { bg: '#ECFDF5', border: '#14B8A6', text: '#115E59' },   // 青
-  { bg: '#FFF7ED', border: '#F97316', text: '#9A3412' },   // 橙
-  { bg: '#F0F9FF', border: '#0EA5E9', text: '#0C4A6E' },   // 天蓝
-  { bg: '#FAF5FF', border: '#A855F7', text: '#6B21A8' },   // 紫罗兰
-]
+export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlightNodeNames }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [hoveredNode, setHoveredNode] = useState<D3Node | null>(null)
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [currentLayout, setCurrentLayout] = useState<LayoutType>('force')
+  const [typeSet, setTypeSet] = useState<Map<string, string>>(new Map())
+  const simRef = useRef<d3.Simulation<D3Node, D3Link> | null>(null)
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const d3NodesRef = useRef<D3Node[]>([])
+  const d3LinksRef = useRef<D3Link[]>([])
 
-const NODE_HEIGHT = 66  // 每个节点占用高度（含间距）
-const NODE_WIDTH = 120  // 节点宽度
-const COL_GAP = 50      // 列间距
-
-function getDomainIndex(domainId: string, domainIds: string[]) {
-  const idx = domainIds.indexOf(domainId)
-  return idx >= 0 ? idx % DOMAIN_COLORS.length : 0
-}
-
-/* ── 自定义节点 ── */
-function CustomNode({ data }: NodeProps) {
-  const colors = data.colors || DOMAIN_COLORS[0]
-
-  return (
-    <div
-      style={{
-        padding: '2px 5px',
-        borderRadius: '5px',
-        border: `1px solid ${colors.border}`,
-        background: `linear-gradient(135deg, ${colors.bg}, white)`,
-        width: NODE_WIDTH - 10,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-body), system-ui, sans-serif',
-      }}
-    >
-      <Handle type="target" position={Position.Top} style={{ background: colors.border, width: 5, height: 5 }} />
-      <div style={{ textAlign: 'center' }}>
-        <div style={{
-          fontSize: '0.52rem',
-          fontWeight: 600,
-          color: '#1F2937',
-          lineHeight: 1.2,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          wordBreak: 'keep-all',
-        }}>
-          {data.label}
-        </div>
-        {data.domain && (
-          <div style={{
-            display: 'inline-block',
-            marginTop: 1,
-            padding: '0px 3px',
-            borderRadius: 3,
-            fontSize: '0.4rem',
-            background: colors.bg,
-            color: colors.text,
-            fontWeight: 500,
-            border: `1px solid ${colors.border}44`,
-            maxWidth: 90,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {data.domain}
-          </div>
-        )}
-        <div style={{ marginTop: 1, fontSize: '0.4rem', color: '#9CA3AF', lineHeight: 1 }}>
-          {'★'.repeat(data.difficulty || 3)}{'☆'.repeat(5 - (data.difficulty || 3))}
-        </div>
-      </div>
-      <Handle type="source" position={Position.Bottom} style={{ background: colors.border, width: 5, height: 5 }} />
-    </div>
-  )
-}
-
-const nodeTypes = { custom: CustomNode }
-
-/* ── 关系样式 ── */
-const RELATION_STYLES: Record<string, { label: string; color: string; width: number; dash: string; opacity: number }> = {
-  PREREQUISITE: { label: '前置', color: '#3B82F6', width: 1.5, dash: 'none', opacity: 0.5 },
-  RELATED_TO:   { label: '关联', color: '#94A3B8', width: 1, dash: '5,4', opacity: 0.25 },
-  CONTAINS:     { label: '包含', color: '#22C55E', width: 1, dash: 'none', opacity: 0.4 },
-  APPLIES:      { label: '应用', color: '#F59E0B', width: 1, dash: 'none', opacity: 0.4 },
-  DEPENDS_ON:   { label: '依赖', color: '#EF4444', width: 1, dash: 'none', opacity: 0.4 },
-}
-
-/* ═══════════════════════════════════════════
- * 领域分簇列式布局
- * ═══════════════════════════════════════════ */
-function domainColumnLayout(
-  graphNodes: GraphNode[],
-  graphEdges: GraphEdge[],
-) {
-  // 1. 按 domain 分组（保持领域输入顺序）
-  const domainOrder: string[] = []
-  const domainMap = new Map<string, GraphNode[]>()
-  for (const n of graphNodes) {
-    if (!domainMap.has(n.domain_id)) {
-      domainOrder.push(n.domain_id)
-      domainMap.set(n.domain_id, [])
+  // ── 构建 D3 数据 ──
+  const buildData = useCallback(() => {
+    // 计算每个节点的度
+    const degreeMap = new Map<string, number>()
+    for (const e of edges) {
+      degreeMap.set(e.source, (degreeMap.get(e.source) || 0) + 1)
+      degreeMap.set(e.target, (degreeMap.get(e.target) || 0) + 1)
     }
-    domainMap.get(n.domain_id)!.push(n)
-  }
 
-  // 2. 计算每列高度，确定画布尺寸
-  let maxNodesInCol = 0
-  for (const nodes of domainMap.values()) {
-    if (nodes.length > maxNodesInCol) maxNodesInCol = nodes.length
-  }
+    const highlightSet = new Set(highlightNodeNames || [])
+    const typeColors = new Map<string, string>()
 
-  const totalHeight = maxNodesInCol * NODE_HEIGHT + 80  // 上下留白
-  const totalWidth = domainOrder.length * (NODE_WIDTH + COL_GAP) + 60
+    const d3nodes: D3Node[] = nodes.map(n => {
+      const domainName = n.domain_name || '默认'
+      if (!typeColors.has(domainName)) {
+        typeColors.set(domainName, getTypeColor(domainName))
+      }
+      const deg = degreeMap.get(n.id) || 0
+      return {
+        id: n.id,
+        label: n.name,
+        type: domainName,
+        domainName: domainName,
+        difficulty: n.difficulty || 3,
+        color: typeColors.get(domainName)!,
+        radius: getNodeRadius(deg),
+        degree: deg,
+        highlighted: highlightSet.has(n.name),
+        isSeed: highlightSet.has(n.name),
+      }
+    })
 
-  // 3. 分配每个节点的坐标
-  const posMap = new Map<string, { x: number; y: number }>()
-  for (let di = 0; di < domainOrder.length; di++) {
-    const did = domainOrder[di]
-    const colNodes = domainMap.get(did) || []
-    const colX = 30 + di * (NODE_WIDTH + COL_GAP) + NODE_WIDTH / 2
-
-    // 列内节点均匀分布，居中对齐
-    const colHeight = colNodes.length * NODE_HEIGHT
-    const startY = (totalHeight - colHeight) / 2 + NODE_HEIGHT / 2
-
-    for (let ni = 0; ni < colNodes.length; ni++) {
-      posMap.set(colNodes[ni].id, {
-        x: colX,
-        y: startY + ni * NODE_HEIGHT,
+    const nodeIdSet = new Set(d3nodes.map(n => n.id))
+    const d3links: D3Link[] = edges
+      .filter(e => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
+      .map(e => {
+        const style = getRelationStyle(e.relation)
+        return {
+          id: `${e.source}-${e.target}-${e.relation}`,
+          source: e.source,
+          target: e.target,
+          label: e.relation === 'PREREQUISITE' ? '前置' : e.relation === 'CONTAINS' ? '包含' : e.relation === 'RELATED_TO' ? '' : e.relation,
+          relation: e.relation,
+          color: style.color,
+          dash: style.dash,
+        }
       })
+
+    setTypeSet(typeColors)
+    return { d3nodes, d3links }
+  }, [nodes, edges, highlightNodeNames])
+
+  // ── 主渲染逻辑 ──
+  useEffect(() => {
+    const container = containerRef.current
+    const svg = svgRef.current
+    if (!container || !svg) return
+
+    const { width, height } = container.getBoundingClientRect()
+    if (width === 0 || height === 0) return
+
+    const { d3nodes, d3links } = buildData()
+    d3NodesRef.current = d3nodes
+    d3LinksRef.current = d3links
+
+    if (d3nodes.length === 0) {
+      d3.select(svg).selectAll('*').remove()
+      return
     }
-  }
 
-  // 4. 优化：同领域节点间微调垂直位置，以减少边交叉
-  //    同一领域内，如果 A→B 有边，尽量让 B 在 A 正下方
-  //    构建领域内边导向：计算每个节点的"理想垂直位置"偏移
-  for (let di = 0; di < domainOrder.length; di++) {
-    const did = domainOrder[di]
-    const colNodes = domainMap.get(did) || []
-    if (colNodes.length <= 2) continue
+    // 清理
+    d3.select(svg).selectAll('*').remove()
+    if (simRef.current) { simRef.current.stop(); simRef.current = null }
 
-    // 计算领域内边吸引偏移
-    const idSet = new Set(colNodes.map(n => n.id))
-    const localEdges = graphEdges.filter(
-      e => idSet.has(e.source) && idSet.has(e.target),
-    )
+    const g = d3.select(svg).append('g').attr('class', 'graph-group')
 
-    // 对于每条领域内边，如果 source 在当前在 target 下方，交换它们的 y
-    // （只交换一次，不链式传播以避免过度调整）
-    for (const e of localEdges) {
-      const sPos = posMap.get(e.source)
-      const tPos = posMap.get(e.target)
-      if (!sPos || !tPos) continue
+    // Zoom
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 8])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform.toString())
+      })
+    d3.select(svg).call(zoom)
+    zoomRef.current = zoom
 
-      // 如果 source 在 target 下方（不应该），交换 y
-      if (sPos.y > tPos.y) {
-        const temp = sPos.y
-        sPos.y = tPos.y
-        tPos.y = temp
+    // ── 渲染边 ──
+    const linkG = g.append('g').attr('class', 'links')
+    const linkLines = linkG.selectAll<SVGLineElement, D3Link>('line')
+      .data(d3links)
+      .join('line')
+      .attr('stroke', d => d.color)
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', d => d.dash || 'none')
+      .attr('opacity', 0.6)
+
+    const linkLabels = linkG.selectAll<SVGTextElement, D3Link>('text')
+      .data(d3links.filter(l => l.label))
+      .join('text')
+      .text(d => d.label)
+      .attr('font-size', 9)
+      .attr('fill', '#9CA3AF')
+      .attr('text-anchor', 'middle')
+      .attr('dy', -4)
+
+    // ── 渲染节点 ──
+    const nodeG = g.append('g').attr('class', 'nodes')
+    const nodeGroups = nodeG.selectAll<SVGGElement, D3Node>('g')
+      .data(d3nodes)
+      .join('g')
+      .attr('class', 'graph-node')
+      .style('cursor', 'pointer')
+
+    nodeGroups.append('circle')
+      .attr('r', d => d.radius)
+      .attr('fill', d => d.color)
+      .attr('stroke', d => d3.color(d.color)!.darker(0.3).toString())
+      .attr('stroke-width', d => d.isSeed ? 3 : 1)
+      .attr('opacity', 0.9)
+
+    // 种子节点光环
+    nodeGroups.filter(d => d.isSeed)
+      .append('circle')
+      .attr('r', d => d.radius + 6)
+      .attr('fill', 'none')
+      .attr('stroke', '#f59e0b')
+      .attr('stroke-width', 2)
+      .attr('stroke-dasharray', '4,2')
+      .attr('class', 'seed-ring')
+      .lower()
+
+    nodeGroups.append('text')
+      .text(d => d.label.length > 8 ? d.label.slice(0, 8) + '..' : d.label)
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => d.radius + 13)
+      .attr('font-size', 10)
+      .attr('fill', '#374151')
+      .attr('font-family', 'system-ui, -apple-system, sans-serif')
+
+    // ── 事件绑定 ──
+    nodeGroups
+      .on('mouseenter', (event: MouseEvent, d: D3Node) => {
+        setHoveredNode(d)
+        setTooltipPos({ x: event.offsetX + 14, y: event.offsetY + 14 })
+      })
+      .on('mousemove', (event: MouseEvent) => {
+        setTooltipPos({ x: event.offsetX + 14, y: event.offsetY + 14 })
+      })
+      .on('mouseleave', () => {
+        setHoveredNode(null)
+      })
+      .on('click', (event: MouseEvent, d: D3Node) => {
+        event.stopPropagation()
+        onNodeClick?.(nodes.find(n => n.id === d.id)!)
+      })
+
+    // Drag
+    const drag = d3.drag<SVGGElement, D3Node>()
+      .on('start', (event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>, d: D3Node) => {
+        if (currentLayout === 'force' && simRef.current) {
+          simRef.current.alphaTarget(0.3).restart()
+        }
+        d.fx = d.x; d.fy = d.y
+      })
+      .on('drag', (event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>, d: D3Node) => {
+        d.fx = event.x; d.fy = event.y
+      })
+      .on('end', (event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>, d: D3Node) => {
+        if (currentLayout === 'force' && simRef.current) {
+          simRef.current.alphaTarget(0)
+        }
+        if (currentLayout !== 'force') {
+          d.fx = d.x; d.fy = d.y  // 静态布局保持拖拽位置
+        } else {
+          d.fx = null; d.fy = null
+        }
+      })
+    nodeGroups.call(drag)
+
+    // SVG 背景点击取消选择
+    d3.select(svg).on('click', (event: MouseEvent) => {
+      if (event.target === svg) {
+        // 点击空白区域
+      }
+    })
+
+    // ── 解析引用：将 link 的字符串 source/target 替换为节点对象 ──
+    function resolveLinks() {
+      const nodeMap = new Map(d3nodes.map(n => [n.id, n]))
+      for (const link of d3links) {
+        if (typeof link.source === 'string') link.source = nodeMap.get(link.source) || link.source
+        if (typeof link.target === 'string') link.target = nodeMap.get(link.target) || link.target
       }
     }
+
+    // ── 布局函数 ──
+    function applyLayout(layout: LayoutType) {
+      d3nodes.forEach(n => { n.fx = null; n.fy = null })
+
+      const cx = width / 2, cy = height / 2
+
+      switch (layout) {
+        case 'circular': {
+          const r = Math.min(width, height) * 0.38
+          d3nodes.forEach((n, i) => {
+            const angle = (2 * Math.PI * i) / d3nodes.length - Math.PI / 2
+            n.x = cx + r * Math.cos(angle); n.y = cy + r * Math.sin(angle)
+            n.fx = n.x; n.fy = n.y
+          })
+          break
+        }
+        case 'grid': {
+          const cols = Math.ceil(Math.sqrt(d3nodes.length))
+          const rows = Math.ceil(d3nodes.length / cols)
+          const cellW = width / (cols + 1), cellH = height / (rows + 1)
+          d3nodes.forEach((n, i) => {
+            n.x = (i % cols + 1) * cellW; n.y = (Math.floor(i / cols) + 1) * cellH
+            n.fx = n.x; n.fy = n.y
+          })
+          break
+        }
+        case 'concentric': {
+          const maxR = Math.min(width, height) * 0.38
+          const maxDeg = Math.max(...d3nodes.map(n => n.degree), 1)
+          const innerR = maxR * 0.3
+          d3nodes.forEach((n, i) => {
+            const t = n.degree / maxDeg
+            const r = innerR + t * (maxR - innerR)
+            const angle = (2 * Math.PI * i) / d3nodes.length - Math.PI / 2
+            n.x = cx + r * Math.cos(angle); n.y = cy + r * Math.sin(angle)
+            n.fx = n.x; n.fy = n.y
+          })
+          break
+        }
+        case 'force':
+        default:
+          break
+      }
+      // 静态布局：解析边引用 → 更新 DOM
+      resolveLinks()
+      ticked()
+    }
+
+    // ── Tick ──
+    function ticked() {
+      nodeGroups.attr('transform', d => `translate(${d.x},${d.y})`)
+      linkLines
+        .attr('x1', d => (d.source as D3Node).x!)
+        .attr('y1', d => (d.source as D3Node).y!)
+        .attr('x2', d => (d.target as D3Node).x!)
+        .attr('y2', d => (d.target as D3Node).y!)
+      linkLabels
+        .attr('x', d => ((d.source as D3Node).x! + (d.target as D3Node).x!) / 2)
+        .attr('y', d => ((d.source as D3Node).y! + (d.target as D3Node).y!) / 2 - 4)
+    }
+
+    // ── Force Simulation ──
+    function runForce() {
+      if (simRef.current) simRef.current.stop()
+      const sim = d3.forceSimulation<D3Node>(d3nodes)
+        .force('link', d3.forceLink<D3Node, D3Link>(d3links).id(d => d.id).distance(80))
+        .force('charge', d3.forceManyBody().strength(-150))
+        .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+        .force('collision', d3.forceCollide().radius(d => d.radius + 6))
+        .on('tick', ticked)
+      simRef.current = sim
+    }
+
+    // ── 根据当前布局初始化 ──
+    if (currentLayout === 'force') {
+      runForce()
+    } else {
+      applyLayout(currentLayout)
+    }
+
+    // ── 清理 ──
+    return () => {
+      if (simRef.current) { simRef.current.stop(); simRef.current = null }
+    }
+  }, [nodes, edges, currentLayout, highlightNodeNames])
+
+  // ── 高亮更新（增量） ──
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const highlightSet = new Set(highlightNodeNames || [])
+    d3.select(svg).selectAll<SVGGElement, D3Node>('g.graph-node')
+      .select('circle:first-child')
+      .attr('stroke-width', d => highlightSet.has(d.label) ? 3 : 1)
+      .attr('stroke', d => highlightSet.has(d.label) ? '#f59e0b' : d3.color(d.color)!.darker(0.3).toString())
+    d3.select(svg).selectAll<SVGGElement, D3Node>('g.graph-node')
+      .select('.seed-ring')
+      .style('display', d => highlightSet.has(d.label) ? 'block' : 'none')
+  }, [highlightNodeNames])
+
+  // ── Zoom 控制 ──
+  const zoomIn = () => {
+    if (!svgRef.current || !zoomRef.current) return
+    d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 1.3)
+  }
+  const zoomOut = () => {
+    if (!svgRef.current || !zoomRef.current) return
+    d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 0.7)
+  }
+  const resetZoom = () => {
+    if (!svgRef.current || !zoomRef.current) return
+    d3.select(svgRef.current).transition().duration(500)
+      .call(zoomRef.current.transform, d3.zoomIdentity)
+  }
+  const fitToView = () => {
+    if (!svgRef.current || !zoomRef.current || d3NodesRef.current.length === 0) return
+    const ns = d3NodesRef.current
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const n of ns) {
+      minX = Math.min(minX, (n.x || 0) - n.radius)
+      minY = Math.min(minY, (n.y || 0) - n.radius)
+      maxX = Math.max(maxX, (n.x || 0) + n.radius)
+      maxY = Math.max(maxY, (n.y || 0) + n.radius)
+    }
+    const rect = containerRef.current?.getBoundingClientRect()
+    const w = rect?.width || 800, h = rect?.height || 600
+    const pad = 50, gw = maxX - minX + pad * 2, gh = maxY - minY + pad * 2
+    const scale = Math.min(w / gw, h / gh, 2)
+    const tx = (w - (minX + maxX) * scale) / 2
+    const ty = (h - (minY + maxY) * scale) / 2
+    d3.select(svgRef.current).transition().duration(500)
+      .call(zoomRef.current!.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
   }
 
-  /* ── 领域标头 Y 坐标 ── */
-  const domainHeaderY: Record<string, number> = {}
-  for (const [did, nodes] of domainMap) {
-    const positions = nodes.map(n => posMap.get(n.id)?.y ?? 0)
-    const minY = Math.min(...positions)
-    const maxY = Math.max(...positions)
-    domainHeaderY[did] = minY - NODE_HEIGHT / 2 - 4
+  const handleLayout = (layout: LayoutType) => {
+    setCurrentLayout(layout)
   }
 
-  // 5. 构建 ReactFlow 节点
-  const domainIds = Array.from(new Set(graphNodes.map(n => n.domain_id)))
-  const flowNodes: Node[] = []
-
-  // 领域标头节点（透明，用于显示领域名称）
-  for (let di = 0; di < domainOrder.length; di++) {
-    const did = domainOrder[di]
-    const colNodes = domainMap.get(did) || []
-    if (colNodes.length === 0) continue
-    const ci = getDomainIndex(did, domainIds)
-    const colX = 30 + di * (NODE_WIDTH + COL_GAP) + NODE_WIDTH / 2
-
-    const domainName = colNodes[0].domain_name
-    flowNodes.push({
-      id: `header-${did}`,
-      type: 'default',
-      position: { x: colX - 50, y: domainHeaderY[did] - 18 },
-      data: { label: domainName },
-      style: {
-        background: 'transparent',
-        border: 'none',
-        fontSize: '0.7rem',
-        fontWeight: 700,
-        color: DOMAIN_COLORS[ci].text,
-        width: 100,
-        textAlign: 'center' as const,
-        padding: 0,
-        fontFamily: 'var(--font-body), system-ui, sans-serif',
-      },
-      draggable: false,
-      selectable: false,
-    })
-  }
-
-  // 知识点节点
-  for (const n of graphNodes) {
-    const pos = posMap.get(n.id)
-    if (!pos) continue
-    const ci = getDomainIndex(n.domain_id, domainIds)
-    flowNodes.push({
-      id: n.id,
-      type: 'custom',
-      position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - 16 },
-      data: {
-        label: n.name,
-        domain: n.domain_name,
-        difficulty: n.difficulty,
-        colors: DOMAIN_COLORS[ci],
-      },
-    })
-  }
-
-  // 6. 构建边（smoothstep 路由 → 整洁不杂乱）
-  const seenEdges = new Set<string>()
-  const flowEdges: Edge[] = []
-  for (const e of graphEdges) {
-    const ek = `${e.source}|${e.target}|${e.relation}`
-    if (seenEdges.has(ek)) continue
-    seenEdges.add(ek)
-
-    const srcPos = posMap.get(e.source)
-    const tgtPos = posMap.get(e.target)
-    if (!srcPos || !tgtPos) continue
-
-    const st = RELATION_STYLES[e.relation] || RELATION_STYLES.RELATED_TO
-
-    // 判断源和目标在同一列还是不同列
-    const sameCol = e.source.startsWith('header') || e.target.startsWith('header') ||
-      graphNodes.find(n => n.id === e.source)?.domain_id === graphNodes.find(n => n.id === e.target)?.domain_id
-
-    flowEdges.push({
-      id: ek,
-      source: e.source,
-      target: e.target,
-      type: 'smoothstep',
-      animated: e.relation === 'PREREQUISITE',
-      style: {
-        stroke: st.color,
-        strokeWidth: st.width,
-        strokeDasharray: st.dash,
-        opacity: st.opacity,
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: st.color,
-        width: 10,
-        height: 10,
-      },
-    })
-  }
-
-  return { flowNodes, flowEdges }
-}
-
-/* ── 图例 ── */
-function Legend() {
-  return (
-    <div style={{
-      position: 'absolute',
-      bottom: 12,
-      left: 12,
-      background: 'rgba(255,255,255,0.93)',
-      borderRadius: 8,
-      border: '1px solid #E5E7EB',
-      padding: '8px 12px',
-      fontSize: '0.6rem',
-      zIndex: 10,
-      boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-      fontFamily: 'var(--font-body), system-ui, sans-serif',
-      lineHeight: 1.4,
-    }}>
-      <div style={{ fontWeight: 600, color: '#1F2937', marginBottom: 3 }}>图例</div>
-      {Object.entries(RELATION_STYLES).map(([key, st]) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 1 }}>
-          <svg width="20" height="3" viewBox="0 0 20 3">
-            <line x1="0" y1="1.5" x2="16" y2="1.5"
-              stroke={st.color} strokeWidth={st.width}
-              strokeDasharray={st.dash} opacity={st.opacity} />
-            {key === 'PREREQUISITE' && <polygon points="15,0 18,1.5 15,3" fill={st.color} opacity={st.opacity} />}
-          </svg>
-          <span style={{ color: '#6B7280', fontSize: '0.55rem' }}>{st.label}</span>
+  // ── 空状态 ──
+  if (nodes.length === 0) {
+    return (
+      <div ref={containerRef} style={{
+        width: '100%', height: '100%', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: BG_COLOR, color: '#9CA3AF', fontSize: 14,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🕸️</div>
+          <p style={{ margin: 0 }}>暂无图谱数据</p>
+          <p style={{ fontSize: 12, marginTop: 4, color: '#D1D5DB' }}>上传 PDF 构建知识图谱后查看</p>
         </div>
-      ))}
-      <div style={{ borderTop: '1px solid #E5E7EB', marginTop: 4, paddingTop: 3, color: '#9CA3AF', fontSize: '0.5rem' }}>
-        拖拽节点可微调 · 滚轮缩放
       </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} style={{
+      width: '100%', height: '100%', position: 'relative',
+      overflow: 'hidden', background: BG_COLOR,
+    }}>
+      <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+
+      {/* ── 图例 ── */}
+      <div style={{
+        position: 'absolute', left: 12, bottom: 12,
+        background: 'rgba(255,255,255,0.92)', borderRadius: 10,
+        border: '1px solid #E5E7EB', padding: '8px 12px',
+        fontSize: 11, maxWidth: 180, maxHeight: 200, overflowY: 'auto',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      }}>
+        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>图例</div>
+        {Array.from(typeSet.entries()).map(([type, color]) => (
+          <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: color, flexShrink: 0,
+            }} />
+            <span style={{ color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {type}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── 关系线样式说明 ── */}
+      <div style={{
+        position: 'absolute', left: 12, top: 12,
+        background: 'rgba(255,255,255,0.92)', borderRadius: 10,
+        border: '1px solid #E5E7EB', padding: '6px 10px',
+        fontSize: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+      }}>
+        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 4 }}>关系</div>
+        {Object.entries(RELATION_STYLES).map(([rel, style]) => (
+          <div key={rel} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+            <svg width={16} height={12}><line x1={0} y1={6} x2={16} y2={6}
+              stroke={style.color} strokeWidth={1.5} strokeDasharray={style.dash} /></svg>
+            <span style={{ color: '#6B7280', fontSize: 10 }}>
+              {rel === 'PREREQUISITE' ? '前置依赖' : rel === 'CONTAINS' ? '包含关系' : rel === 'RELATED_TO' ? '相关关联' : rel === 'APPLIES' ? '应用关系' : rel === 'DEPENDS_ON' ? '依赖关系' : rel}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── 控制栏 ── */}
+      <div style={{
+        position: 'absolute', right: 12, top: 12,
+        display: 'flex', flexDirection: 'column', gap: 4,
+      }}>
+        <ControlBtn label="+" title="放大" onClick={zoomIn} />
+        <ControlBtn label="−" title="缩小" onClick={zoomOut} />
+        <ControlBtn label="⟲" title="重置缩放" onClick={resetZoom} />
+        <ControlBtn label="⊡" title="适应窗口" onClick={fitToView} />
+      </div>
+
+      {/* ── 布局切换栏 ── */}
+      <div style={{
+        position: 'absolute', right: 12, bottom: 12,
+        display: 'flex', gap: 3, background: 'rgba(255,255,255,0.92)',
+        borderRadius: 10, border: '1px solid #E5E7EB', padding: 3,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+      }}>
+        {([
+          ['force', '⟳'],
+          ['circular', '○'],
+          ['grid', '⊞'],
+          ['concentric', '◎'],
+        ] as [LayoutType, string][]).map(([layout, icon]) => (
+          <button key={layout}
+            onClick={() => handleLayout(layout)}
+            title={layout === 'force' ? '力导向' : layout === 'circular' ? '环形' : layout === 'grid' ? '网格' : '同心圆'}
+            style={{
+              width: 30, height: 28, borderRadius: 7, border: 'none',
+              background: currentLayout === layout ? '#4f6df5' : 'transparent',
+              color: currentLayout === layout ? '#fff' : '#6B7280',
+              fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            {icon}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 悬浮提示 ── */}
+      {hoveredNode && (
+        <div style={{
+          position: 'absolute', left: tooltipPos.x, top: tooltipPos.y,
+          padding: '8px 12px', background: 'rgba(30,41,59,0.92)', color: '#fff',
+          borderRadius: 8, fontSize: 12, maxWidth: 220,
+          pointerEvents: 'none', zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{hoveredNode.label}</div>
+          <div style={{ display: 'flex', gap: 8, opacity: 0.85, fontSize: 11 }}>
+            <span>{hoveredNode.domainName}</span>
+            <span>难度 {'⭐'.repeat(hoveredNode.difficulty)}</span>
+          </div>
+          <div style={{ opacity: 0.7, fontSize: 10, marginTop: 2 }}>
+            关联数: {hoveredNode.degree}
+            {hoveredNode.isSeed && ' · 🔍 检索命中'}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-export default function KnowledgeGraphViz({ nodes, edges, onNodeClick }: Props) {
-  const { flowNodes, flowEdges } = useMemo(
-    () => domainColumnLayout(nodes, edges),
-    [nodes, edges],
-  )
-
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(flowNodes)
-  const [rfEdges] = useEdgesState(flowEdges)
-
-  useMemo(() => {
-    setRfNodes(flowNodes)
-  }, [flowNodes])
-
-  const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
-    const graphNode = nodes.find(n => n.id === node.id)
-    if (graphNode && onNodeClick) onNodeClick(graphNode)
-  }
-
+/** 缩放控制按钮 */
+function ControlBtn({ label, title, onClick }: { label: string; title: string; onClick: () => void }) {
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#F8FAFC' }}>
-      <ReactFlow
-        nodes={rfNodes}
-        edges={rfEdges}
-        nodeTypes={nodeTypes}
-        onNodeClick={handleNodeClick}
-        onNodesChange={onNodesChange}
-        fitView
-        fitViewOptions={{ padding: 0.15 }}
-        minZoom={0.1}
-        maxZoom={3}
-        nodesDraggable
-        nodesConnectable={false}
-        elementsSelectable
-      >
-        <Background color="#E2E8F0" gap={20} size={1} />
-        <Controls
-          style={{
-            borderRadius: '6px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-          }}
-          showInteractive={false}
-        />
-        <MiniMap
-          style={{
-            borderRadius: '6px',
-            border: '1px solid #E5E7EB',
-            boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-          }}
-          nodeColor={(n) => {
-            const c = (n.data as any)?.colors
-            return c?.border || '#94A3B8'
-          }}
-          maskColor="rgba(0,0,0,0.08)"
-        />
-      </ReactFlow>
-      <Legend />
-    </div>
+    <button onClick={onClick} title={title}
+      style={{
+        width: 30, height: 30, borderRadius: 8, border: '1px solid #E5E7EB',
+        background: 'rgba(255,255,255,0.92)', color: '#374151',
+        fontSize: 16, cursor: 'pointer', fontFamily: 'inherit',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      }}>
+      {label}
+    </button>
   )
 }

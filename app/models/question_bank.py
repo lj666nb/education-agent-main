@@ -91,6 +91,20 @@ class KnowledgePoint(Base):
     domain = relationship("KnowledgeDomain", back_populates="knowledge_points")
 
 
+class KgFileContent(Base):
+    """知识图谱文件内容存储 — 保存上传 PDF 的文本块，用于 RAG 关键词检索"""
+    __tablename__ = "kg_file_contents"
+
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    subject_id = Column(Uuid, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_name = Column(String(500), nullable=False)
+    chunk_id = Column(String(50), nullable=False)
+    page_number = Column(Integer, default=1)
+    content = Column(Text, nullable=False)
+    chunk_index = Column(Integer, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class QuestionBank(Base):
     """个人题库 — 归属用户，绑定学科，含练习进度统计"""
     __tablename__ = "question_banks"

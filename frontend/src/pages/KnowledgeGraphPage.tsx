@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { knowledgeGraphApi, type GraphNode, type GraphEdge } from '../api/knowledgeGraph'
 import KnowledgeGraphViz from '../components/KnowledgeGraphViz'
+import KgChatPanel from '../components/KgChatPanel'
 
 const API_BASE = '/api/v1'
 const BRAND_COLOR = '#1677E8'
@@ -80,9 +81,10 @@ export default function KnowledgeGraphPage() {
   }, [])
 
   // 图谱可视化
-  const [graphModal, setGraphModal] = useState<{ open: boolean; subjectName: string; nodes: GraphNode[]; edges: GraphEdge[]; loading: boolean }>({
-    open: false, subjectName: '', nodes: [], edges: [], loading: false,
+  const [graphModal, setGraphModal] = useState<{ open: boolean; subjectName: string; subjectId: string; nodes: GraphNode[]; edges: GraphEdge[]; loading: boolean; activeTab: 'graph' | 'chat' }>({
+    open: false, subjectName: '', subjectId: '', nodes: [], edges: [], loading: false, activeTab: 'graph',
   })
+  const [highlightedNodeNames, setHighlightedNodeNames] = useState<string[]>([])
 
   // 页面加载时获取已构建的知识图谱列表，并检查是否有未完成任务
   useEffect(() => {
@@ -248,7 +250,8 @@ export default function KnowledgeGraphPage() {
   const isProcessing = taskStatus && !['done', 'failed'].includes(taskStatus.status)
 
   const openGraphModal = async (kg: KGInfo) => {
-    setGraphModal({ open: true, subjectName: kg.name, nodes: [], edges: [], loading: true })
+    setGraphModal({ open: true, subjectName: kg.name, subjectId: kg.id, nodes: [], edges: [], loading: true, activeTab: 'graph' })
+    setHighlightedNodeNames([])
     try {
       const res = await knowledgeGraphApi.getGraphData(kg.id)
       setGraphModal(prev => ({ ...prev, nodes: res.data.nodes, edges: res.data.edges, loading: false }))
@@ -258,7 +261,8 @@ export default function KnowledgeGraphPage() {
   }
 
   const closeGraphModal = () => {
-    setGraphModal({ open: false, subjectName: '', nodes: [], edges: [], loading: false })
+    setGraphModal({ open: false, subjectName: '', subjectId: '', nodes: [], edges: [], loading: false, activeTab: 'graph' })
+    setHighlightedNodeNames([])
   }
 
   return (
@@ -555,64 +559,103 @@ export default function KnowledgeGraphPage() {
               display: 'flex', flexDirection: 'column',
               overflow: 'hidden',
             }}>
-            {/* 标题栏 */}
+            {/* 标题栏 + 标签页 */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '16px 24px', borderBottom: '1px solid #E5E7EB',
+              padding: '12px 24px', borderBottom: '1px solid #E5E7EB',
             }}>
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                 <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1F2937' }}>
-                  🕸️ {graphModal.subjectName} — 知识图谱
+                  🕸️ {graphModal.subjectName}
                 </span>
-                {!graphModal.loading && (
-                  <span style={{ fontSize: '0.75rem', color: '#9CA3AF', marginLeft: 12 }}>
+                {/* 标签页切换 */}
+                <div style={{ display: 'flex', gap: 4, background: '#F3F4F6', borderRadius: 10, padding: 3 }}>
+                  <button
+                    onClick={() => setGraphModal(prev => ({ ...prev, activeTab: 'graph' }))}
+                    style={{
+                      padding: '5px 16px', borderRadius: 8, border: 'none',
+                      background: graphModal.activeTab === 'graph' ? '#fff' : 'transparent',
+                      color: graphModal.activeTab === 'graph' ? BRAND_COLOR : '#6B7280',
+                      fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                      fontFamily: 'inherit', boxShadow: graphModal.activeTab === 'graph' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    }}>
+                    🕸️ 图谱
+                  </button>
+                  <button
+                    onClick={() => setGraphModal(prev => ({ ...prev, activeTab: 'chat' }))}
+                    style={{
+                      padding: '5px 16px', borderRadius: 8, border: 'none',
+                      background: graphModal.activeTab === 'chat' ? '#fff' : 'transparent',
+                      color: graphModal.activeTab === 'chat' ? BRAND_COLOR : '#6B7280',
+                      fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                      fontFamily: 'inherit', boxShadow: graphModal.activeTab === 'chat' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    }}>
+                    💬 AI 问答
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {!graphModal.loading && graphModal.activeTab === 'graph' && (
+                  <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
                     {graphModal.nodes.length} 个知识点 · {graphModal.edges.length} 条关系
                   </span>
                 )}
+                <button onClick={closeGraphModal}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, border: 'none',
+                    background: '#F3F4F6', color: '#6B7280', fontSize: 13,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                  ✕ 关闭
+                </button>
               </div>
-              <button onClick={closeGraphModal}
-                style={{
-                  padding: '6px 12px', borderRadius: 8, border: 'none',
-                  background: '#F3F4F6', color: '#6B7280', fontSize: 13,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}>
-                ✕ 关闭
-              </button>
             </div>
 
-            {/* 图谱内容 */}
-            <div style={{ flex: 1, position: 'relative' }}>
-              {graphModal.loading ? (
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', color: '#9CA3AF', fontSize: 14, gap: 8,
-                }}>
-                  <div style={{
-                    width: 20, height: 20, border: '2px solid #E5E7EB',
-                    borderTopColor: BRAND_COLOR, borderRadius: '50%',
-                    animation: 'kg-spin 0.8s linear infinite',
-                  }} />
-                  加载图谱数据...
-                </div>
-              ) : graphModal.nodes.length === 0 ? (
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  height: '100%', color: '#9CA3AF', fontSize: 14,
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>🕸️</div>
-                    暂无图谱数据
-                    <div style={{ fontSize: 12, marginTop: 4, color: '#D1D5DB' }}>
-                      需要先上传 PDF 构建知识图谱
+            {/* 内容区域 */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+              {graphModal.activeTab === 'graph' ? (
+                <>
+                  {graphModal.loading ? (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      height: '100%', color: '#9CA3AF', fontSize: 14, gap: 8,
+                    }}>
+                      <div style={{
+                        width: 20, height: 20, border: '2px solid #E5E7EB',
+                        borderTopColor: BRAND_COLOR, borderRadius: '50%',
+                        animation: 'kg-spin 0.8s linear infinite',
+                      }} />
+                      加载图谱数据...
                     </div>
-                  </div>
-                </div>
+                  ) : graphModal.nodes.length === 0 ? (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      height: '100%', color: '#9CA3AF', fontSize: 14,
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>🕸️</div>
+                        暂无图谱数据
+                        <div style={{ fontSize: 12, marginTop: 4, color: '#D1D5DB' }}>
+                          需要先上传 PDF 构建知识图谱
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <KnowledgeGraphViz
+                      nodes={graphModal.nodes}
+                      edges={graphModal.edges}
+                      onNodeClick={(node) => {
+                        console.log('Clicked node:', node)
+                      }}
+                    />
+                  )}
+                </>
               ) : (
-                <KnowledgeGraphViz
-                  nodes={graphModal.nodes}
-                  edges={graphModal.edges}
-                  onNodeClick={(node) => {
-                    console.log('Clicked node:', node)
+                <KgChatPanel
+                  subjectId={graphModal.subjectId}
+                  subjectName={graphModal.subjectName}
+                  onHighlightNodes={(nodeNames) => {
+                    setHighlightedNodeNames(nodeNames)
                   }}
                 />
               )}
