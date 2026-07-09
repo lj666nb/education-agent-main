@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { LinkIcon } from './Icons'
+import { RefreshCw, Volume2, Copy, Brain, Download, ChevronDown, FileText, FileUp, Play, BarChart3, GitBranch, Link } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -34,26 +34,6 @@ interface MessageListProps {
   onRollback?: (messageId: string) => void
   onEditDiagram?: (xml: string) => void
   onGenerateMindmap?: (messageId: string, content: string) => void
-}
-
-function BrainIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2-1 2.7V10c0 1.1-.9 2-2 2s-2-.9-2-2V8.7c-.6-.7-1-1.6-1-2.7a4 4 0 0 1 4-4z"/>
-      <path d="M12 14c2.2 0 6 1.1 6 3v2H6v-2c0-1.9 3.8-3 6-3z"/>
-    </svg>
-  )
-}
-
-function ExportIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/>
-      <line x1="12" y1="15" x2="12" y2="3"/>
-      <path d="M17 8l-5-5-5 5"/>
-    </svg>
-  )
 }
 
 function simpleMarkdown(text: string): string {
@@ -140,8 +120,45 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
     }
   }, [messages, isLoading])
 
+  // ── Icon-only button style ──
+  const iconBtnStyle: React.CSSProperties = {
+    padding: '6px',
+    border: 'none',
+    background: 'none',
+    color: 'var(--gray-400)',
+    cursor: 'pointer',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'color 0.15s, background-color 0.15s',
+  }
 
+  // ── SpeakingManager ──
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
+  const handleSpeak = useCallback((msgId: string, content: string) => {
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel()
+      setSpeakingMsgId(null)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(content.replace(/[#*`~\[\]()>!\[\]]/g, ''))
+    u.lang = 'zh-CN'
+    u.rate = 1.0
+    u.onend = () => setSpeakingMsgId(null)
+    u.onerror = () => setSpeakingMsgId(null)
+    utteranceRef.current = u
+    setSpeakingMsgId(msgId)
+    window.speechSynthesis.speak(u)
+  }, [speakingMsgId])
+
+  // cleanup on unmount
+  useEffect(() => { return () => window.speechSynthesis.cancel() }, [])
+
+  // ── Export logic ──
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportBtnRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState<'pdf' | 'word' | null>(null)
@@ -329,10 +346,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                         gap: '0.25rem',
                       }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                      </svg>
+                      <Copy size={12} />
                       复制
                     </button>
                     <button
@@ -352,9 +366,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                         fontWeight: 500,
                       }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                      </svg>
+                      <Play size={12} fill="currentColor" />
                       运行
                     </button>
                     {lang === 'python' && (
@@ -377,11 +389,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                           opacity: 1,
                         }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
+                        <BarChart3 size={12} />
                         绘制
                       </button>
                     )}
@@ -490,73 +498,58 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
     )
   }
 
+  // ── Empty state ──
   if (messages.length === 0 && !isLoading) {
     return (
       <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-8)',
-        background: 'transparent',
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '48px 24px',
       }}>
-        {/* 白色低透明度圆角浮层 — 衬底 */}
-        <div style={{
-          background: 'rgba(255,255,255,0.72)',
-          borderRadius: 16,
-          padding: '48px 56px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+        <h1 style={{
+          fontSize: '1.75rem', fontWeight: 700,
+          color: 'var(--gray-800)',
+          fontFamily: 'var(--font-heading)',
+          marginBottom: '8px',
+          letterSpacing: '-0.02em',
         }}>
-          {/* Education-themed illustration — bold colors, fully opaque */}
-          <svg width="160" height="128" viewBox="0 0 160 128" fill="none" style={{ marginBottom: 28 }}>
-            {/* Graduation cap */}
-            <path d="M80 12L12 48l68 36 68-36-68-36z" fill="#0284C7" stroke="#0369A1" strokeWidth="1.2" />
-            <path d="M80 48l20-11v18c0 11-9 20-20 20s-20-9-20-20V37l20 11z" fill="#7DD3FC" stroke="#0369A1" strokeWidth="1.2" />
-            {/* Open book */}
-            <rect x="22" y="76" width="48" height="36" rx="5" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1.2" />
-            <rect x="90" y="76" width="48" height="36" rx="5" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1.2" />
-            <line x1="70" y1="76" x2="70" y2="112" stroke="#F59E0B" strokeWidth="1.2" />
-            <line x1="32" y1="86" x2="62" y2="86" stroke="#D97706" strokeWidth="1" />
-            <line x1="32" y1="94" x2="62" y2="94" stroke="#D97706" strokeWidth="1" />
-            <line x1="32" y1="102" x2="54" y2="102" stroke="#D97706" strokeWidth="1" />
-            <line x1="98" y1="86" x2="128" y2="86" stroke="#D97706" strokeWidth="1" />
-            <line x1="98" y1="94" x2="128" y2="94" stroke="#D97706" strokeWidth="1" />
-            <line x1="98" y1="102" x2="120" y2="102" stroke="#D97706" strokeWidth="1" />
-            {/* Sparkles */}
-            <circle cx="142" cy="28" r="4" fill="#38BDF8" />
-            <circle cx="16" cy="22" r="3" fill="#0284C7" />
-            <circle cx="148" cy="56" r="2.5" fill="#F59E0B" />
-            <circle cx="10" cy="54" r="2" fill="#0284C7" />
-          </svg>
+          开始新对话
+        </h1>
+        <p style={{
+          fontSize: '0.9375rem', color: 'var(--gray-500)',
+          marginBottom: '40px',
+        }}>
+          选择模型并开始对话，支持 DeepSeek 和 Qwen
+        </p>
 
-          <div style={{
-            fontSize: '1.5rem',
-            fontWeight: 700,
-            color: '#111827',
-            fontFamily: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-            letterSpacing: '0.03em',
-            marginBottom: 12,
-          }}>
-            开始新对话
-          </div>
-          <div style={{
-            fontSize: '0.95rem',
-            color: '#6B7280',
-            fontWeight: 500,
-            marginBottom: 8,
-          }}>
-            选择模型并开始对话，支持 DeepSeek 和 Qwen
-          </div>
-          <div style={{
-            fontSize: '0.78rem',
-            color: '#9CA3AF',
-          }}>
-            可上传文件、运行代码、生成图表、绘制思维导图
-          </div>
+        {/* Feature cards */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '16px', maxWidth: '640px', width: '100%',
+        }}>
+          {[
+            { icon: FileUp, title: '文件上传', desc: '支持 PDF、Word、PPT' },
+            { icon: Play, title: '代码运行', desc: 'Python 代码在线执行' },
+            { icon: BarChart3, title: '图表生成', desc: 'AI 自动绘制各类图表' },
+            { icon: GitBranch, title: '思维导图', desc: '知识结构可视化' },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} style={{
+              padding: '20px', borderRadius: '12px',
+              backgroundColor: '#FFFFFF', border: '1px solid #F0F0F0',
+              boxShadow: 'var(--chat-bubble-ai-shadow)',
+              textAlign: 'center',
+            }}>
+              <div style={{ marginBottom: '12px', color: 'var(--primary)' }}>
+                <Icon size={28} />
+              </div>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--gray-700)', marginBottom: '4px' }}>
+                {title}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>
+                {desc}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -574,7 +567,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
       {messages.map((message) => (
         <div
           key={message.id}
-          className="fade-in"
+          className="chat-message-enter"
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -583,17 +576,31 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             position: 'relative',
           }}
         >
+          {/* Message bubble */}
           <div
-            style={{
-              maxWidth: message.role === 'user' ? '70%' : '85%',
-              padding: 'var(--space-3) var(--space-4)',
-              borderRadius: message.role === 'user' ? 'var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-lg)' : 'var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm)',
-              backgroundColor: message.role === 'user' ? 'var(--primary)' : 'var(--gray-50)',
-              color: message.role === 'user' ? 'white' : 'var(--gray-800)',
+            style={message.role === 'user' ? {
+              maxWidth: '70%',
+              padding: '14px 20px',
+              borderRadius: '16px 16px 4px 16px',
+              background: 'var(--chat-bubble-user-bg)',
+              color: '#FFFFFF',
               wordBreak: 'break-word',
               lineHeight: 1.6,
+              fontSize: '0.9375rem',
+            } : {
+              maxWidth: '85%',
+              padding: '20px 24px',
+              borderRadius: '12px 12px 12px 4px',
+              backgroundColor: 'var(--chat-bubble-ai-bg)',
+              border: '1px solid var(--chat-bubble-ai-border)',
+              boxShadow: 'var(--chat-bubble-ai-shadow)',
+              color: 'var(--gray-800)',
+              wordBreak: 'break-word',
+              lineHeight: 1.7,
+              fontSize: '0.9375rem',
             }}
           >
+            {/* Reasoning / thinking section */}
             {message.role === 'assistant' && message.reasoning_content && enableThinking && (
               <div style={{ marginBottom: 'var(--space-3)', fontSize: '0.875rem' }}>
                 {isLoading ? (
@@ -605,13 +612,13 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                     border: '1px solid oklch(from var(--warning) l c h / 0.3)',
                   }}>
                     <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <BrainIcon /> AI 深度思考中，请稍候...
+                      <Brain size={16} /> AI 深度思考中，请稍候...
                     </div>
                   </div>
                 ) : (
                   <details>
                     <summary style={{ cursor: 'pointer', color: 'var(--gray-500)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <BrainIcon /> 深度思考（点击查看）
+                      <Brain size={16} /> 深度思考（点击查看）
                     </summary>
                     <div style={{
                       padding: 'var(--space-3)',
@@ -627,6 +634,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                 )}
               </div>
             )}
+
+            {/* Content segments (text, SVG, plot, diagram) */}
             {splitContentWithDiagrams(message.content).map((seg, segIdx) => {
               if (seg.type === 'text') {
                 return <div key={segIdx}>{renderMessageContent(seg.content, message.id)}</div>
@@ -678,94 +687,12 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
               }
             })}
 
-            {/* Message action buttons (copy, rollback) */}
-            {message.role === 'assistant' && !isLoading && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                marginTop: 'var(--space-2)',
-                paddingTop: 'var(--space-1)',
-                borderTop: '1px solid var(--gray-200)',
-                opacity: 0.4,
-                transition: 'opacity 0.15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
-              >
-                <button
-                  onClick={() => navigator.clipboard.writeText(message.content).catch(() => {})}
-                  title="复制此消息"
-                  style={{
-                    padding: '2px 6px',
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--gray-500)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    fontSize: '0.7rem',
-                    borderRadius: '3px',
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                  复制
-                </button>
-                {onRollback && (
-                  <button
-                    onClick={() => onRollback(message.id)}
-                    title="回到此处（删除后续对话）"
-                    style={{
-                      padding: '2px 6px',
-                      border: 'none',
-                      background: 'none',
-                      color: 'var(--gray-500)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      fontSize: '0.7rem',
-                      borderRadius: '3px',
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="1 4 1 10 7 10"/>
-                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                    </svg>
-                    撤回
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* 生成思维导图按钮 */}
-            {message.role === 'assistant' && message.content && message.content.length > 20 && onGenerateMindmap && (
-              <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-                <button onClick={() => onGenerateMindmap(message.id, message.content)}
-                  style={{
-                    padding: '4px 12px', borderRadius: 6, border: '1px solid #E5E7EB',
-                    background: '#fff', color: '#6B7280', fontSize: '0.75rem',
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}>
-                  🧠 生成思维导图
-                </button>
-              </div>
-            )}
-
+            {/* Sources (RAG) */}
             {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
               <details style={{ marginTop: 'var(--space-3)', fontSize: '0.8125rem' }}>
                 <summary style={{ cursor: 'pointer', color: 'var(--gray-400)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 'var(--space-1)', userSelect: 'none' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
-                  <LinkIcon size={12} /> 参考来源（{message.sources.length} 项）
+                  <FileText size={14} />
+                  <Link size={12} /> 参考来源（{message.sources.length} 项）
                 </summary>
                 <div style={{ marginTop: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                   {message.sources.map((source, idx) => (
@@ -776,10 +703,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                       border: '1px solid var(--gray-100)',
                     }}>
                       <div style={{ fontWeight: 500, color: 'var(--gray-700)', marginBottom: '2px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-                          <polyline points="13 2 13 9 20 9"/>
-                        </svg>
+                        <FileText size={12} />
                         {source.document_name}
                       </div>
                       <div style={{ color: 'var(--gray-500)', fontSize: '0.6875rem', marginBottom: '2px' }}>
@@ -794,25 +718,73 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
               </details>
             )}
           </div>
+
+          {/* Icon-only action buttons for AI messages */}
+          {message.role === 'assistant' && !isLoading && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              marginTop: '14px', paddingTop: '12px',
+              borderTop: '1px solid var(--gray-100)',
+              width: '100%',
+            }}>
+              {/* 重新生成 */}
+              {onRollback && (
+                <button
+                  onClick={() => onRollback(message.id)}
+                  title="重新生成"
+                  style={iconBtnStyle}
+                >
+                  <RefreshCw size={15} />
+                </button>
+              )}
+              {/* 朗读 */}
+              <button
+                onClick={() => handleSpeak(message.id, message.content)}
+                title={speakingMsgId === message.id ? '停止朗读' : '朗读'}
+                style={{
+                  ...iconBtnStyle,
+                  color: speakingMsgId === message.id ? 'var(--primary)' : 'var(--gray-400)',
+                }}
+              >
+                <Volume2 size={15} />
+              </button>
+              {/* 复制 */}
+              <button
+                onClick={() => navigator.clipboard.writeText(message.content).catch(() => {})}
+                title="复制"
+                style={iconBtnStyle}
+              >
+                <Copy size={15} />
+              </button>
+              {/* 生成思维导图 */}
+              {message.content && message.content.length > 20 && onGenerateMindmap && (
+                <button
+                  onClick={() => onGenerateMindmap(message.id, message.content)}
+                  title="生成思维导图"
+                  style={iconBtnStyle}
+                >
+                  <GitBranch size={15} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ))}
 
+      {/* Loading indicator — 3 bouncing dots */}
       {isLoading && (
-        <div className="fade-in" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 'var(--space-4)' }}>
+        <div className="fade-in" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '24px' }}>
           <div style={{
-            padding: 'var(--space-3) var(--space-4)',
-            borderRadius: 'var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm)',
-            backgroundColor: 'var(--gray-50)',
-            color: 'var(--gray-400)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
+            padding: '16px 24px',
+            borderRadius: '12px 12px 12px 4px',
+            backgroundColor: 'var(--chat-bubble-ai-bg)',
+            border: '1px solid var(--chat-bubble-ai-border)',
+            boxShadow: 'var(--chat-bubble-ai-shadow)',
+            display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" opacity="0.3"/>
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-            </svg>
-            <span style={{ fontSize: '0.8125rem' }}>AI 思考中...</span>
+            <span className="chat-dot-bounce" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--gray-300)' }} />
+            <span className="chat-dot-bounce" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--gray-300)' }} />
+            <span className="chat-dot-bounce" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--gray-300)' }} />
           </div>
         </div>
       )}
@@ -847,7 +819,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <ExportIcon />
+                <Download size={16} />
               )}
             </button>
 
