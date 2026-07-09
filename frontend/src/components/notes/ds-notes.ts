@@ -621,6 +621,165 @@ void ll_free(LinkedList *ll) {
 3. **合并有序链表**：双指针归并
 4. **删除倒数第 N 个节点**：快慢指针间隔 N 步
 5. **求中间节点**：快指针走两步，慢指针走一步`
+      },
+      {
+        id: 'sparse-matrix',
+        title: '1.3 稀疏矩阵与三元组',
+        content: `## 稀疏矩阵与三元组
+
+### 数组的存储与下标计算
+
+数组是 $n$ 个相同类型数据元素的有限序列。多维数组在内存中按一维排列，有两种存储方式：
+
+- **以行序为主（行优先）**：按行号从小到大，依次存储每一行的元素（C/C++、Python NumPy 默认）
+- **以列序为主（列优先）**：按列号从小到大，依次存储每一列的元素（Fortran、MATLAB 默认）
+
+对于 $m \\times n$ 的二维数组，元素 $a_{ij}$ 的地址公式：
+
+行优先：$LOC(i,j) = LOC(0,0) + (i \\times n + j) \\times L$
+列优先：$LOC(i,j) = LOC(0,0) + (j \\times m + i) \\times L$
+
+其中 $L$ 是每个元素占用的字节数。
+
+### 特殊矩阵的压缩存储
+
+**对称矩阵**：$a_{ij} = a_{ji}$，只需存储上三角或下三角（含对角线）。若存储下三角，元素位置为：
+
+- 当 $i \\geq j$ 时：$k = \\frac{i(i-1)}{2} + j - 1$（下标从 1 开始）
+- 当 $i < j$ 时：对称取 $a_{ji}$
+
+**三角矩阵**：上三角或下三角区域为常数（通常为 0 或同一值），只需存储非常数区域加一个常数。
+
+### 稀疏矩阵与三元组
+
+当矩阵中**非零元素远少于零元素**（通常非零元占比 < 5%）时，称为稀疏矩阵。直接存储所有元素浪费大量空间，应只存储非零元。
+
+**三元组表示法**：每个非零元用 $(i, j, v)$ 表示行号、列号和值。
+
+\`\`\`c
+typedef struct {
+    int i, j;     // 行坐标、列坐标
+    ElemType e;    // 元素值
+} Triple;
+
+typedef struct {
+    Triple data[MAXSIZE + 1];  // 0 号单元不用
+    int mu, nu, tu;            // 行数、列数、非零元个数
+} TSMatrix;
+\`\`\`
+
+<!-- LANG:python -->
+\`\`\`python
+class SparseMatrix:
+    def __init__(self, rows: int, cols: int):
+        self.rows = rows
+        self.cols = cols
+        self.data: list[tuple[int, int, float]] = []  # (row, col, value)
+
+    def add(self, row: int, col: int, value: float) -> None:
+        if value != 0:
+            self.data.append((row, col, value))
+
+    def get(self, row: int, col: int) -> float:
+        for r, c, v in self.data:
+            if r == row and c == col:
+                return v
+        return 0.0
+\`\`\`
+<!-- /LANG -->
+
+### 矩阵转置
+
+**朴素转置**（以列序为主序）：
+
+遍历原矩阵每一列，找到该列所有元素，交换行列坐标放入新矩阵：
+
+\`\`\`c
+void TransposeSMatrix(TSMatrix *T1, TSMatrix *T2) {
+    T2->mu = T1->nu; T2->nu = T1->mu; T2->tu = T1->tu;
+    if (T1->tu == 0) return;
+    int q = 1;
+    for (int col = 1; col <= T1->nu; col++)      // 按列扫描
+        for (int p = 1; p <= T1->tu; p++)          // 遍历所有元素
+            if (T1->data[p].j == col) {
+                T2->data[q].i = T1->data[p].j;
+                T2->data[q].j = T1->data[p].i;
+                T2->data[q].e = T1->data[p].e;
+                q++;
+            }
+}
+\`\`\`
+
+> 时间复杂度 $O(nu \\times tu)$，当矩阵较满时退化为 $O(nu^2 \\times mu)$
+
+**快速转置**：
+
+预先统计每列非零元个数和起始位置，一次遍历即可完成转置：
+
+\`\`\`c
+void FastTransposeSMatrix(TSMatrix *T1, TSMatrix *T2) {
+    int num[T1->nu + 1], cpot[T1->nu + 1];
+    T2->mu = T1->nu; T2->nu = T1->mu; T2->tu = T1->tu;
+    if (T1->tu == 0) return;
+
+    for (int col = 1; col <= T1->nu; col++) num[col] = 0;
+    for (int t = 1; t <= T1->tu; t++) ++num[T1->data[t].j];
+
+    cpot[1] = 1;
+    for (int col = 2; col <= T1->nu; col++)
+        cpot[col] = cpot[col - 1] + num[col - 1];
+
+    for (int p = 1; p <= T1->tu; p++) {
+        int col = T1->data[p].j;
+        int q = cpot[col]++;
+        T2->data[q].i = T1->data[p].j;
+        T2->data[q].j = T1->data[p].i;
+        T2->data[q].e = T1->data[p].e;
+    }
+}
+\`\`\`
+
+> 时间复杂度 $O(nu + tu)$，用空间换时间
+
+<!-- LANG:python -->
+\`\`\`python
+def fast_transpose(sparse: SparseMatrix) -> SparseMatrix:
+    result = SparseMatrix(sparse.cols, sparse.rows)
+    if not sparse.data:
+        return result
+
+    # 统计每列非零元个数
+    col_counts = {}
+    for r, c, v in sparse.data:
+        col_counts[c] = col_counts.get(c, 0) + 1
+
+    # 计算每列起始位置
+    positions = {}
+    pos = 0
+    for c in range(sparse.cols):
+        if col_counts.get(c, 0) > 0:
+            positions[c] = pos
+            pos += col_counts[c]
+
+    # 预分配并填充
+    result.data = [None] * len(sparse.data)
+    for r, c, v in sparse.data:
+        result.data[positions[c]] = (c, r, v)
+        positions[c] += 1
+
+    return result
+\`\`\`
+<!-- /LANG -->
+
+### 其他稀疏矩阵存储方式
+
+| 方式 | 特点 | 适用场景 |
+|------|------|---------|
+| **三元组顺序表** | 简单、按行或列有序 | 矩阵创建后不再增删非零元 |
+| **行逻辑链接** | 增加行起始索引，加速按行访问 | 需要频繁按行遍历 |
+| **十字链表** | 每个非零元同时链接到同行和同列的下一个 | 频繁增删非零元 |
+
+> **核心思想**：压缩存储的本质是用额外的索引信息换取空间节省。选择哪种方式取决于主要操作——是按行遍历、随机访问还是频繁修改。`
       }
     ]
   },
@@ -1673,6 +1832,273 @@ void heap_free(MinHeap *h) { free(h->data); }
 - **合并 K 个有序链表**：用堆维护 K 个指针
 
 > Python 标准库 \`heapq\` 提供了 \`heappush\`、\`heappop\`、\`heapify\` 等操作，底层也是数组实现的小顶堆。`
+      },
+      {
+        id: 'huffman-tree',
+        title: '3.6 哈夫曼树与编码',
+        content: `## 哈夫曼树（Huffman Tree）
+
+### 基本概念
+
+- **路径**：从一个结点到另一个结点所经过的分支序列
+- **路径长度**：路径上的分支数目
+- **结点的权**：为结点赋予的有意义的数值
+- **带权路径长度**：从根到该结点的路径长度 × 该结点的权
+- **树的带权路径长度（WPL）**：所有**叶子结点**的带权路径长度之和：
+
+$$WPL = \\sum_{k=1}^{n} w_k \\times l_k$$
+
+其中 $w_k$ 是第 $k$ 个叶子结点的权值，$l_k$ 是从根到该叶子的路径长度。
+
+**哈夫曼树（最优二叉树）**：在含有 $n$ 个带权叶子结点的二叉树中，WPL 最小的那棵。
+
+### 哈夫曼树的构造
+
+**贪心策略**：每次从森林中选择两棵根结点权值最小的树合并，新树的根结点权值为两棵子树权值之和。
+
+<!-- LANG:python -->
+\`\`\`python
+import heapq
+from dataclasses import dataclass
+
+@dataclass
+class HuffmanNode:
+    char: str | None
+    freq: int
+    left: 'HuffmanNode | None' = None
+    right: 'HuffmanNode | None' = None
+
+    def __lt__(self, other: 'HuffmanNode') -> bool:
+        return self.freq < other.freq
+
+def build_huffman_tree(freq_map: dict[str, int]) -> HuffmanNode | None:
+    \"\"\"构造哈夫曼树，返回根结点\"\"\"
+    heap: list[HuffmanNode] = []
+    for char, freq in freq_map.items():
+        heapq.heappush(heap, HuffmanNode(char, freq))
+
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+        parent = HuffmanNode(None, left.freq + right.freq, left, right)
+        heapq.heappush(heap, parent)
+
+    return heap[0] if heap else None
+
+def generate_codes(root: HuffmanNode) -> dict[str, str]:
+    \"\"\"遍历哈夫曼树生成编码表：左 0，右 1\"\"\"
+    codes: dict[str, str] = {}
+
+    def dfs(node: HuffmanNode, code: str) -> None:
+        if node.char is not None:  # 叶子结点
+            codes[node.char] = code
+            return
+        if node.left:
+            dfs(node.left, code + '0')
+        if node.right:
+            dfs(node.right, code + '1')
+
+    if root:
+        dfs(root, '')
+    return codes
+
+# 示例
+text = "ABRACADABRA"
+freq = {}
+for ch in text:
+    freq[ch] = freq.get(ch, 0) + 1
+
+tree = build_huffman_tree(freq)
+codes = generate_codes(tree)
+print("编码表:", codes)
+\`\`\`
+<!-- /LANG -->
+
+<!-- LANG:c -->
+\`\`\`c
+// 哈夫曼树结点
+typedef struct {
+    int weight;          // 权值
+    int parent, lchild, rchild;  // 双亲及左右孩子下标
+} HTNode, *HuffmanTree;
+
+// 构造哈夫曼树：n 个叶子结点，总共 2n-1 个结点
+void CreateHuffmanTree(HuffmanTree *HT, int *w, int n) {
+    if (n <= 1) return;
+    int m = 2 * n - 1;  // 结点总数
+    *HT = (HuffmanTree)malloc((m + 1) * sizeof(HTNode));
+
+    // 初始化前 n 个叶子结点
+    for (int i = 1; i <= n; i++) {
+        (*HT)[i].weight = w[i - 1];
+        (*HT)[i].parent = (*HT)[i].lchild = (*HT)[i].rchild = 0;
+    }
+    // 初始化后 n-1 个内部结点
+    for (int i = n + 1; i <= m; i++) {
+        (*HT)[i].weight = (*HT)[i].parent = (*HT)[i].lchild = (*HT)[i].rchild = 0;
+    }
+
+    // 构建哈夫曼树
+    for (int i = n + 1; i <= m; i++) {
+        int s1, s2;
+        Select(*HT, i - 1, &s1, &s2);  // 选择 parent=0 且 weight 最小的两个
+        (*HT)[s1].parent = (*HT)[s2].parent = i;
+        (*HT)[i].lchild = s1;
+        (*HT)[i].rchild = s2;
+        (*HT)[i].weight = (*HT)[s1].weight + (*HT)[s2].weight;
+    }
+}
+\`\`\`
+<!-- /LANG -->
+
+### 哈夫曼编码
+
+哈夫曼编码是一种**可变字长编码（VLC）**，根据字符出现频率构造不等长编码：
+
+- **高频字符** → 短编码
+- **低频字符** → 长编码
+- 任意编码不是另一个编码的前缀（**前缀编码**）
+
+**编码过程**：从根到叶子，左分支标记为 0，右分支标记为 1，叶子结点的路径序列即为其编码。
+
+| 字符 | 频率 | 哈夫曼编码 |
+|------|------|-----------|
+| A | 5 | 0 |
+| B | 2 | 10 |
+| R | 2 | 110 |
+| C | 1 | 1110 |
+| D | 1 | 1111 |
+
+> **关键性质**：哈夫曼树中不存在度为 1 的结点（只有度为 0 的叶子和度为 2 的内部结点）。对于 n 个叶子，总共有 2n−1 个结点。
+
+### 应用场景
+
+- **文件压缩**：ZIP、JPEG、MP3 中的熵编码
+- **通信传输**：减少传输数据量
+- **最优决策树**：以概率为权值构建最优判定流程`
+      },
+      {
+        id: 'threaded-binary-tree',
+        title: '3.7 线索二叉树',
+        content: `## 线索二叉树（Threaded Binary Tree）
+
+### 引入动机
+
+普通二叉树的二叉链表有 $n+1$ 个空链域（$n$ 个结点，共 $2n$ 个指针域，其中 $n-1$ 个指向孩子，剩余 $n+1$ 个为 NULL）。线索二叉树**利用这些空链域存储前驱/后继信息**，加速遍历。
+
+### 线索化规则
+
+在每个结点中增加两个标志位：
+
+- **ltag = 0**：lchild 指向左孩子；**ltag = 1**：lchild 指向前驱
+- **rtag = 0**：rchild 指向右孩子；**rtag = 1**：rchild 指向后继
+
+\`\`\`c
+typedef enum { Link, Thread } PointerTag;  // Link=0, Thread=1
+
+typedef struct BiThrNode {
+    ElemType data;
+    struct BiThrNode *lchild, *rchild;
+    PointerTag ltag, rtag;
+} BiThrNode, *BiThrTree;
+\`\`\`
+
+<!-- LANG:python -->
+\`\`\`python
+from dataclasses import dataclass
+
+@dataclass
+class ThreadedNode:
+    data: int
+    left: 'ThreadedNode | None' = None
+    right: 'ThreadedNode | None' = None
+    ltag: int = 0  # 0: child, 1: thread (predecessor)
+    rtag: int = 0  # 0: child, 1: thread (successor)
+
+def inorder_thread(root: ThreadedNode | None) -> None:
+    \"\"\"中序线索化二叉树\"\"\"
+    prev = None
+
+    def dfs(node: ThreadedNode | None) -> None:
+        nonlocal prev
+        if node is None:
+            return
+        dfs(node.left)  # 递归左子树
+        if node.left is None:
+            node.ltag = 1
+            node.left = prev   # 左指针指向前驱
+        if prev is not None and prev.right is None:
+            prev.rtag = 1
+            prev.right = node  # 前驱的右指针指向当前（后继）
+        prev = node
+        dfs(node.right)  # 递归右子树
+
+    dfs(root)
+\`\`\`
+<!-- /LANG -->
+
+### 线索化的三种类型
+
+| 类型 | 线索指向 |
+|------|---------|
+| **先序线索化** | 按根→左→右顺序建立前驱后继线索 |
+| **中序线索化** | 按左→根→右顺序建立前驱后继线索（最常用） |
+| **后序线索化** | 按左→右→根顺序建立前驱后继线索 |
+
+### 中序线索二叉树的遍历
+
+线索化后，可以不用递归/栈实现遍历：
+
+\`\`\`c
+// 中序遍历线索二叉树（非递归）
+void InOrderTraverse_Thr(BiThrTree T) {
+    BiThrTree p = T->lchild;  // p 指向根结点
+    while (p != T) {          // 空树或遍历结束时 p == T
+        while (p->ltag == Link)  // 找到最左子结点
+            p = p->lchild;
+        visit(p->data);         // 访问
+        while (p->rtag == Thread && p->rchild != T) {
+            p = p->rchild;      // 沿线索访问后继
+            visit(p->data);
+        }
+        p = p->rchild;         // 转向右子树
+    }
+}
+\`\`\`
+
+<!-- LANG:python -->
+\`\`\`python
+def inorder_traverse_threaded(root: ThreadedNode) -> list[int]:
+    \"\"\"遍历中序线索二叉树，无需递归\"\"\"
+    result = []
+    curr = root
+    # 找到最左边的结点
+    while curr.left is not None and curr.ltag == 0:
+        curr = curr.left
+
+    while curr is not None:
+        result.append(curr.data)
+        # 如果有后继线索，直接跳转
+        if curr.rtag == 1 and curr.right is not None:
+            curr = curr.right
+        else:
+            # 否则找右子树的最左结点
+            curr = curr.right
+            while curr is not None and curr.ltag == 0 and curr.left is not None:
+                curr = curr.left
+    return result
+\`\`\`
+<!-- /LANG -->
+
+### 线索二叉树的优势
+
+| 操作 | 普通二叉树 | 线索二叉树 |
+|------|-----------|-----------|
+| 找中序前驱/后继 | O(n) 或需要栈 | O(1) 沿线索直接跳转 |
+| 遍历实现 | 需要递归或显式栈 | 线性循环，无额外空间 |
+| 空间开销 | 2n 个指针，空 n+1 | 额外 2n 个标记位 |
+
+> **核心思想**：线索化是用空间换时间的思想——用微小的标记位代价，让空指针从"浪费"变成"加速"。中序线索二叉树最常用，因为它能方便地找到任一结点的前驱和后继，实现高效的顺序遍历。`
       }
     ]
   },

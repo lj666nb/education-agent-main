@@ -1135,6 +1135,29 @@ async def save_message(
 
         content = re.sub(r'\[PLOT\]([\s\S]*?)\[/PLOT\]', _process_plot_block, content)
 
+    # ═══ 处理 [DRAWIO] 代码块：尝试渲染为 PNG → 替换为图片 URL ═══
+    if request.role == "assistant" and "[DRAWIO]" in content:
+        def _process_drawio_block(match: re.Match) -> str:
+            xml = match.group(1).strip()
+            xml = re.sub(r'^```[a-zA-Z]*\n?', '', xml)
+            xml = re.sub(r'\n?```$', '', xml)
+            if not xml.strip():
+                return "\n\n> ⚠️ 图表内容为空\n\n"
+            try:
+                from app.services.drawio_export import save_drawio_png
+                png_url, _ = save_drawio_png(xml)
+                if png_url:
+                    logger.info(f"[DRAWIO] 已渲染并保存")
+                    return f"\n\n![图表]({png_url})\n\n"
+                else:
+                    # 渲染失败：保留原始 [DRAWIO] 标记让前端 DiagramImage 兜底
+                    return match.group(0)
+            except Exception as e:
+                logger.error(f"[DRAWIO] 处理异常: {e}")
+                return match.group(0)
+
+        content = re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _process_drawio_block, content)
+
     db_message = ChatMessageModel(
         session_id=request.chat_id,
         role=request.role,
@@ -1410,6 +1433,15 @@ async def profile_init_chat(
 async def serve_plot_image(filename: str):
     """提供保存的 matplotlib 图表 PNG 文件"""
     filepath = os.path.join("uploads", "plots", filename)
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="图表文件不存在")
+    return FileResponse(filepath, media_type="image/png")
+
+
+@router.get("/drawio/{filename}")
+async def serve_drawio_image(filename: str):
+    """提供保存的 draw.io 图表 PNG 文件"""
+    filepath = os.path.join("uploads", "drawio", filename)
     if not os.path.isfile(filepath):
         raise HTTPException(status_code=404, detail="图表文件不存在")
     return FileResponse(filepath, media_type="image/png")

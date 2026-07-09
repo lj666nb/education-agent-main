@@ -13,8 +13,7 @@ import DrawioEditor, { type DrawioEditorHandle } from './DrawioEditor'
 import CodeRunnerPanel from './CodeRunnerPanel'
 import DraggableWindow from './DraggableWindow'
 import { extractDrawioXml, hasDrawioContent, getDrawioSystemPrompt, stripDiagramDuringStreaming } from '../utils/drawio'
-
-type ModelType = 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'qwen3.5-plus' | 'qwen3.6-plus'
+import { ModelType, DEFAULT_MODEL } from '../constants/models'
 
 interface ChatSession {
   id: string
@@ -89,7 +88,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 export default function ChatPlatform() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentModel, setCurrentModel] = useState<ModelType>('deepseek-v4-flash')
+  const [currentModel, setCurrentModel] = useState<ModelType>(DEFAULT_MODEL)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   // Chat state from persistent store (survives navigation)
   const currentChatId = useChatStore(s => s.currentChatId)
@@ -141,10 +140,13 @@ export default function ChatPlatform() {
   const sendingRef = useRef(false)
   const sendingChatIdRef = useRef<string | null>(null)
   const messagesRef = useRef<Message[]>([])
+  const handleSendRef = useRef<typeof handleSend | null>(null)
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
   const [prefillInput, setPrefillInput] = useState('')
   const [enableAutoChart, setEnableAutoChart] = useState(false)
   const [enableAutoMindmap, setEnableAutoMindmap] = useState(false)
+  const [showClearAllModal, setShowClearAllModal] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
 
   // Keep messagesRef in sync with messages
   
@@ -439,6 +441,8 @@ export default function ChatPlatform() {
       let systemPrompt = getDrawioSystemPrompt()
       if (enableAutoChart) {
         systemPrompt += '\n\n**自动图表模式已开启**：请在每次回复中使用 [PLOT] 代码块生成一张与内容相关的图表（如柱状图、折线图、流程图等），帮助用户可视化理解。'
+      } else {
+        systemPrompt += '\n\n**重要规则**：当前未开启图表生成功能，你绝对不能使用 [PLOT] 代码块生成任何图表。如果用户明确要求生成图表，或你的回答内容确实需要图表来辅助说明（如数据对比、趋势分析、结构关系等），请友好地提醒用户："如果您需要图表来更直观地理解，可以点击输入框左侧的加号按钮，开启「图表生成」功能哦~"。不要在其他情况下主动提及此功能。'
       }
       if (enableAutoMindmap) {
         systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [DRAWIO] 代码块生成一张思维导图，将回复内容的核心知识点以层级结构展示。'
@@ -612,6 +616,9 @@ export default function ChatPlatform() {
       }
     } finally { storeSetIsLoading(false); abortRef.current = null; sendingRef.current = false; sendingChatIdRef.current = null }
   }
+
+  // Keep handleSendRef in sync
+  handleSendRef.current = handleSend
 
   // Enhanced preview: load file content when opening preview
   useEffect(() => {
@@ -802,14 +809,29 @@ export default function ChatPlatform() {
     if (isLoading) {
       abortRef.current?.abort()
       storeSetIsLoading(false)
+      sendingRef.current = false
     }
     if (currentChatId) {
       const prev = useChatStore.getState().messagesByChat[currentChatId] || []
-      const idx = prev.findIndex(m => m.id === messageId)
-      if (idx >= 0) storeSetMessagesForChat(currentChatId, prev.slice(0, idx + 1))
+      const aiIdx = prev.findIndex(m => m.id === messageId)
+      if (aiIdx < 0) return
+      // Find the user message right before this AI message
+      let userIdx = -1
+      for (let i = aiIdx - 1; i >= 0; i--) {
+        if (prev[i].role === 'user') { userIdx = i; break }
+      }
+      if (userIdx < 0) return
+      const userMsg = prev[userIdx]
+      // Roll back to before the user message (remove user + AI pair)
+      storeSetMessagesForChat(currentChatId, prev.slice(0, userIdx))
+      // Re-send the user message to regenerate AI response
+      const fileIds = pastedFiles.map(f => f.fileId).filter((id): id is string => !!id)
+      setTimeout(() => {
+        handleSendRef.current?.(userMsg.content, currentModel, enableThinking, fileIds)
+      }, 100)
     }
     setIrrelevantContentWarning(null)
-  }, [isLoading])
+  }, [isLoading, currentChatId, currentModel, enableThinking, pastedFiles])
 
   const handleDeleteChat = async (chatId: string) => {
     try {
@@ -817,6 +839,24 @@ export default function ChatPlatform() {
       setSessions(prev => prev.filter(s => s.id !== chatId))
       if (currentChatId === chatId) handleNewChat()
     } catch (error) { console.error('删除会话失败:', error) }
+  }
+
+  const handleClearAll = () => {
+    if (sessions.length === 0) return
+    setShowClearAllModal(true)
+  }
+
+  const confirmClearAll = async () => {
+    setClearingAll(true)
+    try {
+      // Delete all sessions sequentially
+      for (const session of sessions) {
+        try { await chatApi.deleteSession(session.id) } catch { /* skip individual failures */ }
+      }
+      setSessions([])
+      handleNewChat()
+    } catch (error) { console.error('清空对话失败:', error) }
+    finally { setClearingAll(false); setShowClearAllModal(false) }
   }
 
   /* ── Project Form Fields ── */
@@ -923,8 +963,9 @@ export default function ChatPlatform() {
 
   const handleGenerateMindmap = async (messageId: string, content: string) => {
     try {
+      // Extract key topics from the AI response content for mindmap generation
       const res = await resourcesApi.generate({
-        knowledge_points: ['AI对话'],
+        knowledge_points: [content.slice(0, 500)],
         title: '对话思维导图',
         resource_type: 'mind_map',
       })
@@ -1091,6 +1132,7 @@ export default function ChatPlatform() {
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} currentChatId={currentChatId}
           onSelectChat={handleSelectChat} onNewChat={handleNewChat} sessions={sortedSessions} onDeleteChat={handleDeleteChat}
           onSearch={handleSearch} searchQuery={searchQuery} favorites={favorites} onToggleFavorite={handleToggleFavorite}
+          onClearAll={handleClearAll}
  />
 
         {/* Chat area */}
@@ -1228,6 +1270,52 @@ export default function ChatPlatform() {
             onClose={() => setCodeRunnerOpen(false)}
           />
         </DraggableWindow>
+      )}
+
+      {/* Clear All History Modal */}
+      {showClearAllModal && (
+        <Modal title="清空全部对话" onClose={() => setShowClearAllModal(false)}>
+          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              backgroundColor: 'oklch(0.55 0.2 20 / 0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}>
+              <Trash2 size={28} style={{ color: 'var(--danger)' }} />
+            </div>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--gray-700)', margin: '0 0 var(--space-2)', fontWeight: 500 }}>
+              确定要清空全部对话记录吗？
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', margin: '0 0 var(--space-6)' }}>
+              此操作将删除全部 {sessions.length} 个对话，不可恢复。
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowClearAllModal(false)}
+                disabled={clearingAll}
+                className="btn btn-secondary"
+                style={{ padding: '8px 20px', fontSize: '0.875rem' }}
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmClearAll}
+                disabled={clearingAll}
+                style={{
+                  padding: '8px 20px', fontSize: '0.875rem',
+                  borderRadius: 'var(--radius-md)', border: 'none',
+                  backgroundColor: 'var(--danger)', color: 'white',
+                  cursor: clearingAll ? 'default' : 'pointer',
+                  opacity: clearingAll ? 0.6 : 1,
+                  fontWeight: 500,
+                }}
+              >
+                {clearingAll ? '清空中...' : '确认清空'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Create Project Modal */}

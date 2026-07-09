@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { splitContentWithDiagrams } from '../utils/drawio'
 import DiagramImage from './DiagramImage'
+import MermaidRenderer from './MermaidRenderer'
 import 'katex/dist/katex.min.css'
 
 // 转换 LaTeX 定界符：\( → $, \[ → $$
@@ -85,6 +86,8 @@ function RichContent({ content }: { content: string }) {
               📊 图表将由后端生成，请刷新页面查看
             </div>
           )
+        } else if (seg.type === 'mermaid') {
+          return <MermaidRenderer key={`m-${idx}`} code={seg.content} />
         } else {
           return <DiagramImage key={`d-${idx}`} xml={seg.content} />
         }

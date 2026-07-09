@@ -414,6 +414,54 @@ class PathStateManager:
         )
 
     # ── 更新节点进度 ──
+    def replan_path(
+        self,
+        user_id: str,
+        state_id: Optional[str] = None,
+        trigger: str = "manual",
+    ) -> Dict[str, Any]:
+        """Reorder unfinished nodes using the latest mastery records."""
+        state = self._get_target_state(user_id, state_id)
+        if not state:
+            return {"success": False, "message": "没有活跃的学习路径，请先创建路径"}
+
+        original_order = list(state.node_order or [])
+        if not original_order:
+            return {"success": False, "message": "当前路径没有可调整的知识点"}
+
+        new_order, changed_count = self._build_dynamic_order(user_id, original_order)
+        next_node = self._activate_first_pending(state, new_order)
+
+        state.node_order = new_order
+        flag_modified(state, "node_order")
+        state.completed_nodes = sum(1 for n in new_order if n.get("status") == "done")
+        state.total_nodes = len(new_order)
+        if not next_node and all(n.get("status") in ("done", "skipped") for n in new_order):
+            state.phase = "completed"
+        elif state.phase == "diagnosis":
+            state.phase = "learning"
+        state.version = (state.version or 0) + 1
+        state.updated_at = datetime.utcnow()
+
+        self.db.commit()
+
+        return {
+            "success": True,
+            "message": "学习路径已根据最新掌握度动态调整",
+            "trigger": trigger,
+            "changed_count": changed_count,
+            "current_node": {
+                "node_id": next_node["node_id"],
+                "name": next_node["name"],
+            } if next_node else None,
+            "phase": state.phase,
+            "progress": {
+                "completed": state.completed_nodes,
+                "total": state.total_nodes,
+                "percentage": round(state.completed_nodes / max(state.total_nodes, 1) * 100),
+            },
+        }
+
     def update_progress(
         self,
         user_id: str,
@@ -483,17 +531,10 @@ class PathStateManager:
             return {"success": False, "message": "节点不存在于当前路径中"}
 
         # 推进游标：找到下一个 pending 节点设为 active
-        next_node = None
-        for node in node_order:
-            if node.get("status") == "pending":
-                next_node = node
-                break
+        node_order, changed_count = self._build_dynamic_order(user_id, node_order)
+        next_node = self._activate_first_pending(state, node_order)
 
-        if next_node:
-            next_node["status"] = "active"
-            state.current_node_id = UUID(next_node["node_id"])
-            state.current_node_name = next_node["name"]
-        else:
+        if not next_node:
             # 所有节点都完成了 → 检查是否真的全部 done
             all_done = all(n.get("status") in ("done", "skipped") for n in node_order)
             if all_done:
@@ -526,6 +567,220 @@ class PathStateManager:
         }
 
     # ── 重新开始路径 ──
+    def _get_target_state(self, user_id: str, state_id: Optional[str] = None) -> Optional[LearningPathState]:
+        if state_id:
+            return (
+                self.db.query(LearningPathState)
+                .filter(
+                    LearningPathState.id == state_id,
+                    LearningPathState.user_id == user_id,
+                )
+                .first()
+            )
+        return (
+            self.db.query(LearningPathState)
+            .filter(
+                LearningPathState.user_id == user_id,
+                LearningPathState.phase != "completed",
+            )
+            .order_by(LearningPathState.updated_at.desc())
+            .first()
+        )
+
+    def _build_dynamic_order(self, user_id: str, node_order: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], int]:
+        node_ids = [n.get("node_id") for n in node_order if n.get("node_id")]
+        uuid_ids = []
+        for nid in node_ids:
+            try:
+                uuid_ids.append(UUID(str(nid)))
+            except Exception:
+                continue
+
+        records_map: Dict[str, KnowledgePointRecord] = {}
+        points_map: Dict[str, KnowledgePoint] = {}
+        if uuid_ids:
+            records = (
+                self.db.query(KnowledgePointRecord)
+                .filter(
+                    KnowledgePointRecord.user_id == user_id,
+                    KnowledgePointRecord.point_id.in_(uuid_ids),
+                )
+                .all()
+            )
+            records_map = {str(r.point_id): r for r in records}
+            points = self.db.query(KnowledgePoint).filter(KnowledgePoint.id.in_(uuid_ids)).all()
+            points_map = {str(p.id): p for p in points}
+
+        prereq_map = self._get_prerequisite_map(points_map)
+
+        fixed: List[Dict[str, Any]] = []
+        remaining: List[Dict[str, Any]] = []
+        original_remaining_ids: List[str] = []
+
+        for idx, raw in enumerate(node_order):
+            item = dict(raw)
+            nid = str(item.get("node_id", ""))
+            item["_original_index"] = idx
+            record = records_map.get(nid)
+            point = points_map.get(nid)
+
+            if record:
+                item["mastery_score"] = record.mastery_score or 0
+            if point:
+                item["sort_order"] = point.sort_order or item.get("sort_order", 0)
+                if not item.get("domain_name") and point.domain:
+                    item["domain_name"] = point.domain.name
+
+            status = item.get("status", "pending")
+            needs_rollback = bool(
+                record
+                and status == "done"
+                and (
+                    (record.consecutive_errors or 0) >= 3
+                    or ((record.total_practiced or 0) > 0 and (record.mastery_score or 0) < 60)
+                    or record.status == "reviewing"
+                )
+            )
+
+            if status == "skipped":
+                fixed.append(item)
+                continue
+
+            if status == "done" and not needs_rollback:
+                fixed.append(item)
+                continue
+
+            if record and (record.mastery_score or 0) >= 80 and (record.total_practiced or 0) >= 3:
+                item["status"] = "done"
+                item["completed_at"] = item.get("completed_at") or datetime.utcnow().isoformat()
+                fixed.append(item)
+                continue
+
+            blocked_by = self._blocking_prerequisites(nid, prereq_map, records_map, node_order)
+            if blocked_by:
+                item["status"] = "locked"
+                item["blocked_by"] = blocked_by
+            elif record and ((record.consecutive_errors or 0) >= 3 or record.status == "reviewing"):
+                item["status"] = "reviewing"
+                item["completed_at"] = None
+            elif needs_rollback:
+                item["status"] = "reviewing"
+                item["completed_at"] = None
+            else:
+                item["status"] = "pending"
+            original_remaining_ids.append(nid)
+            remaining.append(item)
+
+        remaining.sort(key=lambda n: self._dynamic_priority_key(
+            n,
+            records_map.get(str(n.get("node_id", ""))),
+            points_map.get(str(n.get("node_id", ""))),
+        ))
+
+        changed_count = sum(
+            1 for idx, item in enumerate(remaining)
+            if idx >= len(original_remaining_ids) or str(item.get("node_id", "")) != original_remaining_ids[idx]
+        )
+
+        result = fixed + remaining
+        for item in result:
+            item.pop("_original_index", None)
+        return result, changed_count
+
+    def _dynamic_priority_key(
+        self,
+        item: Dict[str, Any],
+        record: Optional[KnowledgePointRecord],
+        point: Optional[KnowledgePoint],
+    ) -> tuple:
+        mastery = int(item.get("mastery_score") or 0)
+        consecutive_errors = int(record.consecutive_errors or 0) if record else 0
+        total_practiced = int(record.total_practiced or 0) if record else 0
+        status = record.status if record else ""
+        difficulty = int(point.difficulty or 1) if point else 1
+        domain_order = point.domain.sort_order if point and point.domain else 0
+        sort_order = int(item.get("sort_order") or 0)
+
+        if item.get("status") == "locked":
+            return (1, domain_order, sort_order, int(item.get("_original_index") or 0))
+
+        priority = 0
+        priority += max(0, 100 - mastery) * 10
+        priority += consecutive_errors * 80
+        if item.get("status") == "reviewing" or status == "reviewing" or consecutive_errors >= 3:
+            priority += 600
+        if total_practiced > 0 and mastery < 60:
+            priority += 180
+        priority += max(0, 4 - difficulty) * 25
+
+        return (-priority, domain_order, sort_order, int(item.get("_original_index") or 0))
+
+    def _get_prerequisite_map(self, points_map: Dict[str, KnowledgePoint]) -> Dict[str, set[str]]:
+        if not points_map:
+            return {}
+
+        name_to_id = {p.name: pid for pid, p in points_map.items() if p.name}
+        prereq_map: Dict[str, set[str]] = {}
+
+        try:
+            from app.db.neo4j import get_neo4j
+            neo4j = get_neo4j()
+            if not neo4j.verify_connectivity():
+                return {}
+            for edge in neo4j.get_all_prerequisite_edges():
+                src_id = name_to_id.get(edge.get("source", ""))
+                tgt_id = name_to_id.get(edge.get("target", ""))
+                if src_id and tgt_id:
+                    prereq_map.setdefault(tgt_id, set()).add(src_id)
+        except Exception as e:
+            logger.warning(f"获取路径前置依赖失败，跳过锁定规则: {e}")
+
+        return prereq_map
+
+    def _blocking_prerequisites(
+        self,
+        node_id: str,
+        prereq_map: Dict[str, set[str]],
+        records_map: Dict[str, KnowledgePointRecord],
+        node_order: List[Dict[str, Any]],
+    ) -> List[str]:
+        prereq_ids = prereq_map.get(node_id) or set()
+        if not prereq_ids:
+            return []
+
+        status_map = {str(n.get("node_id", "")): n.get("status", "pending") for n in node_order}
+        blocked = []
+        for prereq_id in prereq_ids:
+            record = records_map.get(prereq_id)
+            status = status_map.get(prereq_id)
+            mastered = bool(record and (record.mastery_score or 0) >= 70)
+            done = status in ("done", "skipped") or bool(record and record.status == "mastered")
+            if not (done or mastered):
+                blocked.append(prereq_id)
+        return blocked
+
+    def _activate_first_pending(
+        self,
+        state: LearningPathState,
+        node_order: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        next_node = None
+        for node in node_order:
+            if node.get("status") == "active":
+                node["status"] = "pending"
+            if next_node is None and node.get("status") in ("reviewing", "pending"):
+                next_node = node
+
+        if next_node:
+            if next_node.get("status") != "reviewing":
+                next_node["status"] = "active"
+            state.current_node_id = UUID(next_node["node_id"])
+            state.current_node_name = next_node["name"]
+        else:
+            state.current_node_id = None
+            state.current_node_name = None
+        return next_node
+
     def restart_path(self, user_id: str) -> Dict[str, Any]:
         """结束当前路径，保留历史"""
         state = (

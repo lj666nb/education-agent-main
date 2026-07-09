@@ -38,10 +38,12 @@ const DataStructureNotesPage = lazy(() => import('./pages/DataStructureNotesPage
 const AgentTasksPage = lazy(() => import('./pages/AgentTasksPage'))
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'))
 const PathHistoryPage = lazy(() => import('./pages/PathHistoryPage'))
+const KnowledgeLeetBookDetailPage = lazy(() => import('./pages/KnowledgeLeetBookDetailPage'))
 const ReviewCenterPage = lazy(() => import('./pages/ReviewCenterPage'))
 const ReviewWrongPage = lazy(() => import('./pages/ReviewWrongPage'))
 const KnowledgePointsPage = lazy(() => import('./pages/KnowledgePointsPage'))
 const KnowledgeGraphPage = lazy(() => import('./pages/KnowledgeGraphPage'))
+const CodingPracticePage = lazy(() => import('./pages/CodingPracticePage'))
 
 const PageSkeleton = () => (
   <div style={{
@@ -135,8 +137,10 @@ function App() {
           <Route path="cloud-drive" element={<ProtectedRoute><LazyRoute><CloudDrivePage /></LazyRoute></ProtectedRoute>} />
           <Route path="recommendations" element={<ProtectedRoute><LazyRoute><DataStructureNotesPage /></LazyRoute></ProtectedRoute>} />
           <Route path="path" element={<ProtectedRoute><LazyRoute><LearningPathPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="path/knowledge/:pointId" element={<ProtectedRoute><LazyRoute><KnowledgeLeetBookDetailPage /></LazyRoute></ProtectedRoute>} />
           <Route path="path/history" element={<ProtectedRoute><LazyRoute><PathHistoryPage /></LazyRoute></ProtectedRoute>} />
           <Route path="agent/tasks" element={<ProtectedRoute><LazyRoute><AgentTasksPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="coding-practice" element={<ProtectedRoute><LazyRoute><CodingPracticePage /></LazyRoute></ProtectedRoute>} />
         </Route>
       </Routes>
       </ErrorBoundary>

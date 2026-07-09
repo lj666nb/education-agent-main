@@ -207,8 +207,10 @@ useEffect(() => {
 | **LP-24** | **LearningPathState 扩展 metadata 字段** | **P0** | ✅ 是 | 🔴 否 | - | ai_metadata JSONB 字段：path_name/phases/strategy_notes/daily_suggestion |
 | LP-25 | 路径跳过 / 回退功能 | P1 | 🔴 否 | 🔴 否 | - | 用户手动调整节点 |
 | LP-26 | 多信号融合推荐引擎（6维加权评分） | P1 | 🔴 否 | 🔴 否 | - | Priority = w×urgency + w×mastery_gap + ... |
-| LP-27 | 路径自适应调整（回退/短路/解锁） | P2 | 🔴 否 | 🔴 否 | - | Agent 检测信号→自动调整路径结构 |
+| LP-27 | 路径自适应调整（回退/短路/解锁） | P2 | ✅ 是 | ✅ 是 | - | 已实现动态重排、错题回退复习、掌握度短路完成、前置依赖锁定/解锁 |
 | LP-28 | 路径历史与版本控制 | P2 | 🔴 否 | 🔴 否 | - | 每次调整写入PathHistory，前端展示演变时间线 |
+| LP-29 | LeetBook 风格探索地图与知识点章节页 | P1 | ✅ 是 | ✅ 是 | - | 路径总览改为探索知识地图；点击知识点进入独立章节页 |
+| LP-30 | 数据结构参考讲义与知识拔高 | P1 | ✅ 是 | ✅ 是 | - | 阅读讲义按基础讲解、知识拔高、易错辨析、练习导向生成，并标注参考来源 |
 
 ### JSON 版
 
@@ -347,13 +349,23 @@ useEffect(() => {
     },
     "LP-27_adaptive_adjust": {
       "description": "路径自适应调整（回退/短路/解锁）",
-      "completed": false, "passed": false, "user_feedback": null,
-      "notes": "P2: 连续4次答错→回退；跳过前置→短路；5节点mastered→解锁下层"
+      "completed": true, "passed": true, "user_feedback": null,
+      "notes": "2026-07-09 已完成：新增 POST /path/replan；完成节点、掌握度测评和练习提交后按最新 mastery_score、连续错误、reviewing 状态动态重排未完成节点；连续错误或已完成节点掌握度回落会回退为 reviewing；掌握度达标且练习量充足会短路为 done；读取 Neo4j PREREQUISITE 关系并锁定前置未达标节点，前置掌握后自动解锁；前端 AI 生成入口改为 generate→confirm→state 闭环，并展示回退复习/前置锁定状态。"
     },
     "LP-28_path_history": {
       "description": "路径历史与版本控制（PathHistory表+演变时间线）",
       "completed": false, "passed": false, "user_feedback": null,
       "notes": "P2: 每次调整写入PathHistory；前端展示路径演变"
+    },
+    "LP-29_leetbook_explore_ui": {
+      "description": "LeetBook 风格探索知识地图与知识点章节详情页",
+      "completed": true, "passed": true, "user_feedback": null,
+      "notes": "2026-07-09 已完成：LearningPathPage 总览替换为探索知识地图，按领域分组展示知识点卡片；新增 /path/knowledge/:pointId 独立详情页，包含左侧路径目录、章节头图、学习任务、学习内容、练习复盘和前后篇导航；点击线性表等知识点会跳转到对应章节页。Playwright 已验证线性表定义跳转与详情结构。"
+    },
+    "LP-30_sourced_reading_lecture": {
+      "description": "数据结构参考讲义与知识拔高",
+      "completed": true, "passed": true, "user_feedback": null,
+      "notes": "2026-07-09 已完成：新增 knowledge_lecture_builder，根据数据结构复习资料和 CK_0ff 复习笔记的章节索引为知识点构建讲义提示词；线性表等知识点输出基础讲解、知识拔高、易错辨析、练习导向、自测清单和参考来源；无 DeepSeek/Qwen 配置时生成资料参考讲义，有配置时调用模型生成个性化 Markdown 讲义；前端统一为阅读讲义文案。"
     }
   }
 }

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # ── PostgreSQL ──
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: str = "change-me-postgres"
     POSTGRES_DB: str = "education_agent"
     POSTGRES_PORT: str = "5432"
 
@@ -24,13 +24,13 @@ class Settings(BaseSettings):
     # ── Neo4j ──
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
-    NEO4J_PASSWORD: str = "12345678"
+    NEO4J_PASSWORD: str = "change-me-neo4j"
 
     # ── MongoDB ──
     MONGODB_HOST: str = "localhost"
     MONGODB_PORT: int = 27017
     MONGODB_USER: str = "root"
-    MONGODB_PASSWORD: str = "123456"
+    MONGODB_PASSWORD: str = "change-me-mongo"
     MONGODB_DB: str = "education_agent"
 
     # ── 安全 ──
@@ -73,6 +73,57 @@ class Settings(BaseSettings):
     # operator explicitly enables it in a controlled environment.
     ENABLE_CODE_EXECUTION: bool = False
     ENABLE_PLOT_CODE_EXECUTION: bool = False
+
+    # ── CORS ──
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    # ── OCR (Baidu) ──
+    OCR_BAIDU_TOKEN_URL: str = "https://aip.baidubce.com/oauth/2.0/token"
+    OCR_BAIDU_API_URL: str = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic"
+
+    # ── Web Search (DashScope MCP) ──
+    WEB_SEARCH_URL: str = "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp"
+    WEB_SEARCH_MODEL: str = "deepseek-chat"
+
+    # ── Embedding (DashScope) ──
+    EMBEDDING_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
+    EMBEDDING_MAX_RETRIES: int = 3
+    EMBEDDING_TIMEOUT: int = 120
+
+    # ── Unsplash ──
+    UNSPLASH_API_BASE: str = "https://api.unsplash.com"
+
+    # ── Default LLM fallbacks (used when no user API settings) ──
+    DEFAULT_LLM_BASE_URL: str = "https://api.deepseek.com/v1"
+    DEFAULT_LLM_MODEL: str = "deepseek-chat"
+
+    # ── Valid model sets (comma-separated) ──
+    VALID_DEEPSEEK_MODELS: str = "deepseek-v4-pro,deepseek-v4-flash,deepseek-chat,deepseek-reasoner"
+    VALID_QWEN_MODELS: str = "qwen-plus,qwen-turbo,qwen-max,qwen3.5-plus,qwen3.6-plus"
+
+    # ── Execution / Timeouts ──
+    CODE_EXECUTION_TIMEOUT: int = 30
+    API_VALIDATION_TIMEOUT: int = 10
+    DEFAULT_LLM_TIMEOUT: int = 120
+
+    # ── Feature toggles ──
+    ENABLE_OCR: bool = True
+    ENABLE_WEB_SEARCH: bool = True
+    ENABLE_UNSPLASH: bool = True
+    ENABLE_TTS: bool = True
+
+    # ── CDN / External ──
+    ECHARTS_CDN_URL: str = "https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"
+    PLACEHOLD_IMAGE_URL: str = "https://placehold.co"
+    DRAWIO_VIEWER_URL: str = "https://viewer.diagrams.net"
+
+    # ── Uploads ──
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+
+    # ── Pagination defaults ──
+    DEFAULT_PAGE_SIZE: int = 20
+    DEFAULT_LARGE_PAGE_SIZE: int = 100
 
     # Unsplash 图片搜索
     UNSPLASH_ACCESS_KEY: str = ""

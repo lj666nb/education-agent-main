@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pathApi, type PathNodeStatus, type PathListItem } from '../api/path'
 import { questionBankApi } from '../api/questionBank'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import LeetBookExploreMap from '../components/path/LeetBookExploreMap'
 
 const BRAND = '#1677E8', T1 = '#2C3A52', T2 = '#64748B', T3 = '#94A3B8', BL = '#E5EDF7'
 const BG_PAGE = '#F4F8FC'
@@ -28,7 +29,9 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
     if (weakMode && (n.mastery_score || 0) < 40) return { bg:'#FEE2E2', bd:'#EF4444', tx:'#991B1B', ba:'#EF4444', label:'薄弱' }
     if (n.needs_review) return { bg:'#FFFBEB', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'待复习' }
     if (n.status === 'mastered') return { bg:'#D1FAE5', bd:'#6EE7B7', tx:'#166534', ba:'#10B981', label:'已掌握' }
+    if (n.status === 'reviewing') return { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'回退复习' }
     if (n.status === 'learning') return { bg:'#DBEAFE', bd:'#3B82F6', tx:'#1E40AF', ba:BRAND, label:'学习中' }
+    if (n.status === 'locked') return { bg:'#F3F4F6', bd:'#CBD5E1', tx:'#94A3B8', ba:'#CBD5E1', label:'前置锁定' }
     return { bg:'#F9FAFB', bd:'#D1D5DB', tx:'#6B7280', ba:'#9CA3AF', label:'未开始' }
   }
   return <div className="flow-svg-container" style={{ overflow: 'auto', maxHeight: 500, background: BG_PAGE, borderRadius: 8 }}>
@@ -49,7 +52,7 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
             const { bg, bd, tx, ba } = statusColor(n)
             const x = 100 + ni * (N_W + GX), ny = y - N_H / 2
             const hl = highlightNode === n.point_id
-            return <g key={n.point_id} style={{ cursor: 'pointer' }} onClick={() => onNodeClick(n)} onContextMenu={e => { e.preventDefault(); onNodeContext?.(e, n) }}>
+            return <g key={n.point_id} style={{ cursor: n.status==='locked'?'not-allowed':'pointer' }} onClick={() => onNodeClick(n)} onContextMenu={e => { e.preventDefault(); onNodeContext?.(e, n) }}>
               <rect x={x + 1} y={ny + 1} width={N_W} height={N_H} rx={8} fill="#00000008"/>
               <rect x={x} y={ny} width={N_W} height={N_H} rx={8} fill={bg} stroke={hl ? BRAND : bd} strokeWidth={hl ? 2.5 : 1.2} opacity={hl ? 1 : 0.9}/>
               {hl && <rect x={x} y={ny} width={N_W} height={N_H} rx={8} fill="none" stroke={BRAND} strokeWidth="2.5" opacity="0.4"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="2s" repeatCount="indefinite"/></rect>}
@@ -289,7 +292,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
   const prevNode=curIdx>0?nodes[curIdx-1]:null
   const nextNode=curIdx<nodes.length-1?nodes[curIdx+1]:null
 
-  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'assess',l:'🔬 掌握度测评'},{k:'review',l:'📖 AI复习'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}] as const
+  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'assess',l:'🔬 掌握度测评'},{k:'review',l:'📖 阅读讲义'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}] as const
 
   if(detailLoading)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>加载中...</div>
   if(!detailData)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>暂无数据</div>
@@ -422,11 +425,11 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
 
           {/* Review Tab */}
           {activeTab==='review'&&<div>
-            <h3 style={{fontSize:14,fontWeight:600,margin:'0 0 12px',color:T1}}>📖 AI复习资料</h3>
+            <h3 style={{fontSize:14,fontWeight:600,margin:'0 0 12px',color:T1}}>📖 阅读讲义</h3>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
-              {['速记思维导图','考前背诵提纲','易错点总结','代码模板'].map((t,i)=><button key={i} onClick={gr} disabled={reviewGenerating} style={{padding:'8px 16px',borderRadius:8,border:'1px solid '+BL,background:reviewGenerating?'#F3F4F6':'#fff',color:reviewGenerating?T3:['#7C3AED','#F59E0B','#EF4444','#10B981'][i],fontSize:11,cursor:'pointer',fontWeight:500,fontFamily:'inherit'}}>{['🧠','📋','⚠️','💻'][i]} {t}</button>)}
+              {['基础讲解','知识拔高','易错辨析','练习导向'].map((t,i)=><button key={i} onClick={gr} disabled={reviewGenerating} style={{padding:'8px 16px',borderRadius:8,border:'1px solid '+BL,background:reviewGenerating?'#F3F4F6':'#fff',color:reviewGenerating?T3:['#7C3AED','#F59E0B','#EF4444','#10B981'][i],fontSize:11,cursor:'pointer',fontWeight:500,fontFamily:'inherit'}}>{['📘','🚀','⚠️','✏️'][i]} {t}</button>)}
             </div>
-            {reviewContent?<div><div onClick={()=>setReviewExpanded(!reviewExpanded)} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:12,color:'#6366F1',userSelect:'none',marginBottom:reviewExpanded?8:0}}>{reviewExpanded?'收起 ▲':'展开 ▼'}AI生成的复习资料</div>{reviewExpanded&&<div style={{padding:'10px 14px',borderRadius:8,background:BG_PAGE,border:'1px solid #E5E7EB',fontSize:13,lineHeight:1.8,maxHeight:400,overflowY:'auto'}}>{typeof reviewContent==='string'?<MarkdownRenderer content={reviewContent}/>:<pre>{JSON.stringify(reviewContent,null,2)}</pre>}</div>}</div>:<button onClick={gr} disabled={reviewGenerating} style={{padding:'8px 16px',borderRadius:8,border:'none',background:reviewGenerating?'#D1D5DB':'#6366F1',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{reviewGenerating?'⏳ 生成中...':'🤖 AI生成复习资料'}</button>}
+            {reviewContent?<div><div onClick={()=>setReviewExpanded(!reviewExpanded)} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:12,color:'#6366F1',userSelect:'none',marginBottom:reviewExpanded?8:0}}>{reviewExpanded?'收起 ▲':'展开 ▼'}知识点阅读讲义</div>{reviewExpanded&&<div style={{padding:'10px 14px',borderRadius:8,background:BG_PAGE,border:'1px solid #E5E7EB',fontSize:13,lineHeight:1.8,maxHeight:400,overflowY:'auto'}}>{typeof reviewContent==='string'?<MarkdownRenderer content={reviewContent}/>:<pre>{JSON.stringify(reviewContent,null,2)}</pre>}</div>}</div>:<button onClick={gr} disabled={reviewGenerating} style={{padding:'8px 16px',borderRadius:8,border:'none',background:reviewGenerating?'#D1D5DB':'#6366F1',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{reviewGenerating?'⏳ 生成中...':'生成阅读讲义'}</button>}
           </div>}
 
           {/* Wrong Answers Tab */}
@@ -474,7 +477,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
               <div style={{position:'absolute',left:8,top:0,bottom:0,width:2,background:'#E5E7EB'}}/>
               {[
                 {t:detailData.last_practice_at?'最近练习':'尚无练习',d:detailData.last_practice_at?new Date(detailData.last_practice_at).toLocaleDateString('zh-CN'):'开始你的第一次练习',c:'#10B981'},
-                {t:'AI复习',d:detailData.review_material?'已生成复习资料':'点击AI复习Tab生成',c:'#6366F1'},
+                {t:'阅读讲义',d:detailData.review_material?'已生成阅读讲义':'点击阅读讲义 Tab 生成',c:'#6366F1'},
                 {t:'测评记录',d:assessResult?`得分${assessResult.score}分`:'尚未测评',c:'#7C3AED'},
                 {t:'学习次数',d:`已学习${detailData.study_count||0}次`,'c':BRAND},
               ].map((e,i)=>(
@@ -584,18 +587,31 @@ export default function LearningPathPage() {
 
   const _list=async()=>{setPll(true);try{const r=await pathApi.listPaths();setPl(r.data.paths||[]);setPv('select')}catch(_){};setPll(false)}
   const _url=(v:string,s?:string,p?:string)=>{const q=new URLSearchParams();q.set('view',v);if(s)q.set('state',s);if(p)q.set('point',p);window.history.replaceState(null,'','/path?'+q.toString())}
+  const _pathStatus=(s:string):PathNodeStatus['status']=>s==='done'?'mastered':s==='active'?'learning':s==='reviewing'?'reviewing':s==='locked'?'locked':'not_started'
 
-  const _sel=async(s:string)=>{setSid(s);setLoad(true);setErr(null);try{const r=await pathApi.getPathState(s);const d=r.data.state;if(d){const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:n.status==='done'?'mastered':n.status==='active'?'learning':'not_started',is_difficult:false,needs_review:false}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started').length,reviewing:0,difficult:0});setPv('overview');_url('overview',s)}}catch(e:any){setErr(e?.response?.data?.detail||'加载失败')};setLoad(false)}
+  const _sel=async(s:string)=>{setSid(s);setLoad(true);setErr(null);try{const r=await pathApi.getPathState(s);const d=r.data.state;if(d){const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0});setPv('overview');_url('overview',s)}}catch(e:any){setErr(e?.response?.data?.detail||'加载失败')};setLoad(false)}
 
-  const _ref=useCallback(async()=>{if(!sid)return;try{const r=await pathApi.getPathState(sid);const d=r.data.state;if(!d)return;const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:n.status==='done'?'mastered':n.status==='active'?'learning':'not_started',is_difficult:false,needs_review:false}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started').length,reviewing:0,difficult:0})}catch(_){}},[sid])
+  const _ref=useCallback(async()=>{if(!sid)return;try{const r=await pathApi.getPathState(sid);const d=r.data.state;if(!d)return;const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0})}catch(_){}},[sid])
 
   const _navigateToPractice=async(pointId:string)=>{try{const res=await questionBankApi.getKnowledgePointPracticeBank(pointId);nav(`/banks/${res.data.bank_id}/practice?point=${encodeURIComponent(pointId)}`)}catch(_){nav('/banks')}}
-  const _nclick=async(n:PathNodeStatus)=>{if(n.status==='not_started')return;_showDetail(n)}
+  const _nclick=async(n:PathNodeStatus)=>{nav(`/path/knowledge/${n.point_id}${sid?`?state=${encodeURIComponent(sid)}`:''}`)}
   const _showDetail=async(n:PathNodeStatus)=>{setPid(n.point_id);setPv('detail');_url('detail',sid||undefined,n.point_id);setDdl(true);try{const r=await pathApi.getKnowledgeDetail(n.point_id);setDd({...r.data,needs_review:n.needs_review})}catch(_){};setDdl(false)}
-  const _navigateNode=(nodeId:string)=>{const n=nodes.find(x=>x.point_id===nodeId);if(n)_showDetail(n)}
+  const _navigateNode=(nodeId:string)=>{nav(`/path/knowledge/${nodeId}${sid?`?state=${encodeURIComponent(sid)}`:''}`)}
   const _back=useCallback(()=>{setPv('overview');if(sid){_url('overview',sid);_ref()}},[sid,_ref])
-  const _gen=async(data:{subjectId:string;goalType:string;targetScore:string;deadline:string})=>{const r=await pathApi.initPath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:`目标分数:${data.targetScore},截止:${data.deadline}`});await _sel(r.data.state_id)}
+  const _gen=async(data:{subjectId:string;goalType:string;targetScore:string;deadline:string})=>{
+    const goalDescription=`目标分数:${data.targetScore||'未设置'},截止:${data.deadline||'未设置'}`
+    if(createMode==='manual'){
+      const r=await pathApi.initPath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription})
+      await _sel(r.data.state_id)
+      return
+    }
+    const generated=await pathApi.generatePath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription,target_score:data.targetScore,deadline:data.deadline})
+    if(!generated.data.nodes?.length)throw new Error(generated.data.description||'AI未返回可用路径，请检查学科知识点或API配置')
+    const confirmed=await pathApi.confirmPath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription,generated_path:generated.data})
+    await _sel(confirmed.data.state_id)
+  }
   const _adv=async(p:string)=>{if(!sid||adv)return;setAdv(p);try{await pathApi.updateProgress({node_id:p,action:'complete',state_id:sid});await pathApi.recordKnowledgeStudy(p);await _ref()}catch(_){};setAdv(null)}
+  const _replan=async()=>{if(!sid||load)return;setLoad(true);setErr(null);try{await pathApi.replanPath({state_id:sid,trigger:'manual'});await _ref()}catch(e:any){setErr(e?.response?.data?.detail||'动态重排失败')};setLoad(false)}
   const _goback=()=>{setPv('select');_list();window.history.replaceState(null,'','/path')}
   const _deletePath=async(id:string)=>{if(!confirm('确定删除此路径？'))return;try{await pathApi.restartPath();_list()}catch(_){}}
   const _resetPath=async(id:string)=>{try{await pathApi.restartPath();_list()}catch(_){}}
@@ -652,8 +668,26 @@ export default function LearningPathPage() {
     {/* ── Detail View (Page 3) ── */}
     {pv==='detail'&&pid&&<DetailScreen pointId={pid} detailData={dd} detailLoading={ddl} nodes={nodes} onBack={_back} onPractice={(p:string)=>_navigateToPractice(p)} onNavigateNode={_navigateNode}/>}
 
+    {pv==='overview'&&<LeetBookExploreMap
+      nodes={nodes}
+      groups={sdom?groups.filter(g=>g.domain===sdom):groups}
+      progressRate={rate}
+      completed={mst}
+      total={tt}
+      reviewCount={reviewNodes.length}
+      loading={load}
+      error={err}
+      selectedDomain={sdom}
+      weakMode={weakMode}
+      onDomainChange={(domain)=>setSdom(domain)}
+      onNodeClick={_nclick}
+      onNodeContext={_handleNodeContext}
+      onReplan={_replan}
+      onToggleWeakMode={()=>setWeakMode(!weakMode)}
+    />}
+
     {/* ── Overview View (Page 2) ── */}
-    {pv==='overview'&&<div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:BG_PAGE}}>
+    {false&&pv==='overview'&&<div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:BG_PAGE}}>
       {/* Global Info Bar */}
       <div style={{margin:'12px 20px 0',padding:'14px 18px',background:'#fff',borderRadius:12,border:'1px solid '+BL,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
         <div style={{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200}}>
@@ -672,6 +706,7 @@ export default function LearningPathPage() {
         </div>}
         {/* Global actions */}
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          <button onClick={_replan} disabled={load} style={{padding:'5px 10px',borderRadius:6,border:'1px solid '+BL,background:load?'#F3F4F6':'#fff',color:load?T3:BRAND,fontSize:10,cursor:load?'not-allowed':'pointer',fontFamily:'inherit'}}>动态重排</button>
           <button onClick={()=>setWeakMode(!weakMode)} style={{padding:'5px 10px',borderRadius:6,border:'1px solid '+BL,background:'#fff',color:T2,fontSize:10,cursor:'pointer',fontFamily:'inherit'}}>🔥 批量练薄弱</button>
           <button style={{padding:'5px 10px',borderRadius:6,border:'1px solid '+BL,background:'#fff',color:T2,fontSize:10,cursor:'pointer',fontFamily:'inherit'}}>📋 生成复习计划</button>
           <button style={{padding:'5px 10px',borderRadius:6,border:'1px solid '+BL,background:'#fff',color:T2,fontSize:10,cursor:'pointer',fontFamily:'inherit'}}>📥 导出导图</button>

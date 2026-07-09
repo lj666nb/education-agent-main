@@ -9,6 +9,7 @@ import jsPDF from 'jspdf'
 import { splitContentWithDiagrams } from '../utils/drawio'
 import { detectLanguage, LANGUAGE_NAMES } from '../utils/codeRunner'
 import DiagramImage from './DiagramImage'
+import MermaidRenderer from './MermaidRenderer'
 
 export interface RagSource {
   document_name: string
@@ -145,9 +146,34 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
       return
     }
     window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(content.replace(/[#*`~\[\]()>!\[\]]/g, ''))
+    // Strip markdown syntax for cleaner speech
+    const text = content.replace(/[#*`~\[\]()>!\[\]]/g, '').replace(/\[DRAWIO\][\s\S]*?\[\/DRAWIO\]/g, '').replace(/\[PLOT\][\s\S]*?\[\/PLOT\]/g, '').replace(/\[SVG\][\s\S]*?\[\/SVG\]/g, '')
+    const u = new SpeechSynthesisUtterance(text)
     u.lang = 'zh-CN'
     u.rate = 1.0
+    u.pitch = 1.0
+    // Try to find a young male Chinese voice
+    const voices = window.speechSynthesis.getVoices()
+    // Preferred young male voices in order of preference
+    const preferredVoices = [
+      'Microsoft Yunyang',        // Windows - young male Mandarin
+      'Google 普通话（中国大陆）',  // Google - male Mandarin
+      'zh-CN',                     // fallback
+    ]
+    let selected: SpeechSynthesisVoice | null = null
+    for (const pref of preferredVoices) {
+      selected = voices.find(v => v.name.includes(pref) || v.lang === pref) || null
+      if (selected) break
+    }
+    // If no preferred voice found, look for any Chinese male voice
+    if (!selected) {
+      selected = voices.find(v => v.lang.startsWith('zh') && v.name.toLowerCase().includes('male')) || null
+    }
+    // Fallback to any Chinese voice
+    if (!selected) {
+      selected = voices.find(v => v.lang.startsWith('zh')) || null
+    }
+    if (selected) u.voice = selected
     u.onend = () => setSpeakingMsgId(null)
     u.onerror = () => setSpeakingMsgId(null)
     utteranceRef.current = u
@@ -472,6 +498,69 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             return <td style={{ border: '1px solid var(--gray-300)', padding: '0.5rem', ...style }}>{children}</td>
           },
           img({ src, alt }) {
+            // Check if this is a pre-rendered draw.io image
+            const drawioMatch = src?.match(/\/api\/v1\/chat\/drawio\/drawio_(\w+)\.png/)
+            if (drawioMatch && onEditDiagram) {
+              const drawioId = drawioMatch[1]
+              return (
+                <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '0.5rem 0' }}>
+                  <img
+                    src={src}
+                    alt={alt || '图表'}
+                    style={{ maxWidth: '100%', borderRadius: 8, display: 'block' }}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      target.style.display = 'none'
+                      const placeholder = document.createElement('div')
+                      placeholder.style.cssText = 'padding:1rem;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;color:#991B1B;font-size:0.875rem;text-align:center'
+                      placeholder.textContent = '⚠️ 图片加载失败'
+                      target.parentNode?.insertBefore(placeholder, target)
+                    }}
+                  />
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('access_token')
+                        const resp = await fetch(`/api/v1/chat/drawio/${drawioId}/xml`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        })
+                        if (resp.ok) {
+                          const xml = await resp.text()
+                          onEditDiagram?.(xml)
+                        }
+                      } catch { /* ignore */ }
+                    }}
+                    title="在编辑器中打开"
+                    style={{
+                      position: 'absolute', top: '8px', right: '8px',
+                      opacity: 0, transition: 'opacity 0.15s',
+                      padding: '4px 10px', fontSize: '0.7rem',
+                      border: '1px solid var(--gray-200)', borderRadius: '6px',
+                      backgroundColor: 'white', color: 'var(--gray-600)',
+                      cursor: 'pointer', fontWeight: 500,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--primary)'
+                      e.currentTarget.style.color = 'var(--primary)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--gray-200)'
+                      e.currentTarget.style.color = 'var(--gray-600)'
+                    }}
+                    onMouseDown={e => e.stopPropagation()}
+                  >
+                    ✏️ 编辑
+                  </button>
+                  <style>{`
+                    div:has(> img[src*="/api/v1/chat/drawio/"]):hover button {
+                      opacity: 1 !important;
+                    }
+                  `}</style>
+                </div>
+              )
+            }
             return (
               <img
                 src={src}
@@ -691,6 +780,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                     )}
                   </div>
                 )
+              } else if (seg.type === 'mermaid') {
+                return <MermaidRenderer key={`m-${segIdx}`} code={seg.content} />
               } else {
                 return <DiagramImage key={`d-${segIdx}`} xml={seg.content} onEdit={onEditDiagram} />
               }

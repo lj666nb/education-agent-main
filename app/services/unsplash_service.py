@@ -7,10 +7,9 @@
 import logging
 import httpx
 from typing import Optional
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-UNSPLASH_API_BASE = "https://api.unsplash.com"
 
 
 class UnsplashService:
@@ -45,7 +44,7 @@ class UnsplashService:
             logger.warning("UNSPLASH_ACCESS_KEY 未配置，无法搜索图片")
             return []
 
-        url = f"{UNSPLASH_API_BASE}/search/photos"
+        url = f"{settings.UNSPLASH_API_BASE}/search/photos"
         params = {
             "query": query,
             "per_page": min(per_page, 30),

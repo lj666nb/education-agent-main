@@ -11,7 +11,7 @@ class OCRService:
         self.access_token: Optional[str] = None
 
     def get_access_token(self) -> str:
-        token_url = "https://aip.baidubce.com/oauth/2.0/token"
+        token_url = settings.OCR_BAIDU_TOKEN_URL
         params = {
             "grant_type": "client_credentials",
             "client_id": self.api_key,
@@ -28,7 +28,7 @@ class OCRService:
         if not self.access_token:
             self.get_access_token()
 
-        request_url = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic"
+        request_url = settings.OCR_BAIDU_API_URL
         params = {
             "access_token": self.access_token,
             "image": image_base64

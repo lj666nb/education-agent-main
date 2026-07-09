@@ -1,10 +1,12 @@
 # Build stage
 FROM node:20-alpine AS build
 
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm config set registry https://registry.npmmirror.com && npm ci
+RUN npm config set registry ${NPM_REGISTRY} && npm ci
 
 COPY tsconfig.json tsconfig.node.json vite.config.ts ./
 COPY index.html ./

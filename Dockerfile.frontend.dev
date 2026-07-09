@@ -1,9 +1,11 @@
 FROM node:20-alpine
 
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm config set registry https://registry.npmmirror.com && npm ci
+RUN npm config set registry ${NPM_REGISTRY} && npm ci
 
 # Copy Monaco Editor to public directory for local loading (avoids CDN)
 RUN mkdir -p /app/public/monaco-editor/min && cp -r /app/node_modules/monaco-editor/min/vs /app/public/monaco-editor/min/vs

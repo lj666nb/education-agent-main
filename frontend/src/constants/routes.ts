@@ -1,0 +1,38 @@
+/**
+ * 应用路由常量
+ * 统一管理所有前端路由，避免硬编码路径字符串
+ */
+export const ROUTES = {
+  HOME: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  APP_HOME: '/home',
+  CHAT: '/chat/new',
+  BANKS: '/banks',
+  BANK_DETAIL: (id: string) => `/banks/${id}`,
+  BANK_PRACTICE: (bankId: string) => `/banks/${bankId}/practice`,
+  BANK_EXAM_PAPER: (bankId: string, paperId: string) => `/banks/${bankId}/exam-papers/${paperId}`,
+  BANK_HISTORY: (bankId: string) => `/banks/${bankId}/history`,
+  BANK_HISTORY_DETAIL: (bankId: string, sessionId: string) => `/banks/${bankId}/history/${sessionId}`,
+  BANK_STATS: (bankId: string) => `/banks/${bankId}/stats`,
+  BANK_WRONG_REVIEW: (bankId: string) => `/banks/${bankId}/wrong-review`,
+  PROFILE: '/profile',
+  PROFILE_INIT: '/profile/init',
+  PROFILE_DYNAMIC: '/profile/dynamic',
+  PROFILE_EVENTS: '/profile/events',
+  REVIEW: '/review',
+  KNOWLEDGE_GRAPH: '/knowledge-graph',
+  KNOWLEDGE_POINTS: '/knowledge-points',
+  RECOMMENDATIONS: '/recommendations',
+  RESOURCE_DETAIL: (id: string) => `/resources/${id}`,
+  PATH: '/path',
+  PATH_KNOWLEDGE: (pointId: string) => `/path/knowledge/${pointId}`,
+  PATH_HISTORY: '/path/history',
+  STATS: '/stats',
+  API_SETTINGS: '/settings/api',
+  WRONG_ANSWERS: '/wrong-answers',
+  CODING_PRACTICE: '/coding-practice',
+  CLOUD_DRIVE: '/cloud-drive',
+  AGENT_TASKS: '/agent/tasks',
+  ADMIN: '/admin',
+} as const

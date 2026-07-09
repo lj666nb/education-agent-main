@@ -14,7 +14,7 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/code", tags=["code"])
 
-EXECUTION_TIMEOUT = 30  # seconds
+EXECUTION_TIMEOUT = settings.CODE_EXECUTION_TIMEOUT  # seconds
 
 
 class CodeExecuteRequest(BaseModel):

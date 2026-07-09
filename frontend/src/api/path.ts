@@ -7,7 +7,7 @@ export interface PathNodeStatus {
   domain_sort_order: number
   sort_order: number
   mastery_score: number
-  status: 'not_started' | 'learning' | 'mastered' | 'reviewing'
+  status: 'not_started' | 'learning' | 'mastered' | 'reviewing' | 'locked'
   is_difficult: boolean
   needs_review: boolean
 }
@@ -107,7 +107,7 @@ export interface NodeOrderItem {
   node_id: string
   name: string
   domain_name: string
-  status: 'pending' | 'active' | 'done' | 'skipped' | 'locked'
+  status: 'pending' | 'active' | 'done' | 'skipped' | 'locked' | 'reviewing'
   mastery_score: number
   sort_order: number
   started_at: string | null
@@ -174,6 +174,8 @@ export interface PathProgressResult {
   current_node: CurrentNodeInfo | null
   phase: string
   progress: PathProgress
+  replanned?: boolean
+  changed_count?: number
 }
 
 // ═══════════════════════════════════════════════════
@@ -362,13 +364,23 @@ export const pathApi = {
   restartPath: () =>
     api.post<{ success: boolean; message: string }>('/path/restart'),
 
+  replanPath: (data?: { state_id?: string; trigger?: string }) =>
+    api.post<{
+      success: boolean
+      message: string
+      changed_count: number
+      current_node: { node_id: string; name: string } | null
+      phase: string
+      progress: PathProgress
+    }>('/path/replan', data || {}),
+
   /** 设置知识点视频链接 */
   updateVideoUrl: (pointId: string, videoUrl: string) =>
     api.put<{ success: boolean; video_url: string }>(`/path/knowledge/${pointId}/video-url`, { video_url: videoUrl }),
 
-  /** AI 生成知识点复习资料 */
+  /** 生成知识点阅读讲义 */
   generateReviewMaterial: (pointId: string) =>
-    api.post<{ success: boolean; content: string }>(`/path/knowledge/${pointId}/review-material`),
+    api.post<{ success: boolean; content: string; source_mode?: string; message?: string }>(`/path/knowledge/${pointId}/review-material`),
 
   /** 获取掌握度测评题目 */
   assess: (pointId: string) =>
@@ -405,4 +417,6 @@ export interface AssessSubmitResponse {
   correct: number
   total: number
   score: number
+  path_replanned?: boolean
+  path_changed_count?: number
 }

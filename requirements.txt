@@ -32,3 +32,4 @@ pandas
 langgraph>=1.2.0
 langchain-core>=1.4.0
 datasets>=2.14.0
+beautifulsoup4>=4.12.0

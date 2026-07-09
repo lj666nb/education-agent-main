@@ -305,22 +305,21 @@ class PathPlanningEngine:
         base_url = None
         model = None
 
+        valid_deepseek_models = set(settings.VALID_DEEPSEEK_MODELS.split(","))
+        valid_qwen_models = set(settings.VALID_QWEN_MODELS.split(","))
+
         if ctx.api_settings.get("deepseek", {}).get("api_key"):
             ds = ctx.api_settings["deepseek"]
             api_key = ds["api_key"]
-            base_url = ds.get("base_url") or "https://api.deepseek.com/v1"
-            # Validate model version: DeepSeek only accepts deepseek-v4-pro / deepseek-v4-flash / deepseek-chat
+            base_url = ds.get("base_url") or settings.DEEPSEEK_BASE_URL
             raw_model = ds.get("model_version", "")
-            valid_deepseek_models = {"deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"}
-            model = raw_model if raw_model in valid_deepseek_models else "deepseek-chat"
+            model = raw_model if raw_model in valid_deepseek_models else settings.DEEPSEEK_MODEL
         elif ctx.api_settings.get("qwen", {}).get("api_key"):
             qw = ctx.api_settings["qwen"]
             api_key = qw["api_key"]
-            base_url = qw.get("base_url") or "https://dashscope.aliyuncs.com/compatible-mode/v1"
-            # Validate model version: Qwen common models
+            base_url = qw.get("base_url") or settings.QWEN_BASE_URL
             raw_model = qw.get("model_version", "")
-            valid_qwen_models = {"qwen-plus", "qwen-turbo", "qwen-max", "qwen3.5-plus", "qwen3.6-plus"}
-            model = raw_model if raw_model in valid_qwen_models else "qwen-plus"
+            model = raw_model if raw_model in valid_qwen_models else settings.QWEN_MODEL
 
         if not api_key:
             logger.warning("用户未配置 LLM API Key，无法使用 LLM 生成路径")

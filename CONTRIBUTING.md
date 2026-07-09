@@ -382,3 +382,144 @@ PPT/Word 文档解析支持上传和自动分块索引。RAG 参考来源在 AI 
   5. 所有操作幂等（已存在则跳过）
 - **README.md**：新增「种子数据」说明表格
 - 保留 `scripts/seed_data_structures.py` 和 `app/scripts/seed_code_cases.py` 作为独立脚本（可用于重新注入）
+---
+
+## 2026-07-09 - 学习路径动态重排闭环
+
+### 背景
+
+学习路径页面虽然已有状态机、AI 生成和掌握度记录，但主创建入口仍走 `POST /path/init`，用户点击“AI生成路径”后实际得到的是固定顺序清单。学习/测评后也只推进到下一个 pending 节点，没有根据最新掌握度重新规划未完成路径。
+
+### 变更
+
+- `frontend/src/pages/LearningPathPage.tsx`
+  - AI 创建入口改为 `POST /path/generate` → `POST /path/confirm` → `GET /path/state` 的完整链路，手动模式保留 `initPath`。
+  - 路径总览新增“动态重排”按钮，调用 `POST /path/replan` 后刷新当前状态机。
+- `frontend/src/api/path.ts`
+  - 新增 `replanPath()` API 客户端。
+  - `PathProgressResult` 和测评提交响应补充动态重排字段。
+- `app/services/path_state_manager.py`
+  - 新增 `replan_path()`，按最新 `KnowledgePointRecord` 的掌握度、连续错误、reviewing 状态动态重排未完成节点。
+  - `update_progress()` 完成/跳过节点后先重排未完成节点，再激活新的焦点节点。
+- `app/api/endpoints/path.py`
+  - 新增 `POST /path/replan`，并记录 `PathHistory`。
+  - 掌握度测评提交后自动触发当前活跃路径重排，并返回 `path_replanned/path_changed_count`。
+- `request/prd-learning-path.md`
+  - 更新 LP-27 状态：第一阶段动态重排闭环已完成并通过浏览器验证。
+
+### 验证
+
+- `docker-compose exec -T backend python -m py_compile app/services/path_state_manager.py app/api/endpoints/path.py` 通过。
+- `npm run build` / `npx tsc --noEmit` 仍被既有问题阻塞：`src/components/KnowledgeGraphViz.tsx(355,61): Property 'radius' does not exist on type 'SimulationNodeDatum'`，非本次修改文件。
+- Docker 已重启 `backend`、`frontend`。
+- Playwright 使用 `guoketg / 123456` 登录，打开 `/path?view=overview&state=...`，点击“动态重排”，`POST /api/v1/path/replan` 返回 200，页面无白屏或控制台错误。截图：`test_script/screenshot-path-dynamic-replan.png`。
+
+---
+
+## 2026-07-09 - 学习路径高级动态策略
+
+### 背景
+
+在动态重排闭环基础上继续补齐“高级动态”：路径不能只根据分数排序，还需要能因为错题回退复习、因为已掌握跳过重复学习、因为前置知识未达标而锁定后续节点，并在练习提交后自动调整。
+
+### 变更
+
+- `app/services/path_state_manager.py`
+  - `_build_dynamic_order()` 增加三类高级策略：
+    - 回退：已完成节点若连续错误达到阈值、掌握度低于 60 或状态为 reviewing，则回退到复习队列。
+    - 短路：掌握度达到 80 且练习量不少于 3 的节点自动标记为 done，避免重复学习。
+    - 锁定/解锁：读取 Neo4j 前置关系，前置节点未完成且掌握度低于 70 时锁定后续节点；前置达标后自动释放。
+  - `_activate_first_pending()` 支持 reviewing 作为新的学习焦点，locked 节点不会被激活。
+- `app/api/endpoints/question_bank.py`
+  - 单题提交和批量提交后自动触发当前活跃路径重排。
+  - 连续错误达到阈值时，知识点状态进入 reviewing。
+- `app/api/endpoints/path.py`
+  - 掌握度测评后若连续错误达到阈值，状态进入 reviewing，并自动触发路径重排。
+- `frontend/src/pages/LearningPathPage.tsx`
+  - 总览图支持“回退复习”和“前置锁定”两种状态展示。
+  - locked 节点不可点击进入学习详情，避免用户绕过前置条件。
+- `request/prd-learning-path.md`
+  - LP-27 更新为已完成/已通过，并记录高级动态规则。
+
+### 验证
+
+- `docker-compose exec -T backend python -m py_compile app/services/path_state_manager.py app/api/endpoints/path.py app/api/endpoints/question_bank.py` 通过。
+- `npx tsc --noEmit --pretty false` 仍被既有问题阻塞：`src/components/KnowledgeGraphViz.tsx(355,61): Property 'radius' does not exist on type 'SimulationNodeDatum'`，非本次修改文件。
+- Docker 已重启 `backend`、`frontend`。
+- Playwright 使用 `guoketg / 123456` 登录，打开 `/path?view=overview&state=...`，点击“动态重排”，`POST /api/v1/path/replan` 返回 200，返回 `changed_count=53`，页面无白屏、无控制台错误。截图：`test_script/screenshot-path-advanced-dynamic.png`。
+
+---
+
+## 2026-07-09 - LeetBook 风格学习路径探索页
+
+### 背景
+
+用户希望学习路径改成类似 LeetBook 探索知识地图的体验：总览页按知识章节展示，点击“线性表”等知识点后进入独立章节详情页，详情页结构参考 LeetBook 书籍章节页。
+
+### 变更
+
+- `frontend/src/components/path/LeetBookExploreMap.tsx`
+  - 新增探索知识地图组件：顶部路径进度、章节筛选、继续学习入口、按领域分组的知识点卡片。
+  - 知识点卡片展示状态、掌握度、复习/锁定/学习中状态。
+- `frontend/src/pages/KnowledgeLeetBookDetailPage.tsx`
+  - 新增独立知识点详情页 `/path/knowledge/:pointId`。
+  - 页面包含左侧路径目录、章节标题、掌握度指标、本章任务、学习内容、练习复盘和前后篇导航。
+  - 空复习资料时展示生成引导，不伪造内容。
+- `frontend/src/pages/LearningPathPage.tsx`
+  - 路径总览渲染切换为探索知识地图。
+  - 点击知识点跳转到 `/path/knowledge/{pointId}?state={stateId}`，例如“线性表定义”进入对应章节页。
+- `frontend/src/App.tsx`
+  - 注册 `path/knowledge/:pointId` 受保护路由。
+- `request/prd-learning-path.md`
+  - 新增 LP-29 状态记录。
+
+### 验证
+
+- `git diff --check` 通过。
+- `npx tsc --noEmit --pretty false` 未发现本次新增文件错误；仍被既有问题阻塞：
+  - `src/components/KnowledgeGraphViz.tsx(355,61): Property 'radius' does not exist on type 'SimulationNodeDatum'`
+  - `src/components/MessageList.tsx(695,20): Cannot find name 'Link'`
+- Docker 已重启 `frontend`。
+- Playwright 使用 `guoketg / 123456` 登录，打开 `/path?view=overview&state=...`，确认“探索知识地图”渲染；点击“线性表定义”跳转到 `/path/knowledge/f5aae3af-3be6-4dbc-ab36-52132cc60968?state=...`，详情页包含“学习路径目录 / 本章任务 / 学习内容”，无控制台错误。截图：
+  - `test_script/screenshot-path-leetbook-map.png`
+  - `test_script/screenshot-path-leetbook-detail.png`
+
+---
+
+## 2026-07-09 - 数据结构阅读讲义与知识拔高
+
+### 背景
+
+用户希望学习路径中每个知识点的阅读讲义以公开数据结构复习资料为基础：基础讲解参考“数据结构与算法设计复习笔记”，知识拔高参考 CK_0ff 的“数据结构复习笔记”及其章节链接。
+
+### 变更
+
+- `app/services/knowledge_lecture_builder.py`
+  - 新增数据结构讲义构建服务。
+  - 按线性表、栈和队列、数组和广义表、树和二叉树、图、查找、排序等章节归类知识点。
+  - 为每类知识点维护基础讲解要点、拔高角度、易错对比和参考链接。
+- `app/api/endpoints/path.py`
+  - `POST /path/knowledge/{point_id}/review-material` 从“通用复习资料”改为“阅读讲义”生成。
+  - 有 DeepSeek/Qwen 配置时生成包含基础讲解、知识拔高、易错辨析、练习导向、自测清单、参考来源的 Markdown 讲义。
+  - 无 DeepSeek/Qwen 配置时生成资料参考讲义，不再让阅读讲义完全空置。
+  - 用户个人 API 配置优先，`.env` 全局配置作为兜底，但不修改 `.env`。
+- `frontend/src/pages/KnowledgeLeetBookDetailPage.tsx`
+  - “学习内容”改为“阅读讲义”，生成按钮改为“生成阅读讲义”。
+  - 任务卡说明改为基础讲解、知识拔高和易错辨析。
+- `frontend/src/pages/LearningPathPage.tsx`
+  - 旧详情页的“AI复习”文案同步改为“阅读讲义”。
+- `frontend/src/api/path.ts`
+  - 讲义生成接口类型补充 `source_mode` 和 `message`。
+- `request/prd-learning-path.md`
+  - 新增 LP-30 状态记录。
+
+### 验证
+
+- `python -m py_compile app/services/knowledge_lecture_builder.py app/api/endpoints/path.py` 通过。
+- `git diff --check` 通过。
+- `npx tsc --noEmit --pretty false` 仍被既有问题阻塞：`src/components/KnowledgeGraphViz.tsx(355,61): Property 'radius' does not exist on type 'SimulationNodeDatum'`。
+- Docker 已执行 `docker-compose up -d` 并重启 `backend`、`frontend`。
+- Playwright 使用 `guoketg / 123456` 登录，打开 `/path?view=overview&state=...`，确认“探索知识地图”渲染；点击“线性表定义”进入 `/path/knowledge/f5aae3af-3be6-4dbc-ab36-52132cc60968?state=...`，点击“生成/更新阅读讲义”，`POST /api/v1/path/knowledge/{point_id}/review-material` 返回 200，页面包含“基础讲解 / 知识拔高 / 参考来源 / 线性表”，无控制台错误。截图：
+  - `test_script/screenshot-lecture-map.png`
+  - `test_script/screenshot-lecture-flow-generated.png`
+  - `test_script/screenshot-lecture-direct-generated.png`

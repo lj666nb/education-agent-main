@@ -2,8 +2,8 @@ import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
 import { ArrowUp, Plus, Brain, Globe, ChevronDown, FileUp, BarChart3, GitBranch } from 'lucide-react'
 import { chatApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
-
-type ModelType = 'deepseek-v4-flash' | 'deepseek-v4-pro' | 'qwen3.5-plus' | 'qwen3.6-plus'
+import { ModelType, MODEL_OPTIONS, MULTIMODAL_MODELS } from '../constants/models'
+import { UPLOAD_LIMITS } from '../constants/config'
 
 export interface PastedFile {
   id: string
@@ -35,17 +35,6 @@ interface InputAreaProps {
   enableAutoMindmap: boolean
   onEnableAutoMindmapChange: (enabled: boolean) => void
 }
-
-const MODEL_OPTIONS: { value: ModelType; label: string }[] = [
-  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
-  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
-  { value: 'qwen3.5-plus', label: 'Qwen3.5 Plus' },
-  { value: 'qwen3.6-plus', label: 'Qwen3.6 Plus' },
-]
-
-const MULTIMODAL_MODELS: ModelType[] = ['qwen3.5-plus', 'qwen3.6-plus']
-
-const MAX_FILES = 5
 
 const SUGGESTIONS = [
   '解释一下这个概念',
@@ -252,10 +241,10 @@ export default function InputArea({
     setIsProcessingPaste(true)
 
     const currentCount = pastedFiles.length
-    const remainingSlots = MAX_FILES - currentCount
+    const remainingSlots = UPLOAD_LIMITS.MAX_FILES - currentCount
 
     if (remainingSlots <= 0) {
-      alert(`最多只能粘贴 ${MAX_FILES} 个文件`)
+      alert(`最多只能粘贴 ${UPLOAD_LIMITS.MAX_FILES} 个文件`)
       setIsProcessingPaste(false)
       return
     }
@@ -275,7 +264,7 @@ export default function InputArea({
     }
 
     if (files.length > remainingSlots) {
-      alert(`超过了最大数量 ${MAX_FILES} 个文件，只添加了前 ${remainingSlots} 个`)
+      alert(`超过了最大数量 ${UPLOAD_LIMITS.MAX_FILES} 个文件，只添加了前 ${remainingSlots} 个`)
     }
 
     setIsProcessingPaste(false)

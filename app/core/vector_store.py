@@ -10,13 +10,12 @@ from app.core.config import settings
 
 logger = logging.getLogger("uvicorn")
 
-DASHSCOPE_EMBEDDING_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 EMBEDDING_MODEL = "text-embedding-v2"
 
-MAX_RETRIES = 3
+MAX_RETRIES = settings.EMBEDDING_MAX_RETRIES
 INITIAL_RETRY_DELAY = 1.0
 RETRY_DELAY_MULTIPLIER = 2.0
-TIMEOUT_SECONDS = 120.0
+TIMEOUT_SECONDS = float(settings.EMBEDDING_TIMEOUT)
 
 
 def resolve_model_name(model_version: Optional[str] = None) -> str:
@@ -47,7 +46,7 @@ def _get_embedding_with_retry(texts: List[str], api_key: str, text_type: str = "
     for attempt in range(MAX_RETRIES):
         try:
             with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
-                response = client.post(DASHSCOPE_EMBEDDING_URL, json=payload, headers=headers)
+                response = client.post(settings.EMBEDDING_URL, json=payload, headers=headers)
                 response.raise_for_status()
                 result = response.json()
 

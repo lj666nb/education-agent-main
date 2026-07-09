@@ -41,6 +41,11 @@ from app.services.mastery_calculator import calculate_mastery
 from app.services.learning_agent import LearningAgent
 from app.services.path_planner import PathPlanner
 from app.services.path_state_manager import PathStateManager
+from app.services.knowledge_lecture_builder import (
+    build_lecture_prompt,
+    build_source_based_lecture,
+)
+from app.core.config import settings
 from app.db.neo4j import get_neo4j
 from app.schemas.question_bank import DagData, DagNode, DagEdge
 from app.schemas.path_state import (
@@ -74,6 +79,11 @@ class AgentActionRequest(BaseModel):
 class PathHistoryCreate(BaseModel):
     snapshot_data: dict
     agent_reason: Optional[str] = None
+
+
+class PathReplanRequest(BaseModel):
+    state_id: str = ""
+    trigger: str = "manual"
 
 
 @router.get("/current", response_model=LearningPathMarkdownResponse)
@@ -395,6 +405,82 @@ class VideoUrlRequest(BaseModel):
     video_url: str
 
 
+def _get_lecture_llm_config(db: Session, user_id: str) -> Optional[dict]:
+    """Return a compatible chat-completions config for lecture generation."""
+    from app.models.api_settings import ApiSettings
+
+    provider_defaults = {
+        "qwen": {
+            "base_url": settings.QWEN_BASE_URL,
+            "model": settings.QWEN_MODEL or "qwen-plus",
+            "env_key": settings.QWEN_API_KEY,
+        },
+        "deepseek": {
+            "base_url": settings.DEEPSEEK_BASE_URL,
+            "model": settings.DEEPSEEK_MODEL or "deepseek-chat",
+            "env_key": settings.DEEPSEEK_API_KEY,
+        },
+    }
+
+    for provider in ("qwen", "deepseek"):
+        user_setting = (
+            db.query(ApiSettings)
+            .filter(
+                ApiSettings.user_id == user_id,
+                ApiSettings.provider == provider,
+                ApiSettings.is_enabled == True,
+            )
+            .first()
+        )
+        defaults = provider_defaults[provider]
+        if user_setting and user_setting.api_key:
+            return {
+                "provider": provider,
+                "api_key": user_setting.api_key,
+                "base_url": user_setting.base_url or defaults["base_url"],
+                "model": user_setting.model_version or defaults["model"],
+            }
+
+    for provider in ("qwen", "deepseek"):
+        defaults = provider_defaults[provider]
+        if defaults["env_key"]:
+            return {
+                "provider": provider,
+                "api_key": defaults["env_key"],
+                "base_url": defaults["base_url"],
+                "model": defaults["model"],
+            }
+
+    return None
+
+
+def _save_review_material(
+    db: Session,
+    *,
+    user_id,
+    point_id,
+    point_name: str,
+    content: str,
+) -> None:
+    record = (
+        db.query(KnowledgePointRecord)
+        .filter(
+            KnowledgePointRecord.user_id == user_id,
+            KnowledgePointRecord.point_id == point_id,
+        )
+        .first()
+    )
+    if not record:
+        record = KnowledgePointRecord(
+            user_id=user_id,
+            point_id=point_id,
+            point_name=point_name,
+        )
+        db.add(record)
+    record.review_material = content
+    db.commit()
+
+
 @router.put("/knowledge/{point_id}/video-url")
 async def update_knowledge_video_url(
     point_id: str,
@@ -418,9 +504,8 @@ async def generate_review_material(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """AI 生成知识点复习资料"""
+    """生成知识点阅读讲义"""
     import httpx
-    from app.models.api_settings import ApiSettings
 
     pid = UUID(point_id) if len(point_id) == 36 else point_id
     point = db.query(KnowledgePoint).filter(KnowledgePoint.id == pid).first()
@@ -429,93 +514,106 @@ async def generate_review_material(
 
     user_id_str = str(current_user.student_id)
 
-    # 获取 API Key
-    api_setting = (
-        db.query(ApiSettings)
-        .filter(
-            ApiSettings.user_id == user_id_str,
-            ApiSettings.provider.in_(["deepseek", "qwen"]),
-            ApiSettings.is_enabled == True,
-        )
-        .first()
-    )
-    if not api_setting or not api_setting.api_key:
-        raise HTTPException(status_code=400, detail="请先配置 API Key 后再生成复习资料")
-
     domain_name = point.domain.name if point.domain else ""
     subject_name = point.domain.subject.name if point.domain and point.domain.subject else ""
+    description = point.description or ""
 
-    # 构建 LLM prompt
-    prompt = f"""你是一个知识讲解助手。请为以下知识点生成结构化复习资料，帮助学习者快速回顾和掌握。
+    llm_config = _get_lecture_llm_config(db, user_id_str)
+    if not llm_config:
+        content = build_source_based_lecture(
+            subject_name=subject_name,
+            domain_name=domain_name,
+            point_name=point.name,
+            description=description,
+        )
+        _save_review_material(
+            db,
+            user_id=current_user.student_id,
+            point_id=pid,
+            point_name=point.name,
+            content=content,
+        )
+        return {
+            "success": True,
+            "content": content,
+            "source_mode": "reference",
+            "message": "未配置 DeepSeek/Qwen，已生成资料参考讲义。",
+        }
 
-学科：{subject_name}
-章节：{domain_name}
-知识点：{point.name}
-描述：{point.description or '无'}
-
-输出格式（Markdown）：
-## 核心要点
-- 列出 3-5 个最核心的概念/要点
-
-## 常见考点
-- 该知识点在考试/练习中常见的考察方式
-
-## 易错提醒
-- 学习者最容易出错的地方
-
-## 记忆口诀
-- 帮助记忆的口诀或联想
-
-要求：语言简洁精炼，每个要点不超过两句话。"""
+    prompt = build_lecture_prompt(
+        subject_name=subject_name,
+        domain_name=domain_name,
+        point_name=point.name,
+        description=description,
+    )
 
     try:
+        chat_url = f"{llm_config['base_url'].rstrip('/')}/chat/completions"
         async with httpx.AsyncClient(timeout=60) as client:
             r = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
+                chat_url,
                 headers={
-                    "Authorization": f"Bearer {api_setting.api_key}",
+                    "Authorization": f"Bearer {llm_config['api_key']}",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "deepseek-chat",
+                    "model": llm_config["model"],
                     "messages": [
-                        {"role": "system", "content": "你是一个知识讲解助手，输出格式为 Markdown。"},
+                        {
+                            "role": "system",
+                            "content": "你是数据结构课程讲义编写助手，只输出 Markdown 阅读讲义。",
+                        },
                         {"role": "user", "content": prompt},
                     ],
-                    "temperature": 0.5,
-                    "max_tokens": 2048,
+                    "temperature": 0.45,
+                    "max_tokens": 4096,
                 },
             )
         if r.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"LLM 调用失败: {r.status_code}")
+            raise HTTPException(status_code=502, detail=f"讲义生成失败：LLM 调用返回 {r.status_code}")
 
-        content = r.json()["choices"][0]["message"]["content"]
+        payload = r.json()
+        content = payload["choices"][0]["message"]["content"].strip()
+        if not content:
+            raise HTTPException(status_code=502, detail="讲义生成失败：模型返回内容为空")
 
-        # 缓存到 record
-        record = (
-            db.query(KnowledgePointRecord)
-            .filter(
-                KnowledgePointRecord.user_id == user_id_str,
-                KnowledgePointRecord.point_id == pid,
-            )
-            .first()
+        # 后处理：[DRAWIO] 块 → PNG 图片
+        if "[DRAWIO]" in content:
+            import re as _re
+            def _render_drawio(match):
+                xml = match.group(1).strip()
+                xml = _re.sub(r'^```[a-zA-Z]*\n?', '', xml)
+                xml = _re.sub(r'\n?```$', '', xml)
+                if not xml.strip():
+                    return "\n\n> ⚠️ 图表内容为空\n\n"
+                try:
+                    from app.services.drawio_export import save_drawio_png
+                    png_url, _ = save_drawio_png(xml)
+                    if png_url:
+                        return f"\n\n![图表]({png_url})\n\n"
+                except Exception:
+                    pass
+                return match.group(0)
+            content = _re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _render_drawio, content)
+
+        _save_review_material(
+            db,
+            user_id=current_user.student_id,
+            point_id=pid,
+            point_name=point.name,
+            content=content,
         )
-        if not record:
-            record = KnowledgePointRecord(
-                user_id=current_user.student_id,
-                point_id=pid,
-                point_name=point.name,
-            )
-            db.add(record)
-        record.review_material = content
-        db.commit()
 
-        return {"success": True, "content": content}
+        return {
+            "success": True,
+            "content": content,
+            "source_mode": llm_config["provider"],
+        }
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"生成复习资料失败: {str(e)[:200]}")
+        raise HTTPException(status_code=502, detail=f"生成阅读讲义失败: {str(e)[:200]}")
 
 
 class AssessResultRequest(BaseModel):
@@ -662,6 +760,8 @@ async def submit_mastery_assessment(
 
                 if kpr.mastery_score >= 80 and kpr.total_practiced >= 3:
                     kpr.status = "mastered"
+                elif kpr.consecutive_errors >= 3:
+                    kpr.status = "reviewing"
                 elif kpr.total_practiced > 0:
                     kpr.status = "learning"
 
@@ -706,8 +806,31 @@ async def submit_mastery_assessment(
     except Exception:
         pass
 
+    path_replan_result = None
+    try:
+        active_state = db.query(LearningPathState).filter(
+            LearningPathState.user_id == student_id,
+            LearningPathState.phase != "completed",
+        ).order_by(LearningPathState.updated_at.desc()).first()
+        if active_state:
+            manager = PathStateManager(db)
+            path_replan_result = manager.replan_path(
+                user_id=student_id,
+                state_id=str(active_state.id),
+                trigger="assessment",
+            )
+    except Exception as e:
+        logger.warning(f"掌握度测评后动态调整路径失败: {e}")
+
     score = round(correct / max(total, 1) * 100)
-    return {"success": True, "correct": correct, "total": total, "score": score}
+    return {
+        "success": True,
+        "correct": correct,
+        "total": total,
+        "score": score,
+        "path_replanned": bool(path_replan_result and path_replan_result.get("success")),
+        "path_changed_count": (path_replan_result or {}).get("changed_count", 0),
+    }
 
 
 @router.post("/knowledge/{point_id}/record-study")
@@ -1314,6 +1437,41 @@ async def update_path_progress(
             "node_name": point.name,
         },
         agent_reason=f"用户{action_labels.get(body.action, body.action)}了知识点「{point.name}」",
+    )
+    db.add(history)
+    db.commit()
+
+    return result
+
+
+@router.post("/replan")
+async def replan_learning_path(
+    body: PathReplanRequest = PathReplanRequest(),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """根据最新掌握度、错题和复习状态动态调整未完成路径。"""
+    user_id = str(current_user.student_id)
+    manager = PathStateManager(db)
+    result = manager.replan_path(
+        user_id=user_id,
+        state_id=body.state_id or None,
+        trigger=body.trigger or "manual",
+    )
+
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message", "路径重排失败"))
+
+    history = PathHistory(
+        user_id=current_user.student_id,
+        snapshot_data={
+            "action": "dynamic_replan",
+            "state_id": body.state_id,
+            "trigger": body.trigger,
+            "changed_count": result.get("changed_count", 0),
+            "current_node": result.get("current_node"),
+        },
+        agent_reason="系统根据最新掌握度和错题记录动态调整了未完成路径",
     )
     db.add(history)
     db.commit()

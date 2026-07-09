@@ -12,18 +12,14 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 默认 DeepSeek 配置
-DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
-DEFAULT_MODEL = "deepseek-chat"
-
 
 class LLMHelper:
     """LLM 调用助手，支持运行时指定 API Key"""
 
     def __init__(self):
         self._default_api_key = settings.DEEPSEEK_API_KEY
-        self._default_base_url = settings.DEEPSEEK_BASE_URL or DEFAULT_BASE_URL
-        self._default_model = settings.DEEPSEEK_MODEL or DEFAULT_MODEL
+        self._default_base_url = settings.DEEPSEEK_BASE_URL or settings.DEFAULT_LLM_BASE_URL
+        self._default_model = settings.DEEPSEEK_MODEL or settings.DEFAULT_LLM_MODEL
         self.timeout = 60.0
 
     async def chat(

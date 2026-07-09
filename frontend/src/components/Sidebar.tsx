@@ -20,6 +20,7 @@ interface SidebarProps {
   searchQuery: string
   favorites?: Record<string, number>
   onToggleFavorite?: (chatId: string) => void
+  onClearAll?: () => void
 }
 
 // ── Time grouping helpers ──
@@ -136,6 +137,7 @@ export default function Sidebar({
   searchQuery,
   favorites = {},
   onToggleFavorite,
+  onClearAll,
 }: SidebarProps) {
   const [localQuery, setLocalQuery] = useState(searchQuery)
   const [contextMenu, setContextMenu] = useState<{ chatId: string; x: number; y: number } | null>(null)
@@ -276,7 +278,7 @@ export default function Sidebar({
           padding: '16px',
           overflow: 'hidden',
         }}>
-          {/* Top row: collapse + title + new chat */}
+          {/* Top row: collapse + title + new chat + clear all */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
             <button onClick={onToggle} title="收起侧边栏" style={collapseIconBtnStyle}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
@@ -293,6 +295,29 @@ export default function Sidebar({
             }}>
               对话历史
             </div>
+            {sessions.length > 0 && onClearAll && (
+              <button onClick={onClearAll} title="清空全部对话"
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  border: '2px solid transparent', backgroundColor: 'transparent',
+                  color: 'var(--gray-400)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background-color 0.15s, color 0.15s, border-color 0.3s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--danger)'
+                  e.currentTarget.style.backgroundColor = 'oklch(0.55 0.2 20 / 0.06)'
+                  e.currentTarget.style.color = 'var(--danger)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'transparent'
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = 'var(--gray-400)'
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button onClick={onNewChat} title="新建对话"
               style={{
                 width: '32px', height: '32px', borderRadius: '8px',

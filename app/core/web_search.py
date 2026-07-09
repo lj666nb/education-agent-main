@@ -4,13 +4,11 @@ import asyncio
 from typing import List, Dict, Optional, Any
 from app.core.config import settings
 
-DASHSCOPE_WEBSEARCH_URL = "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp"
-
 
 class WebSearchService:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = DASHSCOPE_WEBSEARCH_URL
+        self.base_url = settings.WEB_SEARCH_URL
 
     async def search(self, query: str, count: int = 5) -> List[Dict[str, Any]]:
         try:
@@ -24,7 +22,7 @@ class WebSearchService:
             )
 
             agent = Agent(
-                model="deepseek:deepseek-chat",
+                model=f"deepseek:{settings.WEB_SEARCH_MODEL}",
                 mcp_servers=[mcp_server],
                 system_prompt="你是一个联网搜索助手。当用户提问时，你需要使用bailian_web_search工具搜索相关信息，并简洁地总结搜索结果，返回JSON格式的搜索结果列表，每条结果包含title、url和snippet字段。"
             )

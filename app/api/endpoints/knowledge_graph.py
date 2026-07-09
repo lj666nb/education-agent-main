@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db, SessionLocal
 from app.api.dependencies import CurrentUser, get_current_user
 from app.db.neo4j import get_neo4j
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/knowledge-graph", tags=["知识图谱"])
@@ -225,10 +226,10 @@ async def extract_keywords_llm(question: str, api_key: str) -> List[str]:
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
+                f"{settings.DEEPSEEK_BASE_URL}/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
-                    "model": "deepseek-chat",
+                    "model": settings.DEEPSEEK_MODEL,
                     "messages": [{"role": "user", "content": KEYWORD_EXTRACTION_PROMPT.format(question=question)}],
                     "temperature": 0.1, "max_tokens": 100,
                 }
@@ -314,10 +315,10 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
             try:
                 async with httpx.AsyncClient(timeout=120) as client:
                     r = await client.post(
-                        "https://api.deepseek.com/v1/chat/completions",
+                        f"{settings.DEEPSEEK_BASE_URL}/chat/completions",
                         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                         json={
-                            "model": "deepseek-chat",
+                            "model": settings.DEEPSEEK_MODEL,
                             "messages": [
                                 {"role": "system", "content": EXTRACTION_PROMPT},
                                 {"role": "user", "content": f"文本：{chunk['text']}\n请提取知识点实体和关系。"}
@@ -740,7 +741,8 @@ async def kg_rag_chat(
         raise HTTPException(400, detail="请先在设置中配置 AI API Key 后再使用问答功能")
 
     api_key = api_setting.api_key
-    model = "deepseek-chat" if api_setting.provider == "deepseek" else "qwen-turbo"
+    model = api_setting.model_version or (settings.DEEPSEEK_MODEL if api_setting.provider == "deepseek" else settings.QWEN_MODEL)
+    base_url = api_setting.base_url or (settings.DEEPSEEK_BASE_URL if api_setting.provider == "deepseek" else settings.QWEN_BASE_URL)
 
     async def event_generator():
         try:
@@ -890,7 +892,7 @@ async def kg_rag_chat(
             async with httpx.AsyncClient(timeout=120) as client:
                 async with client.stream(
                     "POST",
-                    "https://api.deepseek.com/v1/chat/completions",
+                    f"{base_url}/chat/completions",
                     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                     json={"model": model, "messages": messages, "temperature": 0.7, "max_tokens": 2048, "stream": True}
                 ) as response:
