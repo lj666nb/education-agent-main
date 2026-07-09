@@ -1,4 +1,5 @@
-import { useState, useRef, KeyboardEvent, useEffect } from 'react'
+import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
+import { ArrowUp, Paperclip, Brain, Globe, ChevronDown } from 'lucide-react'
 import { chatApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 
@@ -42,38 +43,37 @@ const MULTIMODAL_MODELS: ModelType[] = ['qwen3.5-plus', 'qwen3.6-plus']
 
 const MAX_FILES = 5
 
-function BrainIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2-1 2.7V10c0 1.1-.9 2-2 2s-2-.9-2-2V8.7c-.6-.7-1-1.6-1-2.7a4 4 0 0 1 4-4z"/>
-      <path d="M12 14c2.2 0 6 1.1 6 3v2H6v-2c0-1.9 3.8-3 6-3z"/>
-    </svg>
-  )
-}
+const SUGGESTIONS = [
+  '解释一下这个概念',
+  '这道题的考点是什么',
+  '帮我制定一个学习计划',
+]
 
-function SearchIcon() {
+function TagButton({ icon: Icon, label, active, onClick, disabled }: {
+  icon: React.ComponentType<{ size?: number | string }>
+  label: string
+  active: boolean
+  onClick?: () => void
+  disabled?: boolean
+}) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-  )
-}
-
-function SendIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13"/>
-      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-    </svg>
-  )
-}
-
-function AttachIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-    </svg>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '4px',
+        padding: '5px 10px', borderRadius: '8px', border: '1px solid',
+        borderColor: active ? 'oklch(0.55 0.18 200 / 0.3)' : 'var(--gray-200)',
+        backgroundColor: active ? 'oklch(0.55 0.18 200 / 0.08)' : 'var(--gray-50)',
+        color: active ? 'var(--primary)' : 'var(--gray-500)',
+        fontSize: '0.75rem', cursor: disabled ? 'default' : 'pointer',
+        fontFamily: 'inherit', opacity: disabled ? 0.5 : 1,
+        transition: 'all 0.15s', whiteSpace: 'nowrap',
+      }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
   )
 }
 
@@ -113,6 +113,13 @@ export default function InputArea({
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
+    }
+  }
+
+  const handleSuggestionClick = (text: string) => {
+    if (!isLoading) {
+      const fileIds = pastedFiles.map(f => f.fileId).filter((id): id is string => !!id)
+      onSend(text, currentModel, enableThinking, fileIds)
     }
   }
 
@@ -296,186 +303,153 @@ export default function InputArea({
 
   return (
     <div style={{
-      padding: 'var(--space-4)',
-      borderTop: '1px solid var(--gray-100)',
-      backgroundColor: 'white',
+      padding: '20px 24px 24px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
     }}>
-      {/* Toolbar */}
+      {/* Card container */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-3)',
-        marginBottom: 'var(--space-3)',
-        flexWrap: 'wrap',
-      }}>
-        {/* Model selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>模型:</span>
-          <select
-            className="input"
-            value={currentModel}
-            onChange={(e) => {
-              const model = e.target.value as ModelType
-              if (availableModels.includes(model)) {
-                onModelChange(model)
-              }
-            }}
-            style={{ width: 'auto', padding: '0.375rem 2rem 0.375rem 0.625rem', fontSize: '0.8125rem' }}
-          >
-            {MODEL_OPTIONS.map((option) => {
-              const isAvailable = availableModels.includes(option.value)
-              return (
-                <option key={option.value} value={option.value} disabled={!isAvailable}>
-                  {option.label} {isAvailable ? '' : '(未配置)'}
-                </option>
-              )
-            })}
-          </select>
-        </div>
-
-        {/* Thinking toggle */}
-        <button
-          onClick={() => onEnableThinkingChange(!enableThinking)}
-          className="btn"
-          style={{
-            padding: '0.375rem 0.625rem',
-            fontSize: '0.8125rem',
-            backgroundColor: enableThinking ? 'oklch(0.55 0.25 250 / 0.1)' : 'transparent',
-            borderColor: enableThinking ? 'oklch(0.55 0.25 250 / 0.3)' : 'var(--gray-200)',
-            color: enableThinking ? 'var(--primary)' : 'var(--gray-500)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-1)',
-          }}
-        >
-          <BrainIcon />
-          深度思考
-        </button>
-
-        {/* Websearch toggle */}
-        {websearchAvailable ? (
-          <button
-            onClick={() => onEnableWebsearchChange(!enableWebsearch)}
-            className="btn"
-            style={{
-              padding: '0.375rem 0.625rem',
-              fontSize: '0.8125rem',
-              backgroundColor: enableWebsearch ? 'oklch(0.62 0.18 145 / 0.1)' : 'transparent',
-              borderColor: enableWebsearch ? 'oklch(0.62 0.18 145 / 0.3)' : 'var(--gray-200)',
-              color: enableWebsearch ? 'var(--success)' : 'var(--gray-500)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-1)',
-            }}
-          >
-            <SearchIcon />
-            联网搜索
-          </button>
-        ) : (
-          <span style={{ fontSize: '0.75rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-            <SearchIcon />
-            联网搜索（未配置）
-          </span>
-        )}
-      </div>
-
-      {/* Input area */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 'var(--space-3)',
-        backgroundColor: 'var(--gray-50)',
-        borderRadius: 'var(--radius-lg)',
-        padding: 'var(--space-3)',
+        width: '100%', maxWidth: 'var(--chat-input-max-width)',
+        backgroundColor: 'var(--chat-input-bg)',
+        borderRadius: '16px',
+        boxShadow: 'var(--chat-input-shadow)',
         border: '1px solid var(--gray-100)',
-        transition: 'border-color var(--transition-fast)',
+        overflow: 'hidden',
+        transition: 'box-shadow 0.2s',
       }}>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-          style={{ display: 'none' }}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isOcrLoading || isProcessingPaste}
-          title="上传图片或PDF文件"
-          className="btn"
-          style={{
-            padding: '0.5rem',
-            borderColor: 'var(--gray-200)',
-            backgroundColor: isOcrLoading || isProcessingPaste ? 'var(--gray-100)' : 'white',
-            color: isOcrLoading || isProcessingPaste ? 'var(--gray-400)' : 'var(--gray-500)',
-            flexShrink: 0,
-          }}
-        >
-          <AttachIcon />
-        </button>
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={noApiConfigured ? '请先在 API 设置中配置 API Key 以启用对话' : `输入消息... (Enter 发送，Shift+Enter 换行)\n支持粘贴或上传图片、PDF、PPT（最多${MAX_FILES}个）`}
-          disabled={isLoading || noApiConfigured}
-          style={{
-            flex: 1,
-            backgroundColor: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: 'var(--gray-800)',
-            fontSize: '0.9375rem',
-            lineHeight: 1.5,
-            resize: 'none',
-            maxHeight: '200px',
-            fontFamily: 'var(--font-body)',
-          }}
-          rows={1}
-        />
-        {isLoading && onStopGeneration ? (
-          <button
-            onClick={onStopGeneration}
-            className="btn"
+        {/* Suggestions row — shown when input is empty */}
+        {!input.trim() && !isLoading && (
+          <div style={{
+            display: 'flex', gap: '8px', padding: '14px 16px 0',
+            flexWrap: 'wrap',
+          }}>
+            {SUGGESTIONS.map(q => (
+              <button key={q} onClick={() => handleSuggestionClick(q)} style={{
+                padding: '6px 14px', borderRadius: '16px', border: '1px solid var(--gray-200)',
+                background: 'var(--chat-tag-bg)', color: 'var(--gray-600)',
+                fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gray-200)'; e.currentTarget.style.color = 'var(--gray-600)' }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Input row */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-end', gap: '10px',
+          padding: '12px 16px',
+        }}>
+          {/* Attach button */}
+          <>
+            <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isOcrLoading || isProcessingPaste}
+              title="上传文件"
+              style={{
+                padding: '8px', border: 'none', background: 'none',
+                color: 'var(--gray-400)', cursor: 'pointer',
+                borderRadius: '8px', flexShrink: 0,
+                display: 'flex', alignItems: 'center',
+                transition: 'color 0.15s, background-color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--primary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--gray-400)'}
+            >
+              <Paperclip size={20} />
+            </button>
+          </>
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={noApiConfigured ? '请先在 API 设置中配置 API Key' : '输入消息...'}
+            disabled={isLoading || noApiConfigured}
             style={{
-              padding: '0.5rem 1rem',
-              border: 'none',
-              backgroundColor: 'var(--danger)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-1)',
-              flexShrink: 0,
-              fontWeight: 600,
-              animation: 'pulse 1.5s infinite',
+              flex: 1, backgroundColor: 'transparent', border: 'none',
+              outline: 'none', color: 'var(--gray-800)',
+              fontSize: '0.9375rem', lineHeight: 1.5, resize: 'none',
+              maxHeight: '200px', fontFamily: 'var(--font-body)',
+              padding: '6px 0',
             }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
-            </svg>
-            停止生成
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading || noApiConfigured}
-            className="btn"
-            title={noApiConfigured ? '请先在 API 设置中配置 API Key' : ''}
-            style={{
-              padding: '0.5rem 1rem',
+            rows={1}
+          />
+
+          {/* Send / Stop button */}
+          {isLoading && onStopGeneration ? (
+            <button onClick={onStopGeneration} style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              border: 'none', backgroundColor: 'var(--danger)',
+              color: 'white', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'transform 0.15s',
+            }}>
+              <div style={{ width: '14px', height: '14px', borderRadius: '2px', backgroundColor: 'white' }} />
+            </button>
+          ) : (
+            <button onClick={handleSend} disabled={!input.trim() || isLoading || noApiConfigured} style={{
+              width: '36px', height: '36px', borderRadius: '50%',
               border: 'none',
               backgroundColor: input.trim() && !isLoading && !noApiConfigured ? 'var(--primary)' : 'var(--gray-200)',
               color: input.trim() && !isLoading && !noApiConfigured ? 'white' : 'var(--gray-400)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-1)',
-              flexShrink: 0,
-            }}
-          >
-            <SendIcon />
-            发送
-          </button>
-        )}
+              cursor: input.trim() && !isLoading && !noApiConfigured ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'background-color 0.15s, transform 0.15s',
+            }}>
+              <ArrowUp size={20} />
+            </button>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: '1px', backgroundColor: 'var(--gray-100)', margin: '0 16px' }} />
+
+        {/* Feature tag bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '10px 16px', flexWrap: 'wrap',
+        }}>
+          {/* Model selector */}
+          <div style={{ position: 'relative' }}>
+            <select
+              value={currentModel}
+              onChange={(e) => onModelChange(e.target.value as ModelType)}
+              style={{
+                padding: '5px 26px 5px 10px', borderRadius: '8px',
+                border: '1px solid var(--gray-200)', backgroundColor: 'var(--gray-50)',
+                fontSize: '0.75rem', color: 'var(--gray-600)',
+                cursor: 'pointer', fontFamily: 'inherit',
+                appearance: 'none', WebkitAppearance: 'none',
+              }}
+            >
+              {MODEL_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value} disabled={!availableModels.includes(opt.value)}>
+                  {opt.label} {availableModels.includes(opt.value) ? '' : '(未配置)'}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={12} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
+          </div>
+
+          {/* Deep thinking toggle */}
+          <TagButton icon={Brain} label="深度思考" active={enableThinking} onClick={() => onEnableThinkingChange(!enableThinking)} />
+
+          {/* Web search toggle */}
+          {websearchAvailable ? (
+            <TagButton icon={Globe} label="联网搜索" active={enableWebsearch} onClick={() => onEnableWebsearchChange(!enableWebsearch)} />
+          ) : (
+            <TagButton icon={Globe} label="联网搜索" active={false} disabled />
+          )}
+        </div>
       </div>
     </div>
   )
