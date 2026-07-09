@@ -46,7 +46,7 @@ export const chapters: NoteChapter[] = [
 | **顺序存储** | 地址连续，逻辑与物理关系一致 | 随机存取 O(1)，空间利用率高 | 需要整块连续空间，可能产生外部碎片 |
 | **链式存储** | 借助指针链接，物理上可不连续 | 无碎片，充分利用零散空间 | 额外存储指针，只能顺序存取 |
 
-![顺序存储与链式存储](https://img-blog.csdnimg.cn/377bc986fa784c40a68825479e96b332.png)
+![顺序存储与链式存储](/images/ds-notes/377bc986fa784c40a68825479e96b332.png)
 
 > **核心思想**：逻辑结构与物理结构分离。线性表是逻辑结构，顺序表（数组）和链表是物理实现。同一逻辑结构可有多种存储方式。
 
@@ -67,7 +67,7 @@ export const chapters: NoteChapter[] = [
 
 **定义**：算法中基本操作重复执行的次数是问题规模 n 的函数 T(n)，若有辅助函数 f(n)，使 n→∞ 时 T(n)/f(n) 的极限为非零常数，则称 **T(n) = O(f(n))** 为算法的渐进时间复杂度。
 
-![常见数量阶](https://img-blog.csdnimg.cn/b0a9352ec69a4eff8d530e088b6e54c9.png)
+![常见数量阶](/images/ds-notes/b0a9352ec69a4eff8d530e088b6e54c9.png)
 
 ### 时间复杂度的计算规则
 
@@ -87,7 +87,7 @@ O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!) < O(nⁿ
 
 空间复杂度 S(n) 定义为算法所耗费的存储空间，是问题规模 n 的函数。
 
-![空间复杂度](https://img-blog.csdnimg.cn/8a6c5bf4a79f4d009bbc42a8e7f28c13.png)
+![空间复杂度](/images/ds-notes/8a6c5bf4a79f4d009bbc42a8e7f28c13.png)
 
 | 类型 | 说明 |
 |------|------|
@@ -111,7 +111,7 @@ O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!) < O(nⁿ
 
 顺序表是最基础的数据结构，用**一组连续的内存空间**存储数据，支持通过下标 **O(1)** 随机访问。
 
-![顺序存储](https://img-blog.csdnimg.cn/377bc986fa784c40a68825479e96b332.png)
+![顺序存储](/images/ds-notes/377bc986fa784c40a68825479e96b332.png)
 
 ### 核心特性
 
@@ -331,7 +331,7 @@ void al_free(ArrayList *al) {
 
 链表通过**指针**将零散的内存块串联起来，每个节点包含**数据域**和**指针域**。
 
-![链式存储](https://img-blog.csdnimg.cn/93e6ec67d1054c6296b28752968f8307.png)
+![链式存储](/images/ds-notes/93e6ec67d1054c6296b28752968f8307.png)
 
 ### 链表类型
 
@@ -1421,7 +1421,7 @@ AVL 树是**任意节点左右子树高度差不超过 1** 的二叉搜索树，
 
 **平衡因子 = 左子树高度 − 右子树高度**，AVL 树中每个节点的平衡因子只能是 **-1、0、1**。
 
-![AVL 树](https://img-blog.csdnimg.cn/b4f24d04f0274274821775224a8932d0.png)
+![AVL 树](/images/ds-notes/b4f24d04f0274274821775224a8932d0.png)
 
 ### 四种旋转
 
@@ -1434,10 +1434,10 @@ AVL 树是**任意节点左右子树高度差不超过 1** 的二叉搜索树，
 | **LR** | 左子树的右子树 | 先左旋后右旋 |
 | **RL** | 右子树的左子树 | 先右旋后左旋 |
 
-![LL旋转](https://img-blog.csdnimg.cn/c2399b3e07024ff9960b97128395db0e.png)
-![RR旋转](https://img-blog.csdnimg.cn/d25b8b2dab554ab59f81bac6a2753d86.png)
-![LR旋转](https://img-blog.csdnimg.cn/ec481fa5c1a4412bb3d6b0222539fb86.png)
-![RL旋转](https://img-blog.csdnimg.cn/e1d7759e463346939cef623989eb23e3.png)
+![LL旋转](/images/ds-notes/c2399b3e07024ff9960b97128395db0e.png)
+![RR旋转](/images/ds-notes/d25b8b2dab554ab59f81bac6a2753d86.png)
+![LR旋转](/images/ds-notes/ec481fa5c1a4412bb3d6b0222539fb86.png)
+![RL旋转](/images/ds-notes/e1d7759e463346939cef623989eb23e3.png)
 
 ### 操作复杂度
 
@@ -1475,13 +1475,13 @@ B树是一种**多路平衡查找树**，广泛应用于文件系统和数据库
 - 所有叶节点在同一层
 - 节点内关键字有序排列
 
-![B树结构](https://img-blog.csdnimg.cn/174cdd08ed644e5a92e88d49a9c8005a.png)
+![B树结构](/images/ds-notes/174cdd08ed644e5a92e88d49a9c8005a.png)
 
 ### B+树
 
 B+树是 B 树的变形，广泛应用于数据库索引（MySQL InnoDB）：
 
-![B+树结构](https://img-blog.csdnimg.cn/bd254def21d042e5a4f1feced51b2ba3.png)
+![B+树结构](/images/ds-notes/bd254def21d042e5a4f1feced51b2ba3.png)
 
 ### B树 vs B+树
 
@@ -2059,7 +2059,7 @@ void dijkstra(int **graph, int start, int V, int *dist) {
 
 从任意顶点开始，每次选择**连接已选集合和未选集合的最小权边**，将对应顶点加入。
 
-![Prim算法](https://img-blog.csdnimg.cn/c27ac192ad0142fc857c5d1f958f990e.png)
+![Prim算法](/images/ds-notes/c27ac192ad0142fc857c5d1f958f990e.png)
 
 - **时间复杂度**：O(V²) 朴素实现，O((V+E)log V) 堆优化
 - **适用**：稠密图
@@ -2068,7 +2068,7 @@ void dijkstra(int **graph, int start, int V, int *dist) {
 
 按边权升序排列，依次选择**不构成环的最小权边**，直到选出 V-1 条边。
 
-![Kruskal算法](https://img-blog.csdnimg.cn/62cba09c6a5749939744f625ed2fdcf1.png)
+![Kruskal算法](/images/ds-notes/62cba09c6a5749939744f625ed2fdcf1.png)
 
 - **时间复杂度**：O(E log E)，主要耗时在排序
 - **适用**：稀疏图
@@ -2089,7 +2089,7 @@ void dijkstra(int **graph, int start, int V, int *dist) {
 
 拓扑排序是将**有向无环图（DAG）** 的所有顶点排成一个线性序列，满足：若存在边 u→v，则 u 在序列中出现在 v 之前。
 
-![拓扑排序](https://img-blog.csdnimg.cn/d3e314b7f24a40a88c7f12f99dae646e.png)
+![拓扑排序](/images/ds-notes/d3e314b7f24a40a88c7f12f99dae646e.png)
 
 ### Kahn 算法（BFS）
 
@@ -2135,7 +2135,7 @@ def topological_sort(graph, V):
 | **活动最晚开始 l** | l(i) = vl(活动终点) − 活动持续时间 |
 | **关键活动** | e(i) = l(i) 的活动，即无时间余量 |
 
-![关键路径](https://img-blog.csdnimg.cn/b8151fe5f476449abd9b9837ac913647.png)
+![关键路径](/images/ds-notes/b8151fe5f476449abd9b9837ac913647.png)
 
 > 求关键路径步骤：① 拓扑排序求各事件 ve ② 逆拓扑求各事件 vl ③ 计算各活动 e 和 l ④ e = l 的活动为关键活动。`
       }
@@ -2291,7 +2291,7 @@ int lower_bound(int arr[], int n, int target) {
 
 **ASL = Σ(Pᵢ × Cᵢ)**，Pᵢ 为查找第 i 个元素的概率，Cᵢ 为查找所需的比较次数。
 
-![ASL](https://img-blog.csdnimg.cn/2630afa057ce49e19eb5f43bee0112b1.png)
+![ASL](/images/ds-notes/2630afa057ce49e19eb5f43bee0112b1.png)
 
 ### 顺序查找 vs 折半查找
 
@@ -2303,13 +2303,13 @@ int lower_bound(int arr[], int n, int target) {
 | **时间复杂度** | O(n) | O(log n) |
 | **存储结构** | 均可 | 仅顺序表 |
 
-![折半查找](https://img-blog.csdnimg.cn/9846670db92642f99f701264f0814063.png)
+![折半查找](/images/ds-notes/9846670db92642f99f701264f0814063.png)
 
 ### 分块查找（索引顺序查找）
 
 数据分块，块间有序、块内无序。先查索引定位块，再块内顺序查找。
 
-![分块查找](https://img-blog.csdnimg.cn/8600df6bed524e14bd9a11e6d43d512d.png)
+![分块查找](/images/ds-notes/8600df6bed524e14bd9a11e6d43d512d.png)
 
 | 特性 | 说明 |
 |------|------|

@@ -156,20 +156,31 @@ function MarkdownBody({ content }: { content: string }) {
 
         // ── 图片 ──
         img({ src, alt }) {
+          const [failed, setFailed] = useState(false)
+          if (failed) {
+            return (
+              <div style={{
+                padding: '12px 16px', margin: '0.5rem 0',
+                background: '#FFFBEB', border: '1px solid #FDE68A',
+                borderRadius: 8, fontSize: '0.8125rem',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span>🖼️</span>
+                <span style={{ color: '#92400E' }}>{alt || '图片'}</span>
+                <a href={src} target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                  查看原图 →
+                </a>
+              </div>
+            )
+          }
           return (
             <img
               src={src}
               alt={alt || '图片'}
               style={{ maxWidth: '100%', borderRadius: 8, margin: '0.5rem 0' }}
               loading="lazy"
-              onError={(e) => {
-                const target = e.currentTarget
-                target.style.display = 'none'
-                const placeholder = document.createElement('div')
-                placeholder.style.cssText = 'padding:1rem;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;color:#991B1B;font-size:0.875rem;text-align:center'
-                placeholder.textContent = '⚠️ 图片加载失败'
-                target.parentNode?.insertBefore(placeholder, target)
-              }}
+              onError={() => setFailed(true)}
             />
           )
         },
