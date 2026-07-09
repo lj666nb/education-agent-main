@@ -24,6 +24,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "katex": "^0.16.9",
+    "lucide-react": "^1.23.0",
     "mammoth": "^1.6.0",
     "markmap-common": "^0.15.2",
     "markmap-lib": "^0.15.2",
