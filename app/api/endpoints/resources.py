@@ -475,6 +475,9 @@ async def generate_resource(
                 code = re.sub(r'^```[a-zA-Z]*\n?', '', code)
                 code = re.sub(r'\n?```$', '', code)
 
+                if not app_settings.ENABLE_PLOT_CODE_EXECUTION:
+                    return "\n\n> 图表代码已生成，但当前环境未启用安全沙箱，已跳过自动执行。\n\n"
+
                 # 尝试执行（含自动修复和重试）
                 url = _try_execute_plot_with_retry(code)
                 if url:
@@ -691,6 +694,129 @@ async def search_unsplash_images(
         ],
         total=len(results),
     )
+
+
+# ── AI 智能编排笔记 ──
+
+class ComposeNoteRequest(BaseModel):
+    resource_ids: List[str]
+    topic_name: str
+
+class ComposeNoteResponse(BaseModel):
+    composed_note: str  # Markdown
+
+COMPOSE_NOTE_PROMPT = """你是一位资深技术教育作者，擅长将零散的学习资料编排成高质量、结构清晰的技术学习笔记。
+
+请根据以下多个不同类型的资源内容，为知识点「{topic_name}」撰写一篇完整的学习笔记。
+
+编排要求：
+1. **标题**：使用一级标题，简洁有力
+2. **导语**：1-2句话说明这个知识点的核心价值和适用场景
+3. **核心概念**：清晰解释关键定义和原理，由浅入深
+4. **图解/结构**：如果资源中有思维导图内容，转换为文字化的结构梳理（用列表或表格呈现知识框架）
+5. **代码实战**：如果资源中有代码案例，选取最核心的代码片段，加上详细注释和逐步讲解
+6. **重点总结**：列出 3-5 个核心要点
+7. **常见误区/面试要点**：如果资源中有相关提示，整理出来
+8. **延伸学习**：建议下一步学什么
+
+风格要求：
+- 语言通俗易懂，适合自学
+- 代码块使用正确的语言标识（```python 等）
+- 关键术语首次出现时用**加粗**标注
+- 适当使用 > 引用块强调重点
+- 整体长度控制在 800-2000 字
+
+以下是各资源的内容：
+
+{resource_contents}
+
+请输出完整的 Markdown 格式学习笔记。"""
+
+
+@router.post("/compose-note", response_model=ComposeNoteResponse)
+async def compose_note(
+    req: ComposeNoteRequest,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """AI 智能编排：将多个资源合并为一份高质量学习笔记"""
+    if not req.resource_ids:
+        raise HTTPException(status_code=400, detail="资源列表不能为空")
+
+    # 1. 获取资源内容
+    resources = (
+        db.query(KnowledgeResource)
+        .filter(KnowledgeResource.id.in_(req.resource_ids))
+        .all()
+    )
+    if not resources:
+        raise HTTPException(status_code=404, detail="未找到指定资源")
+
+    # 2. 按类型组织资源内容
+    resource_contents = ""
+    type_labels = {
+        "image_text": "📖 图文讲解",
+        "document": "📄 文档",
+        "mind_map": "🧠 思维导图",
+        "code_case": "💻 代码案例",
+        "exercise": "📝 练习题",
+        "video_script": "🎬 视频脚本",
+    }
+
+    for r in resources:
+        label = type_labels.get(r.resource_type, f"📌 {r.resource_type}")
+        content = r.content or ""
+        # 截断过长内容（每资源最多 3000 字）
+        if len(content) > 3000:
+            content = content[:3000] + "\n...（内容过长已截断）"
+        resource_contents += f"\n### {label}：{r.title}\n\n{content}\n\n---\n"
+
+    # 3. 调用 LLM
+    prompt = COMPOSE_NOTE_PROMPT.format(
+        topic_name=req.topic_name,
+        resource_contents=resource_contents,
+    )
+
+    try:
+        composed = await _call_llm_for_compose(prompt)
+    except Exception as e:
+        logger.error(f"LLM 编排笔记失败: {e}")
+        raise HTTPException(status_code=500, detail=f"AI 编排失败：{str(e)}")
+
+    return ComposeNoteResponse(composed_note=composed)
+
+
+async def _call_llm_for_compose(prompt: str) -> str:
+    """调用 LLM 进行笔记编排"""
+    import httpx
+
+    api_key = getattr(app_settings, "DEEPSEEK_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
+    api_url = getattr(app_settings, "DEEPSEEK_BASE_URL", os.getenv("DEEPSEEK_BASE_URL", ""))
+    model = getattr(app_settings, "DEEPSEEK_MODEL", os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
+
+    if not api_key or not api_url:
+        raise ValueError("LLM API 未配置，请先在 API 设置中配置 DeepSeek")
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            f"{api_url.rstrip('/')}/v1/chat/completions",
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": "你是一位资深技术教育作者，擅长编写高质量学习笔记。请用 Markdown 格式输出，语言为中文。"},
+                    {"role": "user", "content": prompt},
+                ],
+                "max_tokens": 4096,
+            },
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+        )
+        if resp.status_code != 200:
+            raise ValueError(f"LLM API 返回错误: {resp.status_code} — {resp.text[:200]}")
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 
 # ── 图文讲解图表静态文件服务 ──

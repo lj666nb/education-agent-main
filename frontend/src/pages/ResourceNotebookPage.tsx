@@ -47,6 +47,11 @@ export default function ResourceNotebookPage() {
   const [genTitle, setGenTitle] = useState('')
   const [generating, setGenerating] = useState(false)
 
+  // ── Fullscreen + AI compose ──
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [composedNote, setComposedNote] = useState<string | null>(null)
+  const [composing, setComposing] = useState(false)
+
   // ── Load data ──
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -133,6 +138,30 @@ export default function ResourceNotebookPage() {
       setDeletingId(null)
     }
   }, [loadData])
+
+  // ── AI compose note ──
+  const handleComposeNote = useCallback(async () => {
+    if (!selectedTopic) return
+    const allResourceIds = selectedTopic.sections.flatMap(s => s.resources.map(r => r.id))
+    if (allResourceIds.length === 0) return
+    setComposing(true)
+    try {
+      const res = await resourcesApi.composeNote({
+        resource_ids: allResourceIds,
+        topic_name: selectedTopic.title,
+      })
+      setComposedNote(res.data.composed_note)
+    } catch (err: any) {
+      alert('AI 编排失败: ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setComposing(false)
+    }
+  }, [selectedTopic])
+
+  // ── Fullscreen toggle ──
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev)
+  }, [])
 
   // ── Generate handlers (reuse existing modal patterns) ──
   const executeGenerate = useCallback(async (resourceType?: string) => {
@@ -237,7 +266,7 @@ export default function ResourceNotebookPage() {
   const categories = data?.categories || []
 
   return (
-    <div className="nb-page">
+    <div className={`nb-page${isFullscreen ? ' nb-page--fullscreen' : ''}`}>
       {/* Top Navigation */}
       <TopCategoryNav
         categories={categories}
@@ -248,6 +277,11 @@ export default function ResourceNotebookPage() {
         <ToolbarActions
           onRefresh={loadData}
           loading={loading}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
+          onComposeNote={handleComposeNote}
+          composing={composing}
+          hasSelection={!!selectedTopic}
           onGenerateVideo={() => setVideoGenModal(true)}
           onGenerateMindmap={() => setMindmapModal(true)}
           onGenerateCodeCase={() => setCodeGenModal(true)}
@@ -298,6 +332,8 @@ export default function ResourceNotebookPage() {
               onViewDetail={handleViewDetail}
               onDelete={handleDelete}
               deletingId={deletingId}
+              composedNote={composedNote}
+              onCloseComposed={() => setComposedNote(null)}
             />
           }
           toc={

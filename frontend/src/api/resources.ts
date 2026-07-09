@@ -165,6 +165,11 @@ export const resourcesApi = {
 
   unsplashSearch: (data: { query: string; per_page?: number; orientation?: string }) =>
     api.post<{ images: UnsplashImage[]; total: number }>('/resources/unsplash-search', data),
+
+  // ── AI 智能编排笔记 ──
+
+  composeNote: (data: { resource_ids: string[]; topic_name: string }) =>
+    api.post<{ composed_note: string }>('/resources/compose-note', data),
 }
 
 export interface UnsplashImage {

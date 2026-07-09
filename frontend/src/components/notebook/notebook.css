@@ -37,6 +37,31 @@
   color: var(--nb-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* ── Fullscreen mode ── */
+.nb-page--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.nb-page--fullscreen .nb-layout {
+  grid-template-columns: 260px 1fr 220px;
+}
+
+.nb-page--fullscreen .nb-article {
+  max-width: 900px;
+}
+
+.nb-article {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .nb-layout {
@@ -208,24 +233,6 @@
 }
 
 /* ── Article Area ── */
-
-.nb-article {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px 40px;
-  max-width: 780px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.nb-article::-webkit-scrollbar {
-  width: 4px;
-}
-
-.nb-article::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 2px;
-}
 
 .nb-article-title {
   font-size: 24px;
@@ -543,6 +550,92 @@
   justify-content: center;
   padding: 80px 20px;
   text-align: center;
+}
+
+/* ── Composed Note Display ── */
+
+.nb-composed-note {
+  padding: 0;
+  line-height: 1.85;
+  font-size: 15px;
+  color: var(--nb-text-primary);
+}
+
+.nb-composed-note h1 {
+  font-size: 28px; font-weight: 700; margin: 0 0 12px;
+  color: var(--nb-text-primary);
+  border-bottom: 2px solid var(--nb-accent); padding-bottom: 12px;
+}
+
+.nb-composed-note h2 {
+  font-size: 20px; font-weight: 600; margin: 28px 0 12px;
+  color: var(--nb-text-primary);
+  padding-left: 10px; border-left: 3px solid var(--nb-accent);
+}
+
+.nb-composed-note h3 {
+  font-size: 17px; font-weight: 600; margin: 22px 0 10px;
+  color: var(--nb-text-primary);
+}
+
+.nb-composed-note p { margin: 8px 0; }
+
+.nb-composed-note ul, .nb-composed-note ol { padding-left: 22px; margin: 8px 0; }
+.nb-composed-note li { margin: 4px 0; }
+
+.nb-composed-note code {
+  background: var(--nb-accent-bg); padding: 2px 6px; border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.88em; color: var(--app-danger, #EF4444);
+}
+
+.nb-composed-note pre {
+  background: #1e1e2e; color: #cdd6f4; padding: 16px 20px;
+  border-radius: var(--nb-radius-md); overflow-x: auto;
+  margin: 12px 0; font-size: 13px; line-height: 1.6;
+}
+
+.nb-composed-note pre code {
+  background: transparent; color: inherit; padding: 0; font-size: inherit;
+}
+
+.nb-composed-note blockquote {
+  border-left: 3px solid var(--nb-accent); padding: 8px 16px;
+  margin: 12px 0; background: var(--nb-accent-bg);
+  border-radius: 0 var(--nb-radius-sm) var(--nb-radius-sm) 0;
+  color: var(--nb-text-secondary);
+}
+
+.nb-composed-note table {
+  border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px;
+}
+
+.nb-composed-note th {
+  background: var(--nb-accent-bg); padding: 8px 12px;
+  text-align: left; font-weight: 600; border: 1px solid var(--nb-border);
+}
+
+.nb-composed-note td {
+  padding: 8px 12px; border: 1px solid var(--nb-border);
+}
+
+.nb-composed-note strong { color: var(--nb-accent); }
+
+.nb-composed-note hr {
+  border: none; border-top: 1px solid var(--nb-border); margin: 24px 0;
+}
+
+.nb-composed-note-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border: 1px solid var(--nb-border);
+  border-radius: var(--nb-radius-sm); background: var(--nb-bg-card);
+  color: var(--nb-text-secondary); font-size: 13px; cursor: pointer;
+  margin-bottom: 20px; transition: all var(--nb-transition);
+}
+
+.nb-composed-note-back:hover {
+  border-color: var(--nb-accent); color: var(--nb-accent);
+  background: var(--nb-accent-bg);
 }
 
 .nb-empty-icon {
