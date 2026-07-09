@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Folder, Code, PenTool, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
+import { Folder, Code, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
 import Sidebar from './Sidebar'
 import MessageList, { Message } from './MessageList'
 import InputArea, { PastedFile } from './InputArea'
@@ -969,16 +969,50 @@ export default function ChatPlatform() {
 
         {/* Right — feature buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setProjectPanelOpen(!projectPanelOpen)}
-            style={headerBtnStyle(!!selectedProjectForChat)}>
-            <Folder size={14} />
-            {selectedProjectForChat ? (projects.find(p => p.id === selectedProjectForChat)?.name || '项目') : '项目'}
-          </button>
-          <button onClick={() => setDiagramOpen(!diagramOpen)}
-            style={headerBtnStyle(diagramOpen)}>
-            <PenTool size={14} />
-            Diagram
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setProjectPanelOpen(!projectPanelOpen)}
+              style={headerBtnStyle(!!selectedProjectForChat)}>
+              <Folder size={14} />
+              {selectedProjectForChat ? (projects.find(p => p.id === selectedProjectForChat)?.name || '项目') : '项目'}
+            </button>
+            {/* Project dropdown — appears directly below the button */}
+            {projectPanelOpen && (
+              <div className="fade-in" style={{
+                position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem',
+                backgroundColor: 'white', border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-xl)', minWidth: '220px', maxHeight: '320px', overflowY: 'auto', zIndex: 1000,
+              }}>
+                <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--gray-100)', fontSize: '0.75rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                  选择项目
+                </div>
+                <div onClick={() => handleSelectProject(null)}
+                  style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: selectedProjectForChat === null ? 'var(--primary)' : 'var(--gray-700)', backgroundColor: selectedProjectForChat === null ? 'oklch(0.55 0.25 250 / 0.06)' : 'transparent', fontWeight: selectedProjectForChat === null ? 500 : 400, transition: 'background-color var(--transition-fast)' }}>
+                  全局对话（无项目）
+                </div>
+                {projects.map(project => (
+                  <div key={project.id} onClick={() => handleSelectProject(project.id)}
+                    style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: selectedProjectForChat === project.id ? 'var(--primary)' : 'var(--gray-700)', backgroundColor: selectedProjectForChat === project.id ? 'oklch(0.55 0.25 250 / 0.06)' : 'transparent', fontWeight: selectedProjectForChat === project.id ? 500 : 400, borderBottom: '1px solid var(--gray-50)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background-color var(--transition-fast)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500 }}>{project.name}</div>
+                      {project.description && <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.description}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                      <button onClick={e => handleOpenEditProject(project, e)} title="编辑项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)' }}>
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={e => handleDeleteProject(project.id, e)} title="删除项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)', color: 'var(--danger)' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div onClick={() => { setProjectPanelOpen(false); setShowCreateProjectModal(true) }}
+                  style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--success)', fontWeight: 500, borderTop: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                  <Plus size={14} /> 新建项目
+                </div>
+              </div>
+            )}
+          </div>
           <button onClick={() => { if (!codeRunnerOpen) { setCodeRunnerCode('# 在此编写代码\nprint("Hello World")'); setCodeRunnerLanguage('python') } setCodeRunnerOpen(!codeRunnerOpen) }}
             style={headerBtnStyle(codeRunnerOpen)}>
             <Code size={14} />
@@ -993,44 +1027,6 @@ export default function ChatPlatform() {
             新建对话
           </button>
         </div>
-
-        {/* Project dropdown */}
-        {projectPanelOpen && (
-          <div className="fade-in" style={{
-            position: 'absolute', top: '100%', right: '8px', marginTop: '0.5rem',
-            backgroundColor: 'white', border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-xl)', minWidth: '220px', maxHeight: '320px', overflowY: 'auto', zIndex: 1000,
-          }}>
-            <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--gray-100)', fontSize: '0.75rem', color: 'var(--gray-500)', fontWeight: 500 }}>
-              选择项目
-            </div>
-            <div onClick={() => handleSelectProject(null)}
-              style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: selectedProjectForChat === null ? 'var(--primary)' : 'var(--gray-700)', backgroundColor: selectedProjectForChat === null ? 'oklch(0.55 0.25 250 / 0.06)' : 'transparent', fontWeight: selectedProjectForChat === null ? 500 : 400, transition: 'background-color var(--transition-fast)' }}>
-              全局对话（无项目）
-            </div>
-            {projects.map(project => (
-              <div key={project.id} onClick={() => handleSelectProject(project.id)}
-                style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: selectedProjectForChat === project.id ? 'var(--primary)' : 'var(--gray-700)', backgroundColor: selectedProjectForChat === project.id ? 'oklch(0.55 0.25 250 / 0.06)' : 'transparent', fontWeight: selectedProjectForChat === project.id ? 500 : 400, borderBottom: '1px solid var(--gray-50)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background-color var(--transition-fast)' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500 }}>{project.name}</div>
-                  {project.description && <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.description}</div>}
-                </div>
-                <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button onClick={e => handleOpenEditProject(project, e)} title="编辑项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)' }}>
-                    <Pencil size={13} />
-                  </button>
-                  <button onClick={e => handleDeleteProject(project.id, e)} title="删除项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)', color: 'var(--danger)' }}>
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            <div onClick={() => { setProjectPanelOpen(false); setShowCreateProjectModal(true) }}
-              style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--success)', fontWeight: 500, borderTop: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-              <Plus size={14} /> 新建项目
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ═══ API 未配置警告条 ═══ */}
@@ -1155,8 +1151,6 @@ export default function ChatPlatform() {
             availableModels={availableModels} pastedFiles={pastedFiles}
             onStopGeneration={handleStopGeneration}
             noApiConfigured={noApiConfigured} prefillText={prefillInput}
-            onProjectClick={() => setProjectPanelOpen(true)}
-            selectedProjectName={selectedProjectForChat ? projects.find(p => p.id === selectedProjectForChat)?.name : undefined}
           />
         </div>
       </div>
