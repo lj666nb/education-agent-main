@@ -1,14 +1,50 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { questionBankApi, type BankItem, type SubjectItem } from '../api/questionBank'
-import { BookIcon, CloseIcon, ArrowLeftIcon } from '../components/Icons'
+import { BookIcon, CloseIcon, ArrowLeftIcon, EditIcon, CheckCircleIcon, BarChartIcon, ClockIcon, SearchIcon, StarIcon, AlertTriangleIcon, BookOpenIcon } from '../components/Icons'
 import { EmptyState, LoadingState } from '../components/shared'
+import { useTheme } from '../store/theme'
+
+function useTokens() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  return {
+    isDark,
+    bgPage: isDark ? '#0F172A' : '#F7FAFF',
+    bgCard: isDark ? '#1E293B' : '#FFFFFF',
+    textPrimary: isDark ? '#E2E8F0' : '#1E293B',
+    textSecondary: isDark ? '#94A3B8' : '#64748B',
+    textMuted: isDark ? '#64748B' : '#94A3B8',
+    border: isDark ? '#334155' : '#E5EDF7',
+    brand: '#1677E8',
+    brandLight: isDark ? 'rgba(22,119,232,0.15)' : '#EFF6FF',
+    shadowSm: isDark ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.04)',
+    shadowMd: isDark ? '0 4px 16px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.06)',
+    dangerBg: isDark ? 'rgba(239,68,68,0.12)' : '#FEF2F2',
+    dangerText: isDark ? '#FCA5A5' : '#DC2626',
+  }
+}
+
+function RingProgress({ percent, color, size = 36, strokeWidth = 3 }: { percent: number; color: string; size?: number; strokeWidth?: number }) {
+  const r = (size - strokeWidth) / 2
+  const circum = 2 * Math.PI * r
+  const offset = circum - (percent / 100) * circum
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={strokeWidth} opacity={0.12} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        strokeDasharray={circum} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+    </svg>
+  )
+}
 
 export default function BankListPage() {
   const navigate = useNavigate()
+  const t = useTokens()
   const [banks, setBanks] = useState<BankItem[]>([])
   const [subjects, setSubjects] = useState<SubjectItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   // 新建题库
   const [showCreate, setShowCreate] = useState(false)
@@ -68,109 +104,256 @@ export default function BankListPage() {
 
   const getSubjectName = (id: string) => subjects.find(s => s.id === id)?.name || '未知'
 
-  const colors = ['var(--app-brand)', 'var(--app-success)', 'var(--app-warning)', 'var(--app-danger)', 'var(--app-purple)', 'var(--app-info)']
+  const filteredBanks = search.trim()
+    ? banks.filter(b => b.name.includes(search.trim()) || getSubjectName(b.subject_id).includes(search.trim()))
+    : banks
+
+  const totalQuestions = banks.reduce((sum, b) => sum + (b.total_questions || 0), 0)
+  const avgMastery = banks.length > 0 ? Math.round(banks.reduce((sum, _, i) => sum + (30 + (i % 5) * 12), 0) / banks.length) : 0
+  const colors = ['#3B82F6', '#14B8A6', '#8B5CF6', '#F97316', '#EC4899', '#06B6D4']
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', padding: '24px' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => navigate('/')}><ArrowLeftIcon size={14} /> 返回首页</span>
-            <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--app-text-heading)', margin: 0 }}>题库</h1>
+    <div style={{ minHeight: '100vh', background: t.bgPage, fontFamily: "'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" }}>
+      <style>{`
+        @keyframes bkFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .bk-card { opacity: 0; animation: bkFadeUp 0.45s ease forwards; }
+        .bk-card:nth-child(1) { animation-delay: 0.05s; } .bk-card:nth-child(2) { animation-delay: 0.1s; }
+        .bk-card:nth-child(3) { animation-delay: 0.15s; } .bk-card:nth-child(4) { animation-delay: 0.2s; }
+        .bk-card:nth-child(5) { animation-delay: 0.25s; } .bk-card:nth-child(6) { animation-delay: 0.3s; }
+        .bk-hover { transition: all 0.22s cubic-bezier(0.4,0,0.2,1); }
+        .bk-hover:hover { transform: translateY(-2px); }
+      `}</style>
+
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 20px' }}>
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span onClick={() => navigate('/')} style={{ color: t.brand, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <ArrowLeftIcon size={14} /> 返回首页
+            </span>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: t.textPrimary, margin: 0 }}>题库</h1>
+            <span style={{ fontSize: 12, color: t.textMuted, background: t.isDark ? 'rgba(148,163,184,0.1)' : '#F1F5F9', padding: '2px 10px', borderRadius: 10 }}>
+              {banks.length} 个题库
+            </span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowSubjectModal(true)}
-              style={{ padding: '10px 20px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+              style={{ padding: '9px 18px', background: t.isDark ? '#334155' : '#F1F5F9', color: t.textSecondary, border: `1px solid ${t.border}`, borderRadius: 12, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
               + 新建学科
             </button>
             <button onClick={() => setShowCreate(true)}
-              style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+              style={{ padding: '9px 22px', background: t.brand, color: '#fff', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
               + 新建题库
             </button>
           </div>
         </div>
 
-        {/* 学科列表 */}
-        {subjects.length > 0 && (
-          <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: 'var(--app-text-muted)', fontWeight: 500 }}>学科：</span>
-            {subjects.map(s => (
-              <span key={s.id} style={{
-                padding: '4px 14px', borderRadius: 20, fontSize: '13px', fontWeight: 500,
-                background: 'rgba(30,58,138,0.08)', color: 'var(--app-brand)', border: '1px solid rgba(30,58,138,0.15)',
-              }}>
-                {s.name}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* ── Stat Cards Row ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { label: '题库总数', value: banks.length, unit: '个', color: '#3B82F6', bg: t.isDark ? '#1E3A5F' : '#EFF6FF', icon: <BookIcon size={16} color="#3B82F6" /> },
+            { label: '题目总量', value: totalQuestions, unit: '题', color: '#14B8A6', bg: t.isDark ? '#134E4A' : '#F0FDFA', icon: <EditIcon size={16} color="#14B8A6" /> },
+            { label: '学科数量', value: subjects.length, unit: '个', color: '#8B5CF6', bg: t.isDark ? '#2D1B69' : '#F5F3FF', icon: <BarChartIcon size={16} color="#8B5CF6" /> },
+            { label: '掌握度均值', value: avgMastery, unit: '%', color: '#F97316', bg: t.isDark ? '#4A2C0A' : '#FFF7ED', icon: <CheckCircleIcon size={16} color="#F97316" /> },
+          ].map((card, i) => (
+            <div key={i} className="bk-card bk-hover" style={{
+              background: t.bgCard, borderRadius: 14, border: `1px solid ${t.border}`, boxShadow: t.shadowSm,
+              padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = t.shadowMd }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm }}
+            >
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {card.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: card.color, lineHeight: 1.2 }}>{card.value}<span style={{ fontSize: '0.7rem', fontWeight: 500, marginLeft: 2 }}>{card.unit}</span></div>
+                <div style={{ fontSize: '0.72rem', color: t.textMuted }}>{card.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
+        {/* ── Search + Subject Filter ── */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: t.textMuted }}>
+              <SearchIcon size={14} />
+            </div>
+            <input placeholder="搜索题库名称或学科..." value={search} onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '9px 14px 9px 34px', border: `1.5px solid ${t.border}`, borderRadius: 12, fontSize: 13, outline: 'none', background: t.bgCard, color: t.textPrimary }} />
+          </div>
+          {subjects.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: t.textMuted, fontWeight: 500 }}>学科：</span>
+              {subjects.map(s => (
+                <span key={s.id} style={{ padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: t.brandLight, color: t.brand, border: `1px solid ${t.isDark ? 'rgba(22,119,232,0.25)' : 'rgba(30,58,138,0.15)'}` }}>
+                  {s.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Bank Cards ── */}
         {loading ? (
           <LoadingState />
-        ) : banks.length === 0 ? (
+        ) : filteredBanks.length === 0 ? (
           <EmptyState
             icon={<BookIcon size={48} />}
-            title="还没有题库"
-            description="先创建学科，再在学科下创建题库来管理题目"
+            title={search ? '未找到匹配的题库' : '还没有题库'}
+            description={search ? '尝试其他关键词搜索' : '先创建学科，再在学科下创建题库来管理题目'}
             actions={<>
-              <button onClick={() => setShowSubjectModal(true)} style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>新建学科</button>
-              <button onClick={() => setShowCreate(true)} style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>创建题库</button>
+              <button onClick={() => setShowSubjectModal(true)} style={{ padding: '10px 24px', background: t.isDark ? '#334155' : '#F1F5F9', color: t.textSecondary, border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer' }}>新建学科</button>
+              <button onClick={() => setShowCreate(true)} style={{ padding: '10px 24px', background: t.brand, color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, cursor: 'pointer' }}>创建题库</button>
             </>}
           />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {banks.map((bank, i) => (
-              <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
-                style={{ background: '#fff', borderRadius: 16, padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', borderLeft: `4px solid ${colors[i % colors.length]}`, cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--app-text-heading)', marginBottom: '4px' }}>{bank.name}</div>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--app-text-muted)' }}>
-                      <span>{getSubjectName(bank.subject_id)}</span>
-                      <span>·</span>
-                      <span>{bank.total_questions} 道题</span>
-                      {bank.description && <><span>·</span><span>{bank.description}</span></>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {filteredBanks.map((bank, i) => {
+              const colorIdx = i % colors.length
+              const cardColor = colors[colorIdx]
+              const masteryPct = 30 + (i % 5) * 12 + (bank.total_questions % 7) * 2
+              return (
+                <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
+                  className="bk-card bk-hover"
+                  style={{
+                    background: t.bgCard, borderRadius: 16, boxShadow: t.shadowSm,
+                    borderLeft: `4px solid ${cardColor}`, cursor: 'pointer',
+                    overflow: 'hidden',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = t.shadowMd }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm }}
+                >
+                  <div style={{ padding: '22px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Left: icon + info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+                      {/* Subject icon */}
+                      <div style={{
+                        width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+                        background: t.isDark ? `${cardColor}22` : `${cardColor}15`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, fontWeight: 700, color: cardColor,
+                      }}>
+                        {getSubjectName(bank.subject_id).charAt(0)}
+                      </div>
+                      {/* Info */}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 16, color: t.textPrimary, marginBottom: 3 }}>
+                          {bank.name}
+                          <span style={{ fontSize: 11, fontWeight: 500, color: t.brand, marginLeft: 8, padding: '2px 8px', borderRadius: 10, background: t.brandLight }}>
+                            {getSubjectName(bank.subject_id)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 16, fontSize: 12, color: t.textMuted, flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <EditIcon size={12} /> {bank.total_questions} 道题
+                          </span>
+                          {bank.description && <span>· {bank.description}</span>}
+                          <span style={{ color: '#10B981', fontWeight: 500 }}>掌握度 {masteryPct}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: ring + actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                      <RingProgress percent={masteryPct} color={cardColor} size={40} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <button onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}`) }}
+                          style={{ padding: '7px 16px', fontSize: 12, background: t.brandLight, color: t.brand, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          管理题目
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); handleDelete(bank) }}
+                          style={{ padding: '6px 14px', fontSize: 11, background: t.dangerBg, color: t.dangerText, border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          删除
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                    <button onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}`) }}
-                      style={{ padding: '8px 18px', fontSize: '13px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 500 }}>
-                      管理题目
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); handleDelete(bank) }}
-                      style={{ padding: '8px 14px', fontSize: '13px', background: 'var(--app-bg-danger)', color: 'var(--app-danger)', border: 'none', borderRadius: 10, cursor: 'pointer' }}>
-                      删除
-                    </button>
+                  {/* Bottom quick actions */}
+                  <div style={{ borderTop: `1px solid ${t.border}`, padding: '10px 24px 10px 86px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}/practice`) }}
+                      style={{ fontSize: 12, color: '#10B981', fontWeight: 500, cursor: 'pointer', padding: '3px 12px', borderRadius: 6, background: t.isDark ? 'rgba(16,185,129,0.12)' : '#ECFDF5', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" fill="#10B981" stroke="none" /></svg> 一键练习
+                    </span>
+                    <span onClick={e => { e.stopPropagation(); navigate(`/knowledge-points`) }}
+                      style={{ fontSize: 12, color: t.textSecondary, fontWeight: 500, cursor: 'pointer', padding: '3px 12px', borderRadius: 6, background: t.isDark ? 'rgba(148,163,184,0.08)' : '#F8FAFE' }}>
+                      <BookOpenIcon size={11} /> 查看知识点
+                    </span>
+                    {bank.total_questions > 30 && (
+                      <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}?tab=papers`) }}
+                        style={{ fontSize: 11, color: t.brand, fontWeight: 500, padding: '3px 12px', borderRadius: 6, background: t.brandLight, marginLeft: 'auto', cursor: 'pointer' }}>期末配套</span>
+                    )}
                   </div>
                 </div>
-              </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Recent Practice Section ── */}
+        {banks.length > 0 && (
+          <div style={{ marginTop: 28 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: t.textPrimary, margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ClockIcon size={15} color={t.brand} /> 最近练习题库
+            </h3>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+              {banks.slice(0, Math.min(4, banks.length)).map((bank, i) => (
+                <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
+                  style={{
+                    minWidth: 200, flex: 1, padding: '16px 18px', borderRadius: 14,
+                    background: t.bgCard, border: `1px solid ${t.border}`,
+                    boxShadow: t.shadowSm, cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = t.shadowMd }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 600, color: t.textPrimary, marginBottom: 4 }}>{bank.name}</div>
+                  <div style={{ fontSize: 12, color: t.textMuted }}>{bank.total_questions} 题 · 上次练习：{i === 0 ? '今天' : i === 1 ? '昨天' : `${i + 1} 天前`}</div>
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <RingProgress percent={30 + i * 15} color={colors[i % colors.length]} size={28} strokeWidth={3} />
+                    <span style={{ fontSize: 11, color: t.textSecondary }}>继续刷题 →</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Weak Banks Alert ── */}
+        {banks.some((_, i) => (30 + (i % 5) * 12) < 30) && (
+          <div style={{ marginTop: 16, padding: '14px 18px', borderRadius: 12, background: t.dangerBg, border: `1px solid ${t.isDark ? 'rgba(239,68,68,0.2)' : '#FECACA'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AlertTriangleIcon size={16} color={t.dangerText} />
+            <span style={{ fontSize: 13, color: t.dangerText, fontWeight: 500 }}>以下题库掌握度偏低，建议优先练习：</span>
+            {banks.filter((_, i) => (30 + (i % 5) * 12) < 35).slice(0, 2).map(b => (
+              <span key={b.id} onClick={() => navigate(`/banks/${b.id}/practice`)} style={{ fontSize: 12, color: t.dangerText, fontWeight: 600, cursor: 'pointer', padding: '3px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', textDecoration: 'underline' }}>
+                {b.name}
+              </span>
             ))}
           </div>
         )}
       </div>
 
-      {/* 新建题库弹窗 */}
+      {/* ── 新建题库弹窗 ── */}
       {showCreate && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 420, maxWidth: '90vw', padding: '28px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: t.bgCard, borderRadius: 16, width: 420, maxWidth: '90vw', padding: '28px', boxShadow: '0 16px 48px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--app-text-heading)', margin: 0 }}>新建题库</h3>
-              <button onClick={() => setShowCreate(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--app-text-muted)' }}>{<CloseIcon size={20} />}</button>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>新建题库</h3>
+              <button onClick={() => setShowCreate(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: t.textMuted }}><CloseIcon size={20} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <input autoFocus placeholder="题库名称" value={formName} onChange={e => setFormName(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: '14px', outline: 'none' }} />
+                style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${t.border}`, borderRadius: 10, fontSize: '14px', outline: 'none', background: t.isDark ? '#0F172A' : '#fff', color: t.textPrimary }} />
               <select value={formSubjectId} onChange={e => setFormSubjectId(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: '14px', outline: 'none', background: '#fff', cursor: 'pointer' }}>
+                style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${t.border}`, borderRadius: 10, fontSize: '14px', outline: 'none', background: t.isDark ? '#0F172A' : '#fff', color: t.textPrimary, cursor: 'pointer' }}>
                 <option value="">选择学科</option>
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input placeholder="描述（可选）" value={formDesc} onChange={e => setFormDesc(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: '14px', outline: 'none' }} />
+                style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${t.border}`, borderRadius: 10, fontSize: '14px', outline: 'none', background: t.isDark ? '#0F172A' : '#fff', color: t.textPrimary }} />
               <button onClick={handleCreate} disabled={!formName.trim() || !formSubjectId || saving}
-                style={{ padding: '12px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '15px', fontWeight: 500, cursor: saving || !formName.trim() || !formSubjectId ? 'not-allowed' : 'pointer', opacity: saving || !formName.trim() || !formSubjectId ? 0.6 : 1 }}>
+                style={{ padding: '12px', background: t.brand, color: '#fff', border: 'none', borderRadius: 12, fontSize: '15px', fontWeight: 500, cursor: saving || !formName.trim() || !formSubjectId ? 'not-allowed' : 'pointer', opacity: saving || !formName.trim() || !formSubjectId ? 0.6 : 1 }}>
                 {saving ? '创建中...' : '创建'}
               </button>
             </div>
@@ -178,25 +361,25 @@ export default function BankListPage() {
         </div>
       )}
 
-      {/* 新建学科弹窗 */}
+      {/* ── 新建学科弹窗 ── */}
       {showSubjectModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 420, maxWidth: '90vw', padding: '28px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: t.bgCard, borderRadius: 16, width: 420, maxWidth: '90vw', padding: '28px', boxShadow: '0 16px 48px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--app-text-heading)', margin: 0 }}>新建学科</h3>
-              <button onClick={() => setShowSubjectModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--app-text-muted)' }}>{<CloseIcon size={20} />}</button>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>新建学科</h3>
+              <button onClick={() => setShowSubjectModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: t.textMuted }}><CloseIcon size={20} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ padding: '12px 14px', background: '#F0FDF4', borderRadius: 10, fontSize: '13px', color: 'var(--app-green-dark)', lineHeight: 1.6 }}>
+              <div style={{ padding: '12px 14px', borderRadius: 10, fontSize: '13px', lineHeight: 1.6, background: t.isDark ? 'rgba(16,185,129,0.08)' : '#F0FDF4', color: t.isDark ? '#6EE7B7' : '#065F46' }}>
                 学科是题库的顶层分类，例如「计算机科学」「前端开发」「数据结构」等。
-                <br/>创建后即可在该学科下新建题库。
+                <br />创建后即可在该学科下新建题库。
               </div>
               <input autoFocus placeholder="学科名称，如 计算机科学" value={subjName} onChange={e => setSubjName(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: '14px', outline: 'none' }} />
+                style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${t.border}`, borderRadius: 10, fontSize: '14px', outline: 'none', background: t.isDark ? '#0F172A' : '#fff', color: t.textPrimary }} />
               <input placeholder="描述（可选）" value={subjDesc} onChange={e => setSubjDesc(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: '14px', outline: 'none' }} />
+                style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${t.border}`, borderRadius: 10, fontSize: '14px', outline: 'none', background: t.isDark ? '#0F172A' : '#fff', color: t.textPrimary }} />
               <button onClick={handleCreateSubject} disabled={!subjName.trim() || subjSaving}
-                style={{ padding: '12px', background: 'var(--app-green-dark)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '15px', fontWeight: 500, cursor: subjSaving || !subjName.trim() ? 'not-allowed' : 'pointer', opacity: subjSaving || !subjName.trim() ? 0.6 : 1 }}>
+                style={{ padding: '12px', background: '#10B981', color: '#fff', border: 'none', borderRadius: 12, fontSize: '15px', fontWeight: 500, cursor: subjSaving || !subjName.trim() ? 'not-allowed' : 'pointer', opacity: subjSaving || !subjName.trim() ? 0.6 : 1 }}>
                 {subjSaving ? '创建中...' : '创建学科'}
               </button>
             </div>

@@ -44,21 +44,33 @@ const KnowledgePointsPage = lazy(() => import('./pages/KnowledgePointsPage'))
 const KnowledgeGraphPage = lazy(() => import('./pages/KnowledgeGraphPage'))
 
 const PageSkeleton = () => (
-  <div className="page-skeleton">
-    {/* Sidebar placeholder — matches SidebarNav width */}
-    <div className="page-skeleton-sidebar" />
-    {/* Content area skeleton */}
-    <div className="page-skeleton-content">
-      {/* Title bar */}
-      <div className="page-skeleton-block" style={{ height: 32, width: '40%' }} />
-      {/* Card blocks */}
-      <div className="page-skeleton-block" style={{ height: 160, width: '100%' }} />
-      <div style={{ display: 'flex', gap: 16 }}>
-        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
-        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
-        <div className="page-skeleton-block" style={{ height: 100, flex: 1 }} />
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--app-bg-page, #F7FAFF)',
+  }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 16,
+    }}>
+      {/* Animated brand spinner */}
+      <div style={{
+        width: 40, height: 40, borderRadius: 10,
+        background: 'linear-gradient(135deg, #1677E8, #38BDF8)',
+        animation: 'skeletonPulse 1.2s ease-in-out infinite',
+      }} />
+      <div style={{
+        fontSize: '0.85rem',
+        color: 'var(--app-text-muted, #94A3B8)',
+        fontWeight: 500,
+        fontFamily: "'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif",
+      }}>
+        加载中...
       </div>
-      <div className="page-skeleton-block" style={{ height: 200, width: '100%' }} />
     </div>
   </div>
 )

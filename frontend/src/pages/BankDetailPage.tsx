@@ -60,6 +60,7 @@ export default function BankDetailPage() {
   const { bankId } = useParams<{ bankId: string }>()
   const [searchParams] = useSearchParams()
   const pointParam = searchParams.get('point')
+  const tabParam = searchParams.get('tab')
   const navigate = useNavigate()
   const [bank, setBank] = useState<BankItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -85,7 +86,7 @@ export default function BankDetailPage() {
   const [detailQuestion, setDetailQuestion] = useState<QuestionItem | null>(null)
 
   // 试卷
-  const [activeTab, setActiveTab] = useState<'questions' | 'papers'>('questions')
+  const [activeTab, setActiveTab] = useState<'questions' | 'papers'>(tabParam === 'papers' ? 'papers' : 'questions')
   const [papers, setPapers] = useState<any[]>([])
   const [papersLoading, setPapersLoading] = useState(false)
   const [showExamCreator, setShowExamCreator] = useState(false)
@@ -368,20 +369,38 @@ export default function BankDetailPage() {
                 <div key={domain.id}>
                   {/* 1-缩进：领域/章节 */}
                   <div style={{
-                    padding: '12px 20px 12px 36px', display: 'flex', justifyContent: 'space-between',
+                    padding: '14px 20px 14px 36px', display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', borderTop: '1px solid #F9FAFB', background: expandedDomain === domain.id ? 'var(--app-bg-card-alt)' : 'transparent',
+                    transition: 'all 0.2s ease',
                   }}>
                     <div onClick={() => {
                       if (expandedDomain === domain.id) { setExpandedDomain(null); setExpandedPoint(null) }
                       else { setExpandedDomain(domain.id); setExpandedPoint(null); loadPoints(domain.id) }
-                    }} style={{ cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    }} style={{ cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                        background: 'var(--app-brand-bg)', color: 'var(--app-brand)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700,
+                      }}>
+                        {domain.name.charAt(0)}
+                      </span>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--app-text-body)' }}>{domain.name}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--app-brand)', marginLeft: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--app-brand)', background: 'rgba(30,58,138,0.08)', padding: '2px 8px', borderRadius: 10 }}>
                         {getDomainQuestionCount(domain.id)} 题
                       </span>
-                      <span style={{ color: 'var(--app-text-placeholder)', fontSize: '11px' }}>{expandedDomain === domain.id ? <ChevronUpIcon size={12} color="#D1D5DB" /> : <ChevronDownIcon size={12} color="#D1D5DB" />}</span>
+                      {/* Progress bar */}
+                      <div style={{ flex: '0 0 60px', height: 4, borderRadius: 2, background: '#F3F4F6', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, getDomainQuestionCount(domain.id) * 5)}%`, borderRadius: 2, background: 'linear-gradient(90deg, var(--app-brand), #7DD3FC)' }} />
+                      </div>
+                      <span style={{ color: 'var(--app-text-placeholder)', fontSize: '11px', flexShrink: 0 }}>{expandedDomain === domain.id ? <ChevronUpIcon size={12} color="#D1D5DB" /> : <ChevronDownIcon size={12} color="#D1D5DB" />}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                      {/* Quick practice button */}
+                      <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bankId}/practice`) }}
+                        style={{ padding: '3px 10px', fontSize: '11px', background: '#ECFDF5', color: 'var(--app-success)', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <PlayIcon size={10} color="#10B981" /> 专项刷题
+                      </span>
                       <button onClick={e => { e.stopPropagation(); setAddingPointForDomain(addingPointForDomain === domain.id ? null : domain.id); setNewPointName('') }}
                         style={{ padding: '2px 10px', fontSize: '11px', background: expandedDomain === domain.id ? 'rgba(30,58,138,0.1)' : 'transparent', color: 'var(--app-brand)', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>
                         + 知识点
@@ -556,31 +575,53 @@ export default function BankDetailPage() {
           {papersLoading ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--app-text-placeholder)' }}>加载中...</div>
           ) : papers.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--app-text-placeholder)' }}>
-              <div style={{ fontSize: '14px', marginBottom: '16px' }}>暂无试卷</div>
-              <button onClick={() => setShowExamCreator(true)}
-                style={{ padding: '8px 20px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '13px', cursor: 'pointer' }}>
-                + 创建试卷
-              </button>
+            <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+              <div style={{ width: 72, height: 72, borderRadius: 20, background: 'var(--app-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', opacity: 0.6 }}>
+                <EditIcon size={32} color="#9CA3AF" />
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--app-text-heading)', marginBottom: 8 }}>暂无试卷</div>
+              <div style={{ fontSize: '13px', color: 'var(--app-text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
+                创建试卷来模拟真实考试<br/>支持手动配置、上传文件、AI 智能出题三种方式
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button onClick={() => setShowExamCreator(true)}
+                  style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+                  + 创建试卷
+                </button>
+                <span style={{ padding: '10px 18px', background: 'var(--app-bg-page)', color: 'var(--app-text-secondary)', borderRadius: 12, fontSize: '13px', fontWeight: 500 }}>
+                  推荐：期末模拟卷
+                </span>
+              </div>
             </div>
           ) : (
             <div>
               {papers.map((p: any) => (
                 <div key={p.id} onClick={() => navigate(`/banks/${bankId}/exam-papers/${p.id}`)} style={{
-                  padding: '14px 20px', cursor: 'pointer', borderTop: '1px solid #F9FAFB',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '16px 20px', cursor: 'pointer', borderTop: '1px solid #F9FAFB',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background 0.15s',
                 }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--app-bg-card-alt)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--app-text-heading)' }}>{p.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--app-text-muted)', marginTop: '4px' }}>
-                      {p.total_questions} 题 · 总分 {p.total_score}
-                      {p.time_limit_minutes && ` · ${p.time_limit_minutes} 分钟`}
-                      · {p.status === 'draft' ? '草稿' : '已发布'}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--app-text-heading)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <EditIcon size={14} color="var(--app-brand)" /> {p.title}
+                      {p.status === 'draft' && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: '#FFFBEB', color: '#D97706', fontWeight: 500 }}>草稿</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--app-text-muted)', marginTop: '4px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <span>{p.total_questions} 题</span>
+                      <span>总分 {p.total_score}</span>
+                      {p.time_limit_minutes && <span>{p.time_limit_minutes} 分钟</span>}
+                      <span style={{ color: p.generate_method === 'upload' ? 'var(--app-info)' : 'var(--app-text-muted)' }}>
+                        {p.generate_method === 'upload' ? '上传' : p.generate_method === 'ai' ? 'AI 出题' : '手动'}
+                      </span>
                     </div>
                   </div>
-                  <span style={{ fontSize: '12px', color: 'var(--app-text-placeholder)' }}>{p.generate_method === 'upload' ? '上传' : '手动'}</span>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bankId}/exam-papers/${p.id}`) }}
+                      style={{ padding: '6px 14px', fontSize: 12, background: 'var(--app-success)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}>
+                      <PlayIcon size={11} color="#fff" /> 开始测试
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
