@@ -79,6 +79,7 @@ export interface NotebookResource {
   tags: string[]
   created_at: string
   mastery_score: number | null
+  content: string | null  // 完整资源内容（Markdown），用于内联渲染
 }
 
 export interface NotebookSection {

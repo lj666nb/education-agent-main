@@ -70,6 +70,7 @@ class NotebookResourceOut(BaseModel):
     tags: List[str] = []
     created_at: str
     mastery_score: Optional[float] = None
+    content: Optional[str] = None  # 资源完整内容，用于内联渲染
 
     class Config:
         from_attributes = True
@@ -470,6 +471,7 @@ async def get_notebook(
                             tags=list(res.tags or []),
                             created_at=res.created_at.isoformat() if res.created_at else "",
                             mastery_score=mastery_by_name.get(topic_name),
+                            content=res.content,
                         )
                         for res in resources
                     ],
@@ -494,6 +496,7 @@ async def get_notebook(
                             tags=list(res.tags or []),
                             created_at=res.created_at.isoformat() if res.created_at else "",
                             mastery_score=mastery_by_name.get(topic_name),
+                            content=res.content,
                         )
                         for res in resources
                     ],
