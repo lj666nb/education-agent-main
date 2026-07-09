@@ -58,21 +58,22 @@ function SessionItem({ session, isFav, currentChatId, onSelectChat, onDeleteChat
   formatTime: (ts: string) => string
   onContextMenu: (e: React.MouseEvent, id: string) => void
 }) {
+  const [isHovered, setIsHovered] = useState(false)
   const isActive = currentChatId === session.id
   return (
     <div
       onClick={() => onSelectChat(session.id)}
       onContextMenu={(e) => onContextMenu(e, session.id)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="sidebar-slide-in"
       style={{
         padding: '10px 12px', marginBottom: '2px', borderRadius: '8px',
-        backgroundColor: isActive ? 'oklch(0.55 0.18 200 / 0.06)' : 'transparent',
+        backgroundColor: isActive ? 'oklch(0.55 0.18 200 / 0.06)' : isHovered ? 'var(--gray-50)' : 'transparent',
         cursor: 'pointer', transition: 'background-color 0.15s',
         border: isActive ? '1px solid oklch(0.55 0.18 200 / 0.12)' : '1px solid transparent',
         display: 'flex', alignItems: 'center', gap: '8px',
       }}
-      onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'var(--gray-50)' }}
-      onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent' }}
     >
       <MessageSquare size={14} style={{ color: isActive ? 'var(--primary)' : 'var(--gray-300)', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -89,6 +90,24 @@ function SessionItem({ session, isFav, currentChatId, onSelectChat, onDeleteChat
         </div>
       </div>
       {isFav && <Star size={14} style={{ color: '#e67e22', flexShrink: 0 }} fill="#e67e22" />}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDeleteChat(session.id); }}
+        title="删除对话"
+        style={{
+          opacity: isHovered ? 1 : 0,
+          transition: 'opacity 0.15s',
+          width: '24px', height: '24px',
+          border: 'none', background: 'none',
+          color: 'var(--gray-400)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+          padding: 0,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--gray-400)'; }}
+      >
+        <Trash2 size={14} />
+      </button>
     </div>
   )
 }
@@ -232,6 +251,7 @@ export default function Sidebar({
         height: 'calc(100vh - var(--chat-header-height))',
         backgroundColor: '#FFFFFF',
         borderRight: '1px solid #F0F0F0',
+        boxShadow: '2px 0 12px rgba(0,0,0,0.04)',
         transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         zIndex: 100,
