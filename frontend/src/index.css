@@ -91,6 +91,23 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Chat redesign tokens ── */
+  --chat-bg: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  --chat-sidebar-width: 260px;
+  --chat-sidebar-collapsed: 56px;
+  --chat-header-height: 56px;
+  --chat-bubble-ai-bg: #FFFFFF;
+  --chat-bubble-ai-border: #F0F0F0;
+  --chat-bubble-ai-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  --chat-bubble-user-bg: linear-gradient(135deg, #0284C7, #0369A1);
+  --chat-input-max-width: 768px;
+  --chat-input-bg: #FFFFFF;
+  --chat-input-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  --chat-input-shadow-focus: 0 4px 24px rgba(2,132,199,0.12);
+  --chat-tag-bg: #F1F5F9;
+  --chat-tag-active-bg: #0284C7;
+  --chat-tag-active-color: #FFFFFF;
 }
 
 * {
@@ -1395,3 +1412,34 @@ hr {
 .dark .review-wrong-tab { background: #1F2937; border-color: #374151; color: #D1D5DB; }
 .dark .review-wrong-tab.active { background: #0369A1; border-color: #0369A1; color: #fff; }
 .dark .review-filter-select { background: #1F2937; border-color: #374151; color: #D1D5DB; }
+
+@keyframes message-slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+  40%           { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes sidebar-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message-enter {
+  animation: message-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-dot-bounce {
+  animation: dot-pulse 1.4s ease-in-out infinite both;
+}
+
+.chat-dot-bounce:nth-child(2) { animation-delay: 0.2s; }
+.chat-dot-bounce:nth-child(3) { animation-delay: 0.4s; }
