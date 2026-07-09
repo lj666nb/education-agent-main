@@ -34,7 +34,7 @@ const WrongAnswerPage = lazy(() => import('./pages/WrongAnswerPage'))
 const TestHistoryPage = lazy(() => import('./pages/TestHistoryPage'))
 const TestHistoryDetailPage = lazy(() => import('./pages/TestHistoryDetailPage'))
 const DailyStatsPage = lazy(() => import('./pages/DailyStatsPage'))
-const ResourceNotebookPage = lazy(() => import('./pages/ResourceNotebookPage'))
+const DataStructureNotesPage = lazy(() => import('./pages/DataStructureNotesPage'))
 const AgentTasksPage = lazy(() => import('./pages/AgentTasksPage'))
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'))
 const PathHistoryPage = lazy(() => import('./pages/PathHistoryPage'))
@@ -133,7 +133,7 @@ function App() {
           <Route path="knowledge-graph" element={<ProtectedRoute><LazyRoute><KnowledgeGraphPage /></LazyRoute></ProtectedRoute>} />
           <Route path="knowledge-points" element={<ProtectedRoute><LazyRoute><KnowledgePointsPage /></LazyRoute></ProtectedRoute>} />
           <Route path="cloud-drive" element={<ProtectedRoute><LazyRoute><CloudDrivePage /></LazyRoute></ProtectedRoute>} />
-          <Route path="recommendations" element={<ProtectedRoute><LazyRoute><ResourceNotebookPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="recommendations" element={<ProtectedRoute><LazyRoute><DataStructureNotesPage /></LazyRoute></ProtectedRoute>} />
           <Route path="path" element={<ProtectedRoute><LazyRoute><LearningPathPage /></LazyRoute></ProtectedRoute>} />
           <Route path="path/history" element={<ProtectedRoute><LazyRoute><PathHistoryPage /></LazyRoute></ProtectedRoute>} />
           <Route path="agent/tasks" element={<ProtectedRoute><LazyRoute><AgentTasksPage /></LazyRoute></ProtectedRoute>} />

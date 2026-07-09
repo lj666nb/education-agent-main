@@ -183,7 +183,7 @@ const topNavItems: NavItem[] = [
   { label: '复习中心', path: '/review', icon: <IconReview /> },
   { label: '知识图谱', path: '/knowledge-graph', icon: <IconKnowledgeGraph /> },
   { label: '知识点总览', path: '/knowledge-points', icon: <IconKnowledgePoint /> },
-  { label: '资源推荐', path: '/recommendations', icon: <IconRecommend /> },
+  { label: '数据结构笔记', path: '/recommendations', icon: <IconRecommend /> },
   { label: '学习路径', path: '/path', icon: <IconPath /> },
   { label: '学习分析', path: '/stats', icon: <IconStats /> },
   { label: 'API 设置', path: '/settings/api', icon: <IconSettings /> },
@@ -386,7 +386,6 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
               <Link
                 key={item.path}
                 to={item.path}
-                prefetch="intent"
                 onClick={() => onMobileToggle?.()}
                 className={`sn-nav-link${active ? ' active' : ''}`}
                 style={{
