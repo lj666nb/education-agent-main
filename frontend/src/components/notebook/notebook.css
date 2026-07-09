@@ -483,6 +483,10 @@
   border-color: rgba(255, 255, 255, 0.14);
 }
 
+.nb-toolbar-btn svg {
+  pointer-events: none;
+}
+
 .nb-toolbar-btn--primary {
   background: var(--nb-accent);
   color: #fff;
