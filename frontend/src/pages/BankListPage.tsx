@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { questionBankApi, type BankItem, type SubjectItem } from '../api/questionBank'
-import { BookIcon, CloseIcon, ArrowLeftIcon, EditIcon, CheckCircleIcon, BarChartIcon, ClockIcon, SearchIcon, StarIcon, AlertTriangleIcon, BookOpenIcon } from '../components/Icons'
+import { BookIcon, CloseIcon, ArrowLeftIcon, EditIcon, CheckCircleIcon, BarChartIcon, ClockIcon, SearchIcon, StarIcon, BookOpenIcon } from '../components/Icons'
 import { EmptyState, LoadingState } from '../components/shared'
 import { useTheme } from '../store/theme'
 
@@ -23,19 +23,6 @@ function useTokens() {
     dangerBg: isDark ? 'rgba(239,68,68,0.12)' : '#FEF2F2',
     dangerText: isDark ? '#FCA5A5' : '#DC2626',
   }
-}
-
-function RingProgress({ percent, color, size = 36, strokeWidth = 3 }: { percent: number; color: string; size?: number; strokeWidth?: number }) {
-  const r = (size - strokeWidth) / 2
-  const circum = 2 * Math.PI * r
-  const offset = circum - (percent / 100) * circum
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={strokeWidth} opacity={0.12} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
-        strokeDasharray={circum} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-    </svg>
-  )
 }
 
 export default function BankListPage() {
@@ -109,7 +96,7 @@ export default function BankListPage() {
     : banks
 
   const totalQuestions = banks.reduce((sum, b) => sum + (b.total_questions || 0), 0)
-  const avgMastery = banks.length > 0 ? Math.round(banks.reduce((sum, _, i) => sum + (30 + (i % 5) * 12), 0) / banks.length) : 0
+  const avgMastery: number | null = null
   const colors = ['#3B82F6', '#14B8A6', '#8B5CF6', '#F97316', '#EC4899', '#06B6D4']
 
   return (
@@ -154,7 +141,7 @@ export default function BankListPage() {
             { label: '题库总数', value: banks.length, unit: '个', color: '#3B82F6', bg: t.isDark ? '#1E3A5F' : '#EFF6FF', icon: <BookIcon size={16} color="#3B82F6" /> },
             { label: '题目总量', value: totalQuestions, unit: '题', color: '#14B8A6', bg: t.isDark ? '#134E4A' : '#F0FDFA', icon: <EditIcon size={16} color="#14B8A6" /> },
             { label: '学科数量', value: subjects.length, unit: '个', color: '#8B5CF6', bg: t.isDark ? '#2D1B69' : '#F5F3FF', icon: <BarChartIcon size={16} color="#8B5CF6" /> },
-            { label: '掌握度均值', value: avgMastery, unit: '%', color: '#F97316', bg: t.isDark ? '#4A2C0A' : '#FFF7ED', icon: <CheckCircleIcon size={16} color="#F97316" /> },
+            { label: '掌握度均值', value: avgMastery ?? '--', unit: '', color: '#F97316', bg: t.isDark ? '#4A2C0A' : '#FFF7ED', icon: <CheckCircleIcon size={16} color="#F97316" /> },
           ].map((card, i) => (
             <div key={i} className="bk-card bk-hover" style={{
               background: t.bgCard, borderRadius: 14, border: `1px solid ${t.border}`, boxShadow: t.shadowSm,
@@ -213,7 +200,6 @@ export default function BankListPage() {
             {filteredBanks.map((bank, i) => {
               const colorIdx = i % colors.length
               const cardColor = colors[colorIdx]
-              const masteryPct = 30 + (i % 5) * 12 + (bank.total_questions % 7) * 2
               return (
                 <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
                   className="bk-card bk-hover"
@@ -250,14 +236,13 @@ export default function BankListPage() {
                             <EditIcon size={12} /> {bank.total_questions} 道题
                           </span>
                           {bank.description && <span>· {bank.description}</span>}
-                          <span style={{ color: '#10B981', fontWeight: 500 }}>掌握度 {masteryPct}%</span>
+                          <span style={{ color: t.textMuted, fontWeight: 500 }}>掌握度 --</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Right: ring + actions */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                      <RingProgress percent={masteryPct} color={cardColor} size={40} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <button onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}`) }}
                           style={{ padding: '7px 16px', fontSize: 12, background: t.brandLight, color: t.brand, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
@@ -309,9 +294,8 @@ export default function BankListPage() {
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm }}
                 >
                   <div style={{ fontSize: 14, fontWeight: 600, color: t.textPrimary, marginBottom: 4 }}>{bank.name}</div>
-                  <div style={{ fontSize: 12, color: t.textMuted }}>{bank.total_questions} 题 · 上次练习：{i === 0 ? '今天' : i === 1 ? '昨天' : `${i + 1} 天前`}</div>
+                  <div style={{ fontSize: 12, color: t.textMuted }}>{bank.total_questions} 题</div>
                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <RingProgress percent={30 + i * 15} color={colors[i % colors.length]} size={28} strokeWidth={3} />
                     <span style={{ fontSize: 11, color: t.textSecondary }}>继续刷题 →</span>
                   </div>
                 </div>
@@ -320,18 +304,6 @@ export default function BankListPage() {
           </div>
         )}
 
-        {/* ── Weak Banks Alert ── */}
-        {banks.some((_, i) => (30 + (i % 5) * 12) < 30) && (
-          <div style={{ marginTop: 16, padding: '14px 18px', borderRadius: 12, background: t.dangerBg, border: `1px solid ${t.isDark ? 'rgba(239,68,68,0.2)' : '#FECACA'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AlertTriangleIcon size={16} color={t.dangerText} />
-            <span style={{ fontSize: 13, color: t.dangerText, fontWeight: 500 }}>以下题库掌握度偏低，建议优先练习：</span>
-            {banks.filter((_, i) => (30 + (i % 5) * 12) < 35).slice(0, 2).map(b => (
-              <span key={b.id} onClick={() => navigate(`/banks/${b.id}/practice`)} style={{ fontSize: 12, color: t.dangerText, fontWeight: 600, cursor: 'pointer', padding: '3px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', textDecoration: 'underline' }}>
-                {b.name}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── 新建题库弹窗 ── */}

@@ -10,7 +10,7 @@ import {
   AlertTriangleIcon, BookIcon, StarIcon,
   TargetIcon, BookOpenIcon,
   MessageCircleIcon, ClockIcon, TrendingUpIcon,
-  AwardIcon, BarChartIcon,
+  AwardIcon,
 } from '../components/Icons'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -272,20 +272,20 @@ export default function HomePage() {
   const mastery = studyStats.average_mastery || 0
   const todayQ = studyStats.today_questions || 0
   const todayMin = studyStats.today_minutes || 0
-  const accuracyRate = totalQ > 0 ? Math.round(((totalQ - (summary.difficult || 0) * 3) / totalQ) * 100) : 0
+  const accuracyRate: number | null = null
 
   // Card config with trends (TASK 2.2)
   const statCards = [
     {
       label: '已掌握进度', icon: <CheckCircleIcon size={18} color={t.cardBlueIcon} />,
       value: mastery, suffix: '%', color: t.cardBlueIcon,
-      bg: t.cardBlue, trend: mastery > 0 ? '较昨日+2%' : null, trendUp: true,
+      bg: t.cardBlue, trend: null, trendUp: true,
       ringPercent: mastery || 0,
     },
     {
       label: '累计练习', icon: <EditIcon size={18} color={t.cardTealIcon} />,
       value: totalQ, suffix: '', color: t.cardTealIcon,
-      bg: t.cardTeal, trend: todayQ > 0 ? `本周新增${todayQ}次` : null, trendUp: true,
+      bg: t.cardTeal, trend: todayQ > 0 ? `今日新增${todayQ}次` : null, trendUp: true,
       ringPercent: totalQ > 0 ? Math.min(100, Math.round((totalQ / 50) * 100)) : 0,
     },
     {
@@ -735,39 +735,6 @@ export default function HomePage() {
                       ))}
                     </div>
 
-                    {/* TASK 3.3: Bottom — Weekly TOP3 Weak Points */}
-                    <div style={{
-                      marginTop: 20, paddingTop: 16,
-                      borderTop: `1px solid ${t.border}`,
-                    }}>
-                      <div style={{
-                        fontSize: '0.75rem', fontWeight: 600, color: t.textSecondary,
-                        marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
-                      }}>
-                        <BarChartIcon size={12} color={t.textMuted} />
-                        本周薄弱知识点 TOP3
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {[
-                          { name: 'BFS 广度优先搜索', score: 0, danger: true },
-                          { name: '动态规划', score: 15, danger: true },
-                          { name: '二叉树遍历', score: 28, danger: false },
-                        ].map((item, i) => (
-                          <span key={i} style={{
-                            fontSize: '0.7rem', padding: '4px 10px', borderRadius: 16,
-                            background: item.danger ? t.dangerBg : t.brandLight,
-                            color: item.danger ? t.dangerText : t.brand,
-                            border: `1px solid ${item.danger ? t.dangerBorder : 'transparent'}`,
-                            fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap',
-                            transition: 'all 0.15s ease',
-                          }}
-                            onClick={() => window.location.href = '/knowledge-points'}
-                          >
-                            {item.name} · {item.score}%
-                          </span>
-                        ))}
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
@@ -867,7 +834,7 @@ export default function HomePage() {
                     {[
                       { label: '今日学习时长', value: `${todayMin || 0}`, unit: '分钟', icon: <ClockIcon size={14} color="#3B82F6" />, color: '#3B82F6' },
                       { label: '今日做题数量', value: `${todayQ || 0}`, unit: '题', icon: <EditIcon size={14} color="#8B5CF6" />, color: '#8B5CF6' },
-                      { label: '今日正确率', value: `${accuracyRate || '--'}`, unit: '%', icon: <AwardIcon size={14} color="#14B8A6" />, color: '#14B8A6' },
+                      { label: '今日正确率', value: accuracyRate === null ? '--' : `${accuracyRate}`, unit: accuracyRate === null ? '' : '%', icon: <AwardIcon size={14} color="#14B8A6" />, color: '#14B8A6' },
                     ].map((item, i) => (
                       <div key={i} style={{
                         background: t.isDark ? 'rgba(148,163,184,0.05)' : '#F8FAFE',
@@ -1075,43 +1042,14 @@ export default function HomePage() {
               <ClockIcon size={15} color={t.brand} /> 学习动态
             </h3>
             <div style={{
-              display: 'flex', gap: 24, overflowX: 'auto', paddingBottom: 8,
+              padding: '18px 16px',
+              borderRadius: 10,
+              background: t.isDark ? 'rgba(148,163,184,0.04)' : '#F8FAFE',
+              border: `1px solid ${t.border}`,
+              color: t.textSecondary,
+              fontSize: '0.8rem',
             }}>
-              {[
-                { time: '今天 10:30', action: '完成 BFS 专项练习', detail: '正确率 60%', icon: <EditIcon size={14} color="#3B82F6" />, dotColor: '#3B82F6' },
-                { time: '今天 09:15', action: 'AI 答疑：动态规划问题', detail: '解决了 3 个疑问', icon: <MessageCircleIcon size={14} color="#8B5CF6" />, dotColor: '#8B5CF6' },
-                { time: '昨天 16:40', action: '查看知识图谱', detail: '浏览了树的遍历', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#14B8A6" strokeWidth="1.8" strokeLinecap="round"><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="12" cy="17" r="2.5" /><line x1="8" y1="7.5" x2="10.5" y2="15.5" /><line x1="16" y1="7.5" x2="13.5" y2="15.5" /></svg>, dotColor: '#14B8A6' },
-                { time: '昨天 14:20', action: '上传 PDF 课件', detail: '数据结构课件导入', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>, dotColor: '#F97316' },
-              ].map((event, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  minWidth: 200, flex: 1,
-                  padding: '12px 14px', borderRadius: 10,
-                  background: t.isDark ? 'rgba(148,163,184,0.04)' : '#F8FAFE',
-                  border: `1px solid ${t.border}`,
-                }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%', background: event.dotColor,
-                    marginTop: 4, flexShrink: 0, boxShadow: `0 0 6px ${event.dotColor}40`,
-                  }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: '0.68rem', color: t.textMuted, marginBottom: 2,
-                    }}>
-                      {event.time}
-                    </div>
-                    <div style={{
-                      fontSize: '0.78rem', fontWeight: 500, color: t.textPrimary,
-                      display: 'flex', alignItems: 'center', gap: 4,
-                    }}>
-                      {event.icon} {event.action}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: t.textSecondary, marginTop: 2 }}>
-                      {event.detail}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              暂无可展示的真实学习动态。完成练习、答疑或资源学习后，这里会显示实际记录。
             </div>
           </section>
 

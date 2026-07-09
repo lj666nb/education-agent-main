@@ -46,7 +46,7 @@ type TaskStatus = {
   status: string  // pending/parsing/extracting/fusing/importing/done/failed
   progress: number
   message: string
-  result?: { entities: number; triples: number; prerequisites: number; source: string }
+  result?: { entities: number; triples: number; prerequisites: number; source: string; subject_id?: string }
 }
 
 export default function KnowledgeGraphPage() {

@@ -31,6 +31,7 @@ logger = logging.getLogger("uvicorn")
 
 # ── 系统常量 ──
 SYSTEM_OWNER_ID = UUID("00000000-0000-0000-0000-000000000000")
+SEED_BANK_ID = UUID("2ce6ee7d-ed5a-42a1-8a26-6ad6856afd3e")
 SEED_BANK_NAME = "数据结构题库"
 SEED_SUBJECT_NAME = "数据结构"
 
@@ -513,8 +514,239 @@ def _ensure_admin_user(db: Session):
     logger.info("✅ 创建管理员用户：admin / admin123")
 
 
+def _seed_data_structures_from_json(db: Session) -> bool:
+    """Load the curated data-structures seed file and replace the system seed bank."""
+    seed_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "seed_data", "data_structures_seed.json"))
+    if not os.path.isfile(seed_path):
+        logger.warning(f"数据结构种子文件不存在: {seed_path}")
+        return False
+
+    with open(seed_path, "r", encoding="utf-8") as f:
+        seed = json.load(f)
+
+    subject_data = seed["subject"]
+    bank_data = seed["bank"]
+    domains_data = seed.get("domains", [])
+    points_data = seed.get("knowledge_points", [])
+    questions_data = seed.get("questions", [])
+
+    system_user = db.query(User).filter(User.id == SYSTEM_OWNER_ID).first()
+    if not system_user:
+        system_user = User(
+            id=SYSTEM_OWNER_ID,
+            username="system",
+            password_hash=get_password_hash(str(_uuid.uuid4())),
+            role=UserRole.ADMIN.value,
+            status=UserStatus.ACTIVE.value,
+        )
+        db.add(system_user)
+        db.flush()
+
+    legacy_subject_names = {subject_data["name"], SEED_SUBJECT_NAME, "���ݽṹ", "鏁版嵁缁撴瀯"}
+    subject = db.query(Subject).filter(Subject.name.in_(legacy_subject_names)).first()
+    if not subject:
+        subject = Subject(id=UUID(subject_data["id"]))
+        db.add(subject)
+
+    subject.name = subject_data["name"]
+    subject.description = subject_data.get("description")
+    subject.sort_order = subject_data.get("sort_order", 1)
+    db.flush()
+
+    neo4j = get_neo4j()
+    try:
+        _sync_subject_to_neo4j(neo4j, subject)
+    except Exception as e:
+        logger.warning(f"Neo4j 同步学科失败: {e}")
+
+    domain_by_seed_id: dict[str, KnowledgeDomain] = {}
+    for domain_data in sorted(domains_data, key=lambda x: x.get("sort_order", 0)):
+        domain = db.query(KnowledgeDomain).filter(
+            KnowledgeDomain.subject_id == subject.id,
+            KnowledgeDomain.sort_order == domain_data.get("sort_order", 0),
+        ).first()
+        if not domain:
+            domain = db.query(KnowledgeDomain).filter(
+                KnowledgeDomain.subject_id == subject.id,
+                KnowledgeDomain.name == domain_data["name"],
+            ).first()
+        if not domain:
+            domain = KnowledgeDomain(id=UUID(domain_data["id"]), subject_id=subject.id)
+            db.add(domain)
+
+        domain.name = domain_data["name"]
+        domain.description = domain_data.get("description")
+        domain.sort_order = domain_data.get("sort_order", 0)
+        db.flush()
+        domain_by_seed_id[domain_data["id"]] = domain
+        try:
+            _sync_domain_to_neo4j(neo4j, domain, subject.id)
+        except Exception as e:
+            logger.warning(f"Neo4j 同步领域失败: {e}")
+
+    point_by_seed_id: dict[str, KnowledgePoint] = {}
+    for point_data in sorted(points_data, key=lambda x: (x.get("domain_id", ""), x.get("sort_order", 0))):
+        domain = domain_by_seed_id.get(point_data["domain_id"])
+        if not domain:
+            continue
+        point = db.query(KnowledgePoint).filter(
+            KnowledgePoint.domain_id == domain.id,
+            KnowledgePoint.sort_order == point_data.get("sort_order", 0),
+        ).first()
+        if not point:
+            point = db.query(KnowledgePoint).filter(
+                KnowledgePoint.domain_id == domain.id,
+                KnowledgePoint.name == point_data["name"],
+            ).first()
+        if not point:
+            point = KnowledgePoint(id=UUID(point_data["id"]), domain_id=domain.id)
+            db.add(point)
+
+        point.name = point_data["name"]
+        point.description = point_data.get("description")
+        point.video_url = point_data.get("video_url")
+        point.difficulty = point_data.get("difficulty", 1)
+        point.sort_order = point_data.get("sort_order", 0)
+        db.flush()
+        point_by_seed_id[point_data["id"]] = point
+        try:
+            _sync_point_to_neo4j(neo4j, point, domain.id)
+        except Exception as e:
+            logger.warning(f"Neo4j 同步知识点失败: {e}")
+
+    desired_domain_ids = {domain.id for domain in domain_by_seed_id.values()}
+    for domain in db.query(KnowledgeDomain).filter(KnowledgeDomain.subject_id == subject.id).all():
+        if domain.id not in desired_domain_ids:
+            db.delete(domain)
+
+    desired_point_names_by_domain = {
+        domain_by_seed_id[domain_id].id: {
+            point["name"] for point in points_data if point.get("domain_id") == domain_id
+        }
+        for domain_id in domain_by_seed_id
+    }
+    for domain_id, desired_names in desired_point_names_by_domain.items():
+        for point in db.query(KnowledgePoint).filter(KnowledgePoint.domain_id == domain_id).all():
+            if point.name not in desired_names:
+                db.delete(point)
+    db.flush()
+
+    banks_data = seed.get("banks") or [bank_data]
+    bank_by_seed_id: dict[str, QuestionBank] = {}
+    desired_bank_ids = {UUID(item["id"]) for item in banks_data}
+
+    for item in banks_data:
+        bank_id = UUID(item["id"])
+        bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
+        if not bank:
+            bank = QuestionBank(id=bank_id, owner_id=SYSTEM_OWNER_ID, subject_id=subject.id)
+            db.add(bank)
+
+        bank.owner_id = SYSTEM_OWNER_ID
+        bank.subject_id = subject.id
+        bank.name = item["name"]
+        bank.description = item.get("description")
+        bank.visibility = item.get("visibility", "public")
+        bank.tags = item.get("tags", [])
+        bank_by_seed_id[item["id"]] = bank
+
+    db.flush()
+
+    for obsolete in db.query(QuestionBank).filter(
+        QuestionBank.owner_id == SYSTEM_OWNER_ID,
+        QuestionBank.subject_id == subject.id,
+    ).all():
+        if obsolete.id not in desired_bank_ids:
+            db.query(Question).filter(Question.bank_id == obsolete.id).delete(synchronize_session=False)
+            db.delete(obsolete)
+    db.flush()
+
+    seed_questions_by_bank: dict[UUID, list[dict]] = {}
+    for question_data in questions_data:
+        question_type = question_data.get("type", "single_choice")
+        if question_type in {"short_answer", "essay"}:
+            continue
+        bank_id = UUID(question_data.get("bank_id") or banks_data[0]["id"])
+        if bank_id in desired_bank_ids:
+            seed_questions_by_bank.setdefault(bank_id, []).append(question_data)
+
+    existing_questions = db.query(Question).filter(Question.bank_id.in_(list(desired_bank_ids))).all()
+    existing_counts: dict[UUID, int] = {}
+    for question in existing_questions:
+        existing_counts[question.bank_id] = existing_counts.get(question.bank_id, 0) + 1
+
+    needs_replace = (
+        len(existing_questions) != sum(len(items) for items in seed_questions_by_bank.values())
+        or any(q.source != "curated_seed" for q in existing_questions)
+        or any("�" in (q.content or {}).get("stem", "") for q in existing_questions)
+        or any(existing_counts.get(bank_id, 0) != len(items) for bank_id, items in seed_questions_by_bank.items())
+    )
+    if not needs_replace:
+        for bank_id, items in seed_questions_by_bank.items():
+            bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
+            if bank:
+                bank.total_questions = len(items)
+        db.flush()
+        logger.info(f"数据结构系统题库已是新版：{sum(len(items) for items in seed_questions_by_bank.values())} 道题")
+        return True
+
+    for question in existing_questions:
+        db.expunge(question)
+    db.query(Question).filter(Question.bank_id.in_(list(desired_bank_ids))).delete(synchronize_session=False)
+    db.flush()
+
+    created = 0
+    created_by_bank: dict[UUID, int] = {}
+    for question_data in questions_data:
+        question_type = question_data.get("type", "single_choice")
+        if question_type in {"short_answer", "essay"}:
+            continue
+        bank_id = UUID(question_data.get("bank_id") or banks_data[0]["id"])
+        if bank_id not in desired_bank_ids:
+            continue
+
+        kp_ids = []
+        for seed_kp_id in question_data.get("knowledge_point_uuids", []):
+            point = point_by_seed_id.get(seed_kp_id)
+            if point:
+                kp_ids.append(str(point.id))
+
+        question = Question(
+            id=UUID(question_data["id"]),
+            bank_id=bank_id,
+            type=question_type,
+            difficulty=question_data.get("difficulty", "basic"),
+            status=question_data.get("status", "published"),
+            priority=question_data.get("priority", 0),
+            content=question_data.get("content", {}),
+            answer=question_data.get("answer", {}),
+            knowledge_point_uuids=kp_ids,
+            tags=question_data.get("tags", []),
+            ai_generated=question_data.get("ai_generated", False),
+            source=question_data.get("source", "curated_seed"),
+            created_by=SYSTEM_OWNER_ID,
+        )
+        db.add(question)
+        created += 1
+        created_by_bank[bank_id] = created_by_bank.get(bank_id, 0) + 1
+        try:
+            _sync_question_to_neo4j(neo4j, question)
+        except Exception as e:
+            logger.warning(f"Neo4j 同步题目失败: {e}")
+
+    for bank_id in desired_bank_ids:
+        bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
+        if bank:
+            bank.total_questions = created_by_bank.get(bank_id, 0)
+    db.flush()
+    logger.info(f"数据结构系统题库已加载：{len(banks_data)} 个题库，{len(domains_data)} 章，{len(points_data)} 个知识点，{created} 道题")
+    return True
+
 def _seed_comprehensive_data(db: Session):
     """使用 Python 数据定义注入完整的学科、题库数据（幂等）"""
+    if _seed_data_structures_from_json(db):
+        return
+
     if _bank_exists(db, SEED_BANK_NAME):
         logger.info(f"📚 种子题库「{SEED_BANK_NAME}」已存在，跳过学科数据注入")
         return

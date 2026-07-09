@@ -401,37 +401,6 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                 >
                   {codeString}
                 </SyntaxHighlighter>
-
-                {/* Plot result display */}
-                {plotResult?.image && (
-                  <div style={{
-                    marginTop: 8, padding: 8, background: '#fff',
-                    borderRadius: 'var(--radius-md)', border: '1px solid #E5E7EB',
-                    textAlign: 'center', position: 'relative',
-                  }}>
-                    <img src={plotResult.image} alt="生成的图表"
-                      style={{ maxWidth: '100%', maxHeight: 400, borderRadius: 6 }} />
-                    <button
-                      onClick={() => setPlotResults(prev => {
-                        const next = { ...prev }; delete next[plotKey]; return next
-                      })}
-                      style={{
-                        position: 'absolute', top: 4, right: 4,
-                        width: 22, height: 22, borderRadius: '50%', border: 'none',
-                        background: 'rgba(0,0,0,0.4)', color: '#fff', cursor: 'pointer',
-                        fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >×</button>
-                  </div>
-                )}
-                {plotResult?.error && !plotResult?.image && (
-                  <div style={{
-                    marginTop: 8, padding: '6px 10px', fontSize: 12,
-                    color: '#DC2626', background: '#FEF2F2', borderRadius: 6,
-                  }}>
-                    绘图失败: {plotResult.error}
-                  </div>
-                )}
               </div>
             )
           },

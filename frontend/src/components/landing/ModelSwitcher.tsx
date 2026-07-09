@@ -192,7 +192,7 @@ export default function ModelSwitcher({ onLoginClick }: ModelSwitcherProps) {
                         onClick={() => { setSelectedModel(model); setIsOpen(false) }}
                         style={{
                           display: 'flex', gap: '12px', padding: '12px 14px',
-                          width: '100%', border: 'none', background: 'transparent',
+                          width: '100%', border: 'none',
                           cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                           transition: 'background 0.15s ease',
                           borderBottom: '1px solid rgba(51,65,85,0.5)',

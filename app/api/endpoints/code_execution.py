@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user, CurrentUser
+from app.core.config import settings
 
 router = APIRouter(prefix="/code", tags=["code"])
 
@@ -155,6 +156,22 @@ LANGUAGE_EXECUTORS = {
 }
 
 
+def _require_code_execution_enabled(kind: str = "code") -> None:
+    enabled = (
+        settings.ENABLE_PLOT_CODE_EXECUTION
+        if kind == "plot"
+        else settings.ENABLE_CODE_EXECUTION
+    )
+    if not enabled:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Code execution is disabled because this deployment does not "
+                "provide a sandbox. Enable it only in an isolated environment."
+            ),
+        )
+
+
 class PlotExecuteRequest(BaseModel):
     code: str
 
@@ -274,6 +291,7 @@ async def execute_plot(
 
     支持：函数图像、数据分析图表、韦恩图、哈斯图、树/图等包含文字标注的可视化。
     """
+    _require_code_execution_enabled("plot")
     if not request.code.strip():
         raise HTTPException(status_code=400, detail="代码不能为空")
     return _execute_plot(request.code)
@@ -284,6 +302,7 @@ async def execute_code(
     request: CodeExecuteRequest,
     current_user: CurrentUser = Depends(get_current_user),
 ):
+    _require_code_execution_enabled("code")
     if not request.code.strip():
         raise HTTPException(status_code=400, detail="代码不能为空")
     if request.language not in LANGUAGE_EXECUTORS:

@@ -762,7 +762,7 @@ function QuestionDetailModal({ question: q, onClose }: { question: QuestionItem;
 /* ════════════════════════════════════════════════
    题目编辑器弹窗
    ════════════════════════════════════════════════ */
-const ALL_Q_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'fill_blank', 'true_false', 'short_answer', 'programming', 'essay']
+const ALL_Q_TYPES: QuestionType[] = ['single_choice', 'multiple_choice', 'fill_blank', 'true_false', 'programming']
 
 function QuestionEditorModal({ bankId, editQuestion, onClose, onSaved, llmAvailable }: {
   bankId: string; editQuestion: QuestionItem | null; onClose: () => void; onSaved: () => void; llmAvailable: boolean
@@ -1128,7 +1128,7 @@ function QuestionEditorModal({ bankId, editQuestion, onClose, onSaved, llmAvaila
 /* ════════════════════════════════════════════════
    创建试卷弹窗（手动配置 + 预览推荐）
    ════════════════════════════════════════════════ */
-const ALL_QTYPES = ['single_choice', 'multiple_choice', 'fill_blank', 'true_false', 'short_answer', 'programming', 'essay']
+const ALL_QTYPES = ['single_choice', 'multiple_choice', 'fill_blank', 'true_false', 'programming']
 
 function CreateExamPaperModal({ bankId, onClose, onCreated, llmAvailable }: {
   bankId: string; onClose: () => void; onCreated: () => void; llmAvailable: boolean
@@ -1324,7 +1324,7 @@ function CreateExamPaperModal({ bankId, onClose, onCreated, llmAvailable }: {
       for (const q of generatedQuestions) {
         try {
           const res = await questionBankApi.createQuestion(bankId, {
-            type: q.type || 'short_answer',
+            type: q.type || 'single_choice',
             content: q.content || {},
             answer: q.answer || { correct_answer: [], explanation: '' },
             difficulty: q.difficulty || 'basic',
@@ -1596,7 +1596,7 @@ function CreateExamPaperModal({ bankId, onClose, onCreated, llmAvailable }: {
                           for (const q of toSave) {
                             try {
                               const res = await questionBankApi.createQuestion(bankId, {
-                                type: q.type || 'short_answer', content: q.content || {},
+                                type: q.type || 'single_choice', content: q.content || {},
                                 answer: q.answer || { correct_answer: [], explanation: '' },
                                 difficulty: q.difficulty || 'basic',
                                 knowledge_point_uuids: q.knowledge_point_uuids || [],

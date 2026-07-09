@@ -62,7 +62,7 @@ AI_EXAM_SYSTEM_PROMPT = """你是一个专业的AI出题助手，正在为试卷
 
 需要收集的信息：
 1. 知识点（至少1个）
-2. 题型（single_choice=单选题, multiple_choice=多选题, fill_blank=填空题, true_false=判断题, short_answer=简答题, programming=编程题, essay=论述题）
+2. 题型（single_choice=单选题, multiple_choice=多选题, fill_blank=填空题, true_false=判断题, programming=编程题；不要生成简答题或论述题）
 3. 题目数量（建议1-10题）
 4. 难度（beginner=入门, basic=基础, intermediate=进阶, advanced=挑战, competition=竞赛）
 
@@ -73,7 +73,6 @@ AI_EXAM_SYSTEM_PROMPT = """你是一个专业的AI出题助手，正在为试卷
 - 这道试卷是期末考试级别，必须出有深度、有区分度的题目
 - 避免简单的概念复述题（如"什么是XX"），必须考察学生的深度理解和综合应用能力
 - 对于选择题：选项设计要有迷惑性，考察易混淆概念，不能一眼看出答案
-- 对于简答/论述题：需要多步推理、证明或计算，不能是单一知识点背诵
 - 适当设置陷阱选项，考查学生对概念边界的掌握
 - 难度建议：至少以 intermediate（进阶）或 advanced（挑战）为主
 
@@ -92,15 +91,19 @@ AI_EXAM_SYSTEM_PROMPT = """你是一个专业的AI出题助手，正在为试卷
 }}"""
 
 
+SYSTEM_OWNER_ID = UUID("00000000-0000-0000-0000-000000000000")
 SEED_BANK_ID = UUID("2ce6ee7d-ed5a-42a1-8a26-6ad6856afd3e")
 
 
 def _get_bank(bank_id: UUID, db: Session, user) -> QuestionBank:
     """获取用户可读的题库（自己的或种子题库）"""
-    from sqlalchemy import or_
+    from sqlalchemy import and_, or_
     bank = db.query(QuestionBank).filter(
         QuestionBank.id == bank_id,
-        or_(QuestionBank.owner_id == user.student_id, QuestionBank.id == SEED_BANK_ID)
+        or_(
+            QuestionBank.owner_id == user.student_id,
+            and_(QuestionBank.owner_id == SYSTEM_OWNER_ID, QuestionBank.visibility == "public"),
+        )
     ).first()
     if not bank:
         raise HTTPException(404, detail="题库不存在")

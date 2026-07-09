@@ -11,6 +11,7 @@ import { VideoIcon, BookIcon } from '../components/Icons'
 import { autoCompleteCode, LANGUAGE_NAMES } from '../utils/codeRunner'
 import CodeAgentPanel from '../components/CodeAgentPanel'
 import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 
 /* ── Icons ── */
 function BackIcon() {
@@ -317,7 +318,6 @@ export default function ResourceDetailPage() {
         return
       }
 
-      const { jsPDF } = require('jspdf')
       const pdf = new jsPDF({
         orientation: width > height ? 'landscape' : 'portrait',
         unit: 'px',

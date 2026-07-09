@@ -69,6 +69,11 @@ class Settings(BaseSettings):
 
     DATA_DIR: str = "./data"
 
+    # Code execution is dangerous without a real sandbox. Keep it off unless an
+    # operator explicitly enables it in a controlled environment.
+    ENABLE_CODE_EXECUTION: bool = False
+    ENABLE_PLOT_CODE_EXECUTION: bool = False
+
     # Unsplash 图片搜索
     UNSPLASH_ACCESS_KEY: str = ""
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from uuid import UUID
 from typing import List, Optional, Dict, Any, AsyncGenerator
 from collections import defaultdict
@@ -139,15 +139,23 @@ def _delete_question_from_neo4j(neo4j: Neo4jConnection, question_id: UUID):
         )
 
 
-# 种子题库 UUID — 仅此题库对所有用户可见（数据结构题库）
+# System-owned public banks are visible to every user.
+SYSTEM_OWNER_ID = UUID("00000000-0000-0000-0000-000000000000")
 SEED_BANK_ID = UUID("2ce6ee7d-ed5a-42a1-8a26-6ad6856afd3e")
+
+
+def _system_public_bank_clause():
+    return and_(
+        QuestionBank.owner_id == SYSTEM_OWNER_ID,
+        QuestionBank.visibility == "public",
+    )
 
 
 def _get_readable_bank(db: Session, bank_id: UUID, user_id: UUID) -> Optional[QuestionBank]:
     """获取用户可读的题库（自己的 或 种子题库）"""
     return db.query(QuestionBank).filter(
         QuestionBank.id == bank_id,
-        or_(QuestionBank.owner_id == user_id, QuestionBank.id == SEED_BANK_ID)
+        or_(QuestionBank.owner_id == user_id, _system_public_bank_clause())
     ).first()
 
 
@@ -339,7 +347,7 @@ async def list_banks(
     db: Session = Depends(get_db), current_user=Depends(get_current_active_user)
 ):
     query = db.query(QuestionBank).filter(
-        or_(QuestionBank.owner_id == current_user.student_id, QuestionBank.id == SEED_BANK_ID)
+        or_(QuestionBank.owner_id == current_user.student_id, _system_public_bank_clause())
     )
     if subject_id: query = query.filter(QuestionBank.subject_id == subject_id)
     if search: query = query.filter(QuestionBank.name.ilike(f"%{search}%"))
@@ -1969,7 +1977,7 @@ AI_SYSTEM_PROMPT = """你是一个专业的AI出题助手，正在题库「{bank
 
 必要的信息（用户一次性提供就直接生成）：
 1. 知识点（至少1个，可以是已有的或全新的）
-2. 题型（single_choice=单选题, multiple_choice=多选题, fill_blank=填空题, true_false=判断题, short_answer=简答题, programming=编程题, essay=论述题）
+2. 题型（single_choice=单选题, multiple_choice=多选题, fill_blank=填空题, true_false=判断题, programming=编程题；不要生成简答题或论述题）
 3. 题目数量（建议1-10题）
 4. 难度（beginner=入门, basic=基础, intermediate=进阶, advanced=挑战, competition=竞赛）
 

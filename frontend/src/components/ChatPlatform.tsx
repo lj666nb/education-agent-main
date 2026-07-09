@@ -808,7 +808,7 @@ export default function ChatPlatform() {
     // 如果正在向其他会话发送消息，先中断再切换，避免竞态导致闪烁
     if (sendingRef.current) {
       abortRef.current?.abort()
-      setIsLoading(false)
+      storeSetIsLoading(false)
       sendingRef.current = false
       sendingChatIdRef.current = null
     }
@@ -872,7 +872,7 @@ export default function ChatPlatform() {
     // Stop generation if active
     if (isLoading) {
       abortRef.current?.abort()
-      setIsLoading(false)
+      storeSetIsLoading(false)
     }
     if (currentChatId) {
       const prev = useChatStore.getState().messagesByChat[currentChatId] || []

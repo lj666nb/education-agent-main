@@ -53,7 +53,6 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
               <rect x={x + 1} y={ny + 1} width={N_W} height={N_H} rx={8} fill="#00000008"/>
               <rect x={x} y={ny} width={N_W} height={N_H} rx={8} fill={bg} stroke={hl ? BRAND : bd} strokeWidth={hl ? 2.5 : 1.2} opacity={hl ? 1 : 0.9}/>
               {hl && <rect x={x} y={ny} width={N_W} height={N_H} rx={8} fill="none" stroke={BRAND} strokeWidth="2.5" opacity="0.4"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="2s" repeatCount="indefinite"/></rect>}
-              <text x={x + 8} y={ny + 14} fontSize="8">{(n.point_name||'').includes('算法')||(n.point_name||'').includes('排序')||(n.point_name||'').includes('查找')?'🧮':(n.point_name||'').includes('实现')||(n.point_name||'').includes('存储')?'💻':'📖'}</text>
               <text x={x + N_W/2} y={ny + 16} textAnchor="middle" fontSize="10" fontWeight={700} fill={tx}>{(n.point_name||'').length > 9 ? (n.point_name||'').slice(0, 8) + '…' : n.point_name}</text>
               <rect x={x + 5} y={ny + N_H - 8} width={N_W - 10} height={4} rx={2} fill="#E5E7EB"/>
               <rect x={x + 5} y={ny + N_H - 8} width={(N_W - 10) * s / 100} height={4} rx={2} fill={ba} opacity="0.7"/>
@@ -290,7 +289,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
   const prevNode=curIdx>0?nodes[curIdx-1]:null
   const nextNode=curIdx<nodes.length-1?nodes[curIdx+1]:null
 
-  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'assess',l:'🔬 掌握度测评'},{k:'review',l:'📖 AI复习'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}]
+  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'assess',l:'🔬 掌握度测评'},{k:'review',l:'📖 AI复习'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}] as const
 
   if(detailLoading)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>加载中...</div>
   if(!detailData)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>暂无数据</div>
@@ -685,40 +684,8 @@ export default function LearningPathPage() {
 
       {/* Main Content */}
       <div style={{flex:1,overflow:'auto',padding:'8px 20px 12px',display:'flex',flexDirection:'column',gap:8}}>
-        {/* Phase buttons + focus bar */}
-        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-          <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>{phases.map((p,i)=><button key={i} style={{padding:'3px 10px',borderRadius:12,border:'1px solid #E5E7EB',background:'#fff',cursor:'pointer',fontSize:10,fontWeight:500,color:p.color,fontFamily:'inherit'}}>{p.name} {p.progress}%</button>)}</div>
-          {focus&&<div style={{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0,justifyContent:'flex-end'}}>
-            <span style={{fontSize:11,color:T3}}>🎯 当前:</span>
-            <span style={{fontSize:12,fontWeight:600,color:T1}}>{focus.point_name}</span>
-            <span style={{fontSize:10,color:T3}}>{focus.domain_name}·{focus.mastery_score}%</span>
-            <button onClick={()=>_adv(focus.point_id)} disabled={adv===focus.point_id} style={{padding:'4px 10px',borderRadius:5,border:'none',background:'#10B981',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>✅已学会</button>
-            <button onClick={()=>_showDetail(focus)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #F59E0B',background:'#FFFBEB',color:'#92400E',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>✏️练习</button>
-            <button onClick={()=>_showDetail(focus)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #BAE6FD',background:'#F0F9FF',color:BRAND,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>🤖AI讲解</button>
-          </div>}
-        </div>
-
-        {/* Sidebar + Flow Diagram Layout */}
+        {/* Flow Diagram */}
         <div style={{flex:1,display:'flex',gap:8,minHeight:0}}>
-          {/* Left sidebar: category list */}
-          <div style={{width:180,flexShrink:0,background:'#fff',borderRadius:10,border:'1px solid '+BL,overflow:'auto',padding:'8px 0'}}>
-            <div style={{padding:'4px 12px 8px',fontSize:11,fontWeight:700,color:T1,borderBottom:'1px solid '+BL,marginBottom:4}}>📂 章节分类</div>
-            {groups.map(g=>{
-              const mastered=g.nodes.filter(n=>n.mastery_score>=80).length
-              const weak=g.nodes.filter(n=>n.mastery_score<40).length
-              const pct=Math.round(mastered/g.nodes.length*100)
-              return <div key={g.domain} onClick={()=>setSdom(sdom===g.domain?null:g.domain)} style={{padding:'8px 12px',cursor:'pointer',fontSize:12,color:sdom===g.domain?BRAND:T2,background:sdom===g.domain?BG_PAGE:'transparent',display:'flex',justifyContent:'space-between',alignItems:'center',borderLeft:sdom===g.domain?`3px solid ${BRAND}`:'3px solid transparent',fontFamily:'inherit',transition:'all 0.1s'}}
-                onMouseEnter={e=>{if(sdom!==g.domain)e.currentTarget.style.background=BG_PAGE}} onMouseLeave={e=>{if(sdom!==g.domain)e.currentTarget.style.background='transparent'}}>
-                <span>{(g.domain||'').length>8?(g.domain||'').slice(0,7)+'…':g.domain}</span>
-                <span style={{display:'flex',alignItems:'center',gap:4,fontSize:10}}>
-                  <span style={{color:pct>=80?'#10B981':pct>=40?'#F59E0B':'#EF4444',fontWeight:600}}>{pct}%</span>
-                  {weak>0&&<span style={{color:'#EF4444',fontWeight:600}}>⚠{weak}</span>}
-                </span>
-              </div>
-            })}
-          </div>
-
-          {/* Center: Flow Diagram */}
           <div style={{flex:1,background:'#fff',borderRadius:10,border:'1px solid '+BL,overflow:'hidden',display:'flex',flexDirection:'column'}}>
             <div style={{padding:'6px 14px',borderBottom:'1px solid #E5E7EB',display:'flex',justifyContent:'space-between',alignItems:'center',gap:6}}>
               <span style={{fontSize:11,fontWeight:600,color:T1}}>📊 知识路径流程图</span>

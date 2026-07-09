@@ -31,7 +31,7 @@ const DIFF_COLORS: Record<string, string> = {
 
 const QuestionCard = forwardRef<any, {
   question: PracticeQuestion
-  onSubmit: (answer: string, isCorrect: boolean) => void
+  onSubmit: (answer: string, isCorrect: boolean, skipBackend?: boolean) => void
   onAskAI: () => void
   readonly?: boolean
   hideAnswer?: boolean
@@ -43,11 +43,11 @@ const QuestionCard = forwardRef<any, {
   const q = question
 
   const initSelected = savedAnswer ? (() => {
-    if (q.type === 'single_choice' || q.type === 'true_false') return savedAnswer.answerContent
+    if (q.type === 'single_choice' || q.type === 'true_false' || (q.type === 'programming' && q.content.options?.length)) return savedAnswer.answerContent
     return ''
   })() : ''
   const initMulti = savedAnswer && q.type === 'multiple_choice' ? savedAnswer.answerContent.split(',').filter(Boolean) : []
-  const initText = savedAnswer && !['single_choice', 'multiple_choice', 'true_false'].includes(q.type) ? savedAnswer.answerContent : ''
+  const initText = savedAnswer && !['single_choice', 'multiple_choice', 'true_false'].includes(q.type) && !(q.type === 'programming' && q.content.options?.length) ? savedAnswer.answerContent : ''
   const [selected, setSelected] = useState(initSelected)
   const [selectedMulti, setSelectedMulti] = useState<string[]>(initMulti)
   const [textAnswer, setTextAnswer] = useState(initText)
@@ -62,7 +62,7 @@ const QuestionCard = forwardRef<any, {
   useEffect(() => {
     if (savedAnswer) {
       const raw = savedAnswer.answerContent
-      if (q.type === 'single_choice' || q.type === 'true_false') {
+      if (q.type === 'single_choice' || q.type === 'true_false' || (q.type === 'programming' && q.content.options?.length)) {
         setSelected(raw); setSelectedMulti([]); setTextAnswer('')
       } else if (q.type === 'multiple_choice') {
         setSelectedMulti(raw.split(',').filter(Boolean)); setSelected(''); setTextAnswer('')
@@ -93,6 +93,12 @@ const QuestionCard = forwardRef<any, {
       const correctArr = correct.map(s => s.trim().toUpperCase()).sort()
       return userArr.length === correctArr.length && userArr.every((v, i) => v === correctArr[i])
     }
+    if (q.type === 'fill_blank' || q.type === 'programming') {
+      const normalizeText = (value: string) =>
+        value.trim().toUpperCase().replace(/[，、；;]/g, ',').replace(/\s+/g, '')
+      const user = normalizeText(userAns)
+      return correct.some(c => normalizeText(c) === user)
+    }
     const user = userAns.trim().toUpperCase()
     return correct.some(c => c.trim().toUpperCase() === user)
   }
@@ -100,6 +106,7 @@ const QuestionCard = forwardRef<any, {
   const getCurrentAnswer = useCallback((): string => {
     const fromState = (() => {
       if (q.type === 'single_choice') return selected
+      if (q.type === 'programming' && q.content.options?.length) return selected
       if (q.type === 'multiple_choice') return selectedMulti.sort().join(',')
       if (q.type === 'true_false') return selected
       return textAnswer
@@ -194,6 +201,39 @@ const QuestionCard = forwardRef<any, {
           <pre style={{ background: 'var(--app-bg-card-alt)', borderRadius: 12, padding: '16px', fontSize: '13px', fontFamily: 'monospace', marginBottom: '20px' }}>
             {q.content.code_template}
           </pre>
+        )}
+
+        {q.type === 'programming' && q.content.options && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            {q.content.options.map(opt => (
+              <div key={opt.key} onClick={() => { if (!isDisabled) handleSelect(opt.key); }}
+                style={{
+                  display: 'flex', alignItems: 'center', padding: '14px 16px',
+                  background: selected === opt.key ? 'rgba(30,58,138,0.08)' : 'var(--app-bg-card-alt)',
+                  borderRadius: 12, border: selected === opt.key ? '2px solid #1E3A8A' : '2px solid transparent',
+                  cursor: isDisabled ? 'default' : 'pointer', transition: 'all 0.15s',
+                }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: selected === opt.key ? 'var(--app-brand)' : 'var(--app-border)',
+                  color: selected === opt.key ? '#fff' : 'var(--app-text-secondary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '14px', fontWeight: 600, marginRight: '12px', flexShrink: 0,
+                }}>
+                  {opt.key}
+                </div>
+                <span style={{ fontSize: '15px', color: 'var(--app-text-body)' }}><MarkdownRenderer content={opt.text} /></span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {q.type === 'programming' && !q.content.options && (
+          <div style={{ marginBottom: '20px' }}>
+            <textarea value={textAnswer} onChange={e => { latestAnswerRef.current = e.target.value; setTextAnswer(e.target.value); clearError(); }}
+              placeholder="请输入代码空白处应填内容" disabled={isDisabled}
+              style={{ width: '100%', minHeight: 96, padding: '14px', border: '2px solid #E5E7EB', borderRadius: 12, fontSize: '15px', outline: 'none', resize: 'vertical', fontFamily: 'monospace', background: isDisabled ? 'var(--app-bg-card-alt)' : '#fff' }} />
+          </div>
         )}
 
         {/* single choice */}

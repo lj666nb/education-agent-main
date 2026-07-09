@@ -1,7 +1,31 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chapters, type NoteChapter, type NoteSection } from '../components/notes/ds-notes'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 import '../components/notes/notes.css'
+
+/** 支持的语言 */
+type CodeLang = 'python' | 'c' | 'cpp'
+const LANG_OPTIONS: { value: CodeLang; label: string }[] = [
+  { value: 'python', label: 'Python' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'c', label: 'C' },
+]
+
+/** 按语言过滤内容：保留选中语言的 <!-- LANG:xxx --> ... <!-- /LANG --> 块，移除其他语言块 */
+function filterContentByLang(content: string, lang: CodeLang): string {
+  // 匹配 <!-- LANG:xxx --> ... <!-- /LANG --> 块（xxx 为 python|c|cpp）
+  const BLOCK_RE = /<!--\s*LANG:(\w+)\s*-->([\s\S]*?)<!--\s*\/LANG\s*-->/g
+  return content.replace(BLOCK_RE, (_match, blockLang: string, blockContent: string) => {
+    // 规范化语言名
+    const normalized = blockLang.toLowerCase()
+    const matchLang =
+      (lang === 'c' && normalized === 'c') ||
+      (lang === 'cpp' && (normalized === 'cpp' || normalized === 'c++')) ||
+      (lang === 'python' && normalized === 'python')
+    return matchLang ? blockContent : ''
+  })
+}
 
 export default function DataStructureNotesPage() {
   const navigate = useNavigate()
@@ -18,6 +42,21 @@ export default function DataStructureNotesPage() {
     return first ? { chapter: first, section: first.sections[0] } : null
   })
   const [mobileSidebar, setMobileSidebar] = useState(false)
+  const [codeLang, setCodeLang] = useState<CodeLang>(() => {
+    return (localStorage.getItem('ds-notes-code-lang') as CodeLang) || 'python'
+  })
+
+  // Persist language preference
+  const handleCodeLangChange = useCallback((lang: CodeLang) => {
+    setCodeLang(lang)
+    localStorage.setItem('ds-notes-code-lang', lang)
+  }, [])
+
+  // Filter content by selected language
+  const filteredContent = useMemo(() => {
+    if (!selectedSection) return ''
+    return filterContentByLang(selectedSection.section.content, codeLang)
+  }, [selectedSection, codeLang])
 
   // Scroll to top when section changes
   useEffect(() => {
@@ -37,56 +76,6 @@ export default function DataStructureNotesPage() {
     setMobileSidebar(false)
   }, [])
 
-  // Simple markdown-to-HTML converter
-  const renderMarkdown = (md: string): string => {
-    let h = md
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    // Escaped backslashes in code
-    h = h.replace(/\\\\/g, '&#92;&#92;')
-    // Code blocks
-    h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (_: string, lang: string, code: string) => {
-      const c = code.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#92;&#92;/g,'\\\\')
-      return `<pre><code class="language-${lang}">${c}</code></pre>`
-    })
-    // Inline code
-    h = h.replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Bold
-    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Headers
-    h = h.replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-    h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    h = h.replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    h = h.replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Tables
-    h = h.replace(/^\|(.+)\|$/gm, (row: string) => {
-      const cells = row.split('|').filter((c, i, a) => {
-        const t = c.trim()
-        if (!t || /^[-:]+$/.test(t)) return false
-        return i > 0 && i < a.length - 1
-      })
-      if (cells.length === 0) return row
-      const isHeader = h.includes('---')
-      const tag = isHeader ? 'th' : 'td'
-      return '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>'
-    })
-    // Lists
-    h = h.replace(/^- (.+)$/gm, '<li>$1</li>')
-    h = h.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
-    // Blockquotes
-    h = h.replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>')
-    // Merge adjacent blockquotes
-    h = h.replace(/<\/blockquote>\n<blockquote>/g, '')
-    // Horizontal rules
-    h = h.replace(/^---$/gm, '<hr>')
-    // Paragraphs
-    h = h.replace(/\n\n+/g, '</p><p>')
-    h = h.replace(/\n/g, '<br>')
-    // Cleanup
-    h = h.replace(/<p><(pre|h[1-4]|ul|ol|blockquote|table|tr|hr)/g, '<$1')
-    h = h.replace(/<\/(pre|h[1-4]|ul|ol|blockquote|table|tr)><\/p>/g, '</$1>')
-    h = h.replace(/<p><\/p>/g, '')
-    return `<p>${h}</p>`
-  }
 
   return (
     <div className="ds-page">
@@ -159,12 +148,39 @@ export default function DataStructureNotesPage() {
       <main className="ds-content" ref={contentRef}>
         {selectedSection ? (
           <div>
-            <div style={{ fontSize: 12, color: 'var(--ds-text-muted)', marginBottom: 6 }}>
-              {selectedSection.chapter.icon} {selectedSection.chapter.title}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 12, color: 'var(--ds-text-muted)' }}>
+                {selectedSection.chapter.icon} {selectedSection.chapter.title}
+              </div>
+              {/* Language selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--ds-text-muted)' }}>代码语言:</span>
+                <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--ds-border)' }}>
+                  {LANG_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleCodeLangChange(opt.value)}
+                      style={{
+                        padding: '3px 10px',
+                        fontSize: 11,
+                        fontWeight: codeLang === opt.value ? 600 : 400,
+                        border: 'none',
+                        background: codeLang === opt.value ? 'var(--ds-accent)' : '#fff',
+                        color: codeLang === opt.value ? '#fff' : 'var(--ds-text-secondary)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(selectedSection.section.content) }}
-            />
+            <div>
+              <MarkdownRenderer content={filteredContent} />
+            </div>
             {/* Navigation between sections */}
             <hr />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32 }}>

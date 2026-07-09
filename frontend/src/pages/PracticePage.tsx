@@ -16,9 +16,7 @@ const QTYPE_OPTIONS: { key: string; label: string }[] = [
   { key: 'multiple_choice', label: '多选题' },
   { key: 'fill_blank', label: '填空题' },
   { key: 'true_false', label: '判断题' },
-  { key: 'short_answer', label: '简答题' },
   { key: 'programming', label: '编程题' },
-  { key: 'essay', label: '论述题' },
 ]
 const TIME_OPTIONS = [
   { value: null, label: '不限时' },
@@ -30,7 +28,7 @@ const TIME_OPTIONS = [
 ]
 
 /* ── helpers ── */
-const SUBJECTIVE_TYPES = ['fill_blank', 'short_answer', 'essay']
+const SUBJECTIVE_TYPES = ['short_answer', 'essay']
 const mapToPractice = (q: QuestionItem): PracticeQuestion => ({
   id: q.id,
   type: q.type,
@@ -464,9 +462,9 @@ export default function PracticePage() {
         let isCorrect = false
         if (ca.length > 0) {
           if (currentQ.type === 'multiple_choice') {
-            const ua = sel.split(',').map(s => s.trim().toUpperCase()).sort()
-            const caSorted = ca.map(s => s.trim().toUpperCase()).sort()
-            isCorrect = ua.length === caSorted.length && ua.every((v, i) => v === caSorted[i])
+            const ua = sel.split(',').map((s: string) => s.trim().toUpperCase()).sort()
+            const caSorted = ca.map((s: string) => s.trim().toUpperCase()).sort()
+            isCorrect = ua.length === caSorted.length && ua.every((v: string, i: number) => v === caSorted[i])
           } else {
             isCorrect = ca.some(c => c.trim().toUpperCase() === sel.trim().toUpperCase())
           }
