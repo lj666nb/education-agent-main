@@ -557,7 +557,7 @@ def import_questions(
 # ═══════════════════════════════════════════════════════════════════
 
 def sync_to_neo4j(db: Session) -> None:
-    """将 leetcode_import 题目和对应知识点同步到 Neo4j"""
+    """将 leetcode_import 题目、Domain、KnowledgePoint 同步到 Neo4j"""
     neo4j = get_neo4j()
     if not neo4j:
         logger.warning("Neo4j 未连接，跳过同步")
@@ -566,12 +566,13 @@ def sync_to_neo4j(db: Session) -> None:
     # 尝试导入同步函数
     try:
         from app.api.endpoints.question_bank import (
-            _sync_question_to_neo4j, _sync_point_to_neo4j,
+            _sync_question_to_neo4j, _sync_point_to_neo4j, _sync_domain_to_neo4j,
         )
     except ImportError:
         logger.warning("无法导入 Neo4j 同步函数，跳过 Neo4j 同步")
         return
 
+    # Step 1: 同步所有涉及到的 Domain 到 Neo4j（必须先于 KnowledgePoint）
     leetcode_questions = db.query(Question).filter(
         Question.source == "leetcode_import",
     ).all()
@@ -580,25 +581,50 @@ def sync_to_neo4j(db: Session) -> None:
         logger.info("没有需要同步的题目")
         return
 
+    # 收集所有涉及的知识点
+    all_kp_uuids = set()
+    for q in leetcode_questions:
+        for kp_uuid in (q.knowledge_point_uuids or []):
+            all_kp_uuids.add(kp_uuid)
+
+    # 收集所有涉及的 Domain（按 domain_id 去重）
+    synced_domains = set()
+    for kp_uuid in all_kp_uuids:
+        kp = db.query(KnowledgePoint).filter(KnowledgePoint.id == kp_uuid).first()
+        if kp and kp.domain_id not in synced_domains:
+            domain = db.query(KnowledgeDomain).filter(KnowledgeDomain.id == kp.domain_id).first()
+            if domain:
+                try:
+                    _sync_domain_to_neo4j(neo4j, domain, domain.subject_id)
+                    synced_domains.add(kp.domain_id)
+                except Exception as e:
+                    logger.warning(f"Neo4j 同步 Domain {domain.name} 失败: {e}")
+
+    logger.info(f"已同步 {len(synced_domains)} 个 Domain 到 Neo4j")
+
+    # Step 2: 同步 KnowledgePoint
     synced_kps = set()
+    for kp_uuid in all_kp_uuids:
+        kp = db.query(KnowledgePoint).filter(KnowledgePoint.id == kp_uuid).first()
+        if kp:
+            try:
+                _sync_point_to_neo4j(neo4j, kp, kp.domain_id)
+                synced_kps.add(kp_uuid)
+            except Exception as e:
+                logger.warning(f"Neo4j 同步知识点 {kp.name} 失败: {e}")
+
+    logger.info(f"已同步 {len(synced_kps)} 个知识点到 Neo4j")
+
+    # Step 3: 同步 Question + TESTS 关系
     synced_questions = 0
     for q in leetcode_questions:
         try:
-            # 先同步知识点
-            for kp_uuid in (q.knowledge_point_uuids or []):
-                if kp_uuid in synced_kps:
-                    continue
-                kp = db.query(KnowledgePoint).filter(KnowledgePoint.id == kp_uuid).first()
-                if kp:
-                    _sync_point_to_neo4j(neo4j, kp, kp.domain_id)
-                    synced_kps.add(kp_uuid)
-            # 再同步题目
             _sync_question_to_neo4j(neo4j, q)
             synced_questions += 1
         except Exception as e:
             logger.warning(f"Neo4j 同步题目 {q.id} 失败: {e}")
 
-    logger.info(f"Neo4j 同步完成: {synced_questions} 道题, {len(synced_kps)} 个知识点")
+    logger.info(f"Neo4j 同步完成: {synced_questions} 道题, {len(synced_kps)} 个知识点, {len(synced_domains)} 个 Domain")
 
 
 # ═══════════════════════════════════════════════════════════════════
