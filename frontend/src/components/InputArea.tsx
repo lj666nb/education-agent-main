@@ -1,5 +1,5 @@
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { ArrowUp, Paperclip, Brain, Globe, ChevronDown } from 'lucide-react'
+import { ArrowUp, Paperclip, Brain, Globe, ChevronDown, Folder, Presentation } from 'lucide-react'
 import { chatApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 
@@ -30,6 +30,13 @@ interface InputAreaProps {
   pastedFiles: PastedFile[]
   onStopGeneration?: () => void
   prefillText?: string
+  /** 项目选择回调 */
+  onProjectClick?: () => void
+  /** 当前选中的项目名称 */
+  selectedProjectName?: string
+  /** PPT 生成开关 */
+  enablePpt?: boolean
+  onEnablePptChange?: (enabled: boolean) => void
 }
 
 const MODEL_OPTIONS: { value: ModelType; label: string }[] = [
@@ -93,6 +100,10 @@ export default function InputArea({
   onStopGeneration,
   noApiConfigured,
   prefillText,
+  onProjectClick,
+  selectedProjectName,
+  enablePpt,
+  onEnablePptChange,
 }: InputAreaProps) {
   const [input, setInput] = useState('')
   const [isOcrLoading, setIsOcrLoading] = useState(false)
@@ -448,6 +459,16 @@ export default function InputArea({
             <TagButton icon={Globe} label="联网搜索" active={enableWebsearch} onClick={() => onEnableWebsearchChange(!enableWebsearch)} />
           ) : (
             <TagButton icon={Globe} label="联网搜索" active={false} disabled />
+          )}
+
+          {/* 选择项目 */}
+          {onProjectClick && (
+            <TagButton icon={Folder} label={selectedProjectName || '选择项目'} active={!!selectedProjectName} onClick={onProjectClick} />
+          )}
+
+          {/* PPT 生成 */}
+          {onEnablePptChange && (
+            <TagButton icon={Presentation} label="PPT 生成" active={enablePpt ?? false} onClick={() => onEnablePptChange?.(!(enablePpt ?? false))} />
           )}
         </div>
       </div>

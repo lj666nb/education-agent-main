@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Folder, Code, PenTool, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
 import Sidebar from './Sidebar'
 import MessageList, { Message } from './MessageList'
 import InputArea, { PastedFile } from './InputArea'
@@ -42,90 +43,6 @@ interface ProjectDocument {
   created_at: string
 }
 
-/* ── SVG Icons ── */
-
-function ArrowLeftIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="19" y1="12" x2="5" y2="12"/>
-      <polyline points="12 19 5 12 12 5"/>
-    </svg>
-  )
-}
-
-function FolderIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    </svg>
-  )
-}
-
-function PlusIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"/>
-      <line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  )
-}
-
-function EditIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6"/>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    </svg>
-  )
-}
-
-function ImageIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-      <circle cx="8.5" cy="8.5" r="1.5"/>
-      <polyline points="21 15 16 10 5 21"/>
-    </svg>
-  )
-}
-
-function FileIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18"/>
-      <line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  )
-}
-
-function UploadIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="17 8 12 3 7 8"/>
-      <line x1="12" y1="3" x2="12" y2="15"/>
-    </svg>
-  )
-}
-
 /* ── Shared Modal ── */
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
@@ -158,7 +75,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
           <h2 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>{title}</h2>
           <button onClick={onClose} className="btn btn-secondary" style={{ padding: 'var(--space-1)', border: 'none', background: 'none', color: 'var(--gray-400)' }}>
-            <CloseIcon />
+            <X size={18} />
           </button>
         </div>
         {children}
@@ -941,7 +858,7 @@ export default function ChatPlatform() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
           <label style={{ marginBottom: 0 }}>参考文档</label>
           <label htmlFor="edit-project-doc-upload" className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}>
-            <UploadIcon /> 上传
+            <FileUp size={14} /> 上传
           </label>
           <input type="file" id="edit-project-doc-upload" onChange={handleFileChange} style={{ display: 'none' }} />
         </div>
@@ -954,7 +871,7 @@ export default function ChatPlatform() {
                 : ''
               return (
                 <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', borderBottom: index < projectDocuments[editingProject.id].length - 1 ? '1px solid var(--gray-50)' : 'none', backgroundColor: 'var(--gray-50)' }}>
-                  <span style={{ color: 'var(--gray-400)', flexShrink: 0 }}>{isImage ? <ImageIcon /> : <FileIcon />}</span>
+                  <span style={{ color: 'var(--gray-400)', flexShrink: 0 }}>{isImage ? <Image size={16} /> : <FileUp size={16} />}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.8125rem', color: 'var(--gray-700)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', fontSize: '0.6875rem', color: 'var(--gray-400)', marginTop: '2px' }}>
@@ -964,7 +881,7 @@ export default function ChatPlatform() {
                     </div>
                   </div>
                   <button onClick={e => handleDeleteDocument(editingProject.id, doc.id, e)} title="删除文档" style={{ padding: '4px', border: 'none', background: 'none', color: 'var(--gray-400)', cursor: 'pointer', flexShrink: 0 }}>
-                    <TrashIcon />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               )
@@ -979,7 +896,7 @@ export default function ChatPlatform() {
         )}
         {newProjectDocName && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', backgroundColor: 'var(--success-bg)', borderRadius: 'var(--radius-md)', border: '1px solid oklch(from var(--success) l c h / 0.3)' }}>
-            <FileIcon />
+            <FileUp size={16} />
             <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--gray-700)' }}>{newProjectDocName}</span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--success)' }}>待上传</span>
           </div>
@@ -1008,107 +925,79 @@ export default function ChatPlatform() {
     }
   }
 
+  const headerBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: '8px', border: '1px solid',
+    borderColor: active ? 'oklch(0.55 0.18 200 / 0.2)' : 'var(--gray-200)',
+    backgroundColor: active ? 'oklch(0.55 0.18 200 / 0.06)' : 'white',
+    color: active ? 'var(--primary)' : 'var(--gray-500)',
+    fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
+    display: 'flex', alignItems: 'center', gap: '5px',
+    transition: 'all 0.15s', whiteSpace: 'nowrap',
+  })
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100vh',
-      backgroundImage: 'url(/chat-bg.png)',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      position: 'relative',
+      background: 'var(--chat-bg)',
     }}>
-      {/* Floating back button */}
-      <button
-        onClick={() => navigate('/')}
-        className="btn btn-secondary"
-        style={{
-          position: 'fixed', top: '1rem', left: '1rem',
-          padding: 'var(--space-2) var(--space-3)',
-          zIndex: 1001,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          background: '#FFFFFF',
-          border: '1px solid #E5E5E5',
-        }}
-      >
-        <ArrowLeftIcon />
-        首页
-      </button>
-
-      {/* Header — 纯白实底 */}
+      {/* ═══ Header — 透明/玻璃态 ═══ */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '0.75rem 1rem', borderBottom: '1px solid #E5E5E5',
-        position: 'relative', zIndex: 102, flexShrink: 0,
-        background: '#FFFFFF',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: 'var(--chat-header-height)', padding: '0 16px',
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        position: 'relative', zIndex: 200, flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '1rem', color: '#1F2937' }}>AI 对话平台</span>
-          <button
-            onClick={() => setProjectPanelOpen(!projectPanelOpen)}
-            className="btn"
+        {/* Left */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => navigate('/')}
             style={{
-              padding: '0.25rem 0.5rem', fontSize: '0.75rem',
-              backgroundColor: selectedProjectForChat ? 'oklch(0.55 0.25 250 / 0.08)' : 'var(--gray-50)',
-              borderColor: selectedProjectForChat ? 'oklch(0.55 0.25 250 / 0.2)' : 'var(--gray-200)',
-              color: selectedProjectForChat ? 'var(--primary)' : 'var(--gray-500)',
-              display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-            }}
-            title="选择项目"
-          >
-            <FolderIcon />
-            {selectedProjectForChat ? (projects.find(p => p.id === selectedProjectForChat)?.name || '项目') : '选择项目'}
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--gray-200)',
+              backgroundColor: 'white', color: 'var(--gray-500)',
+              fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'all 0.15s',
+            }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            首页
           </button>
-          <button
-            onClick={() => { setProjectPanelOpen(false); setDiagramOpen(!diagramOpen) }}
-            className="btn"
-            style={{
-              padding: '0.25rem 0.5rem', fontSize: '0.75rem',
-              backgroundColor: diagramOpen ? 'oklch(0.55 0.25 250 / 0.08)' : 'var(--gray-50)',
-              borderColor: diagramOpen ? 'oklch(0.55 0.25 250 / 0.2)' : 'var(--gray-200)',
-              color: diagramOpen ? 'var(--primary)' : 'var(--gray-500)',
-              display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-            }}
-            title="打开/关闭图表编辑器"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
+          <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.9375rem', color: '#1F2937' }}>
+            AI 对话
+          </span>
+        </div>
+
+        {/* Right — feature buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={() => setProjectPanelOpen(!projectPanelOpen)}
+            style={headerBtnStyle(!!selectedProjectForChat)}>
+            <Folder size={14} />
+            {selectedProjectForChat ? (projects.find(p => p.id === selectedProjectForChat)?.name || '项目') : '项目'}
+          </button>
+          <button onClick={() => setDiagramOpen(!diagramOpen)}
+            style={headerBtnStyle(diagramOpen)}>
+            <PenTool size={14} />
             Diagram
           </button>
-          <button
-            onClick={() => {
-              setProjectPanelOpen(false)
-              if (!codeRunnerOpen) {
-                setCodeRunnerCode('# 在此编写代码\nprint("Hello World")')
-                setCodeRunnerLanguage('python')
-              }
-              setCodeRunnerOpen(!codeRunnerOpen)
-            }}
-            className="btn"
-            style={{
-              padding: '0.25rem 0.5rem', fontSize: '0.75rem',
-              backgroundColor: codeRunnerOpen ? 'oklch(0.62 0.18 145 / 0.1)' : 'var(--gray-50)',
-              borderColor: codeRunnerOpen ? 'oklch(0.62 0.18 145 / 0.3)' : 'var(--gray-200)',
-              color: codeRunnerOpen ? 'var(--success)' : 'var(--gray-500)',
-              display: 'flex', alignItems: 'center', gap: 'var(--space-1)',
-            }}
-            title="打开/关闭代码运行器"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="16 18 22 12 16 6"/>
-              <polyline points="8 6 2 12 8 18"/>
-            </svg>
+          <button onClick={() => { if (!codeRunnerOpen) { setCodeRunnerCode('# 在此编写代码\nprint("Hello World")'); setCodeRunnerLanguage('python') } setCodeRunnerOpen(!codeRunnerOpen) }}
+            style={headerBtnStyle(codeRunnerOpen)}>
+            <Code size={14} />
             Code
+          </button>
+          <button onClick={() => { handleNewChat(); if (!sidebarOpen) setSidebarOpen(true) }}
+            style={{
+              ...headerBtnStyle(false), backgroundColor: 'var(--primary)',
+              color: 'white', borderColor: 'var(--primary)',
+            }}>
+            <Plus size={14} />
+            新建对话
           </button>
         </div>
 
         {/* Project dropdown */}
         {projectPanelOpen && (
           <div className="fade-in" style={{
-            position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '0.5rem',
+            position: 'absolute', top: '100%', right: '8px', marginTop: '0.5rem',
             backgroundColor: 'white', border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)',
             boxShadow: 'var(--shadow-xl)', minWidth: '220px', maxHeight: '320px', overflowY: 'auto', zIndex: 1000,
           }}>
@@ -1128,26 +1017,20 @@ export default function ChatPlatform() {
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                   <button onClick={e => handleOpenEditProject(project, e)} title="编辑项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)' }}>
-                    <EditIcon />
+                    <Pencil size={13} />
                   </button>
                   <button onClick={e => handleDeleteProject(project.id, e)} title="删除项目" className="btn btn-secondary" style={{ padding: '4px 6px', fontSize: '0.75rem', borderColor: 'var(--gray-200)', color: 'var(--danger)' }}>
-                    <TrashIcon />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
             ))}
             <div onClick={() => { setProjectPanelOpen(false); setShowCreateProjectModal(true) }}
               style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--success)', fontWeight: 500, borderTop: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-              <PlusIcon /> 新建项目
+              <Plus size={14} /> 新建项目
             </div>
           </div>
         )}
-
-        <button onClick={() => { handleNewChat(); if (!sidebarOpen) setSidebarOpen(true) }}
-          className="btn btn-primary"
-          style={{ position: 'absolute', right: '1rem', padding: '0.375rem 0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-          <PlusIcon /> 新建对话
-        </button>
       </div>
 
       {/* ═══ API 未配置警告条 ═══ */}
@@ -1176,8 +1059,13 @@ export default function ChatPlatform() {
           onSearch={handleSearch} searchQuery={searchQuery} favorites={favorites} onToggleFavorite={handleToggleFavorite}
  />
 
-        {/* Chat + Diagram — only MessageList scrolls internally */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingLeft: sidebarOpen ? '220px' : '0', transition: 'padding-left var(--transition-slow)', overflow: 'hidden', minWidth: 0 }}>
+        {/* Chat area */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          marginLeft: sidebarOpen ? 'var(--chat-sidebar-width)' : 'var(--chat-sidebar-collapsed)',
+          transition: 'margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden', minWidth: 0,
+        }}>
           {/* Attachments bar */}
           {pastedFiles.length > 0 && (
             <div style={{ padding: 'var(--space-2) var(--space-4)', backgroundColor: 'var(--gray-50)', borderBottom: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', overflowX: 'auto', flexShrink: 0 }}>
@@ -1188,7 +1076,7 @@ export default function ChatPlatform() {
                     <img src={file.preview} alt={file.file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' }}>
-                      <FileIcon />
+                      <FileUp size={16} />
                     </div>
                   )}
                   <div onClick={e => { e.stopPropagation(); const isDb = file.id.includes('-') && file.id.length > 20; if (isDb && file.fileId) chatApi.deleteAttachment(file.id).catch(() => {}); setPastedFiles(pastedFiles.filter(f => f.id !== file.id)) }}
@@ -1217,35 +1105,10 @@ export default function ChatPlatform() {
           </div>
 
           {/* Floating Diagram Window */}
-          <DraggableWindow
-            title="图表编辑器"
-            visible={diagramOpen}
-            onClose={() => setDiagramOpen(false)}
-            defaultWidth={700} defaultHeight={500} defaultX={80} defaultY={60}
-          >
-            <DrawioEditor
-              ref={drawioRef}
-              visible={true}
-              xml={activeDiagramXml}
-              onDiagramChange={(xml) => setActiveDiagramXml(xml)}
-              onClose={() => setDiagramOpen(false)}
-            />
-          </DraggableWindow>
+          {/* (moved to root level below) */}
 
           {/* Floating Code Runner Window */}
-          <DraggableWindow
-            title="代码运行器"
-            visible={codeRunnerOpen}
-            onClose={() => setCodeRunnerOpen(false)}
-            defaultWidth={650} defaultHeight={450} defaultX={160} defaultY={100}
-          >
-            <CodeRunnerPanel
-              key={codeRunnerKey}
-              code={codeRunnerCode}
-              language={codeRunnerLanguage}
-              onClose={() => setCodeRunnerOpen(false)}
-            />
-          </DraggableWindow>
+          {/* (moved to root level below) */}
 
           {/* 无关内容警告条 */}
           {irrelevantContentWarning && (
@@ -1271,6 +1134,7 @@ export default function ChatPlatform() {
             </div>
           )}
 
+          {/* Suggested questions */}
           {suggestedQuestions.length > 0 && (
             <div style={{ display: 'flex', gap: 6, padding: '4px 12px 0', flexWrap: 'wrap' }}>
               {suggestedQuestions.map(q => (
@@ -1285,151 +1149,196 @@ export default function ChatPlatform() {
               ))}
             </div>
           )}
-          <InputArea onSend={handleSend} onFilesChange={setPastedFiles} isLoading={isLoading} currentModel={currentModel}
-            onModelChange={setCurrentModel} enableThinking={enableThinking} onEnableThinkingChange={storeSetEnableThinking}
-            enableWebsearch={enableWebsearch} onEnableWebsearchChange={storeSetEnableWebsearch} websearchAvailable={websearchAvailable}
-            availableModels={availableModels} pastedFiles={pastedFiles} onStopGeneration={handleStopGeneration}
-            noApiConfigured={noApiConfigured} prefillText={prefillInput} />
 
-          {/* Create Project Modal */}
-          {showCreateProjectModal && <Modal title="新建项目" onClose={() => { setShowCreateProjectModal(false); setNewProjectName(''); setNewProjectDesc(''); setNewProjectPrompt(''); setNewProjectDoc(null); setNewProjectDocName('') }}>{projectFormFields}</Modal>}
-
-          {/* Edit Project Modal */}
-          {showEditProjectModal && editingProject && <Modal title="编辑项目" onClose={() => { setShowEditProjectModal(false); setEditingProject(null); setNewProjectName(''); setNewProjectDesc(''); setNewProjectPrompt(''); setNewProjectDoc(null); setNewProjectDocName('') }}>{editFormFields}</Modal>}
-
-          {/* File Preview Overlay */}
-          {previewFile && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'oklch(0 0 0 / 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 'var(--space-8)', backdropFilter: 'blur(4px)' }}>
-              <div className="fade-in" style={{
-                maxWidth: '95%', maxHeight: '95%',
-                width: (() => {
-                  const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
-                  if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return '100%'
-                  return 'auto'
-                })(),
-                height: (() => {
-                  const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
-                  if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return '90vh'
-                  return 'auto'
-                })(),
-                backgroundColor: 'white', borderRadius: 'var(--radius-xl)', overflow: 'hidden',
-                display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-xl)',
-              }}>
-                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 500, fontFamily: 'var(--font-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{previewFile.file.name}</span>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexShrink: 0 }}>
-                    <button onClick={async () => {
-                      if (previewFile.fileId) {
-                        try {
-                          const resp = await chatApi.getFileInfo(previewFile.fileId)
-                          if (resp.data) {
-                            const binaryStr = atob(resp.data.base64)
-                            const bytes = new Uint8Array(binaryStr.length)
-                            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
-                            const blob = new Blob([bytes], { type: resp.data.mime_type })
-                            const url = URL.createObjectURL(blob)
-                            const a = document.createElement('a')
-                            a.href = url; a.download = previewFile.file.name; a.click()
-                            URL.revokeObjectURL(url)
-                          }
-                        } catch {}
-                      }
-                    }} title="下载" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    </button>
-                    <button onClick={() => setPreviewFile(null)} className="btn btn-secondary" style={{ padding: 'var(--space-1)', border: 'none', background: 'none', color: 'var(--gray-400)' }}>
-                      <CloseIcon />
-                    </button>
-                  </div>
-                </div>
-                <div style={{
-                  overflow: 'auto', flex: 1,
-                  padding: (() => {
-                    const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
-                    if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return 0
-                    return 'var(--space-4)'
-                  })(),
-                }}>
-                  {(() => {
-                    const t = previewFile.file.type
-                    const n = previewFile.file.name.toLowerCase()
-                    const isImage = t.startsWith('image/')
-                    const isPdf = t === 'application/pdf'
-                    const isDocx = n.endsWith('.docx') || n.endsWith('.doc')
-                    const isPptx = n.endsWith('.pptx') || n.endsWith('.ppt')
-                    const isText = n.endsWith('.txt') || n.endsWith('.md')
-
-                    if (isImage) {
-                      return <img src={previewFile.preview} alt={previewFile.file.name} style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 'var(--radius-md)' }} />
-                    }
-                    if (isPdf) {
-                      return <iframe src={previewFile.preview} style={{ width: '100%', height: 'calc(90vh - 52px)', border: 'none' }} title={previewFile.file.name} />
-                    }
-                    if (isDocx && previewDocxHtml) {
-                      return (
-                        <div className="markdown-content" style={{ padding: 'var(--space-8)', maxWidth: 800, margin: '0 auto', lineHeight: 1.8, fontSize: '0.9375rem' }}
-                          dangerouslySetInnerHTML={{ __html: previewDocxHtml }} />
-                      )
-                    }
-                    if (isPptx && previewSlides) {
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 300 }}>
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8)', backgroundColor: 'var(--gray-50)' }}>
-                            <div style={{ width: '100%', maxWidth: 600, minHeight: 200, backgroundColor: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-8)', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginBottom: 'var(--space-3)', textAlign: 'center' }}>
-                                幻灯片 {previewCurrentSlide + 1} / {previewSlides.length}
-                              </div>
-                              {(previewSlides[previewCurrentSlide] || []).length > 0 ? (
-                                <ul style={{ fontSize: '1rem', lineHeight: 2, color: 'var(--gray-800)', paddingLeft: 'var(--space-5)', margin: 0 }}>
-                                  {previewSlides[previewCurrentSlide].map((t, i) => <li key={i}>{t}</li>)}
-                                </ul>
-                              ) : (
-                                <div style={{ textAlign: 'center', color: 'var(--gray-400)' }}>此幻灯片无文字内容</div>
-                              )}
-                            </div>
-                          </div>
-                          {previewSlides.length > 1 && (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', padding: 'var(--space-3)', borderTop: '1px solid var(--gray-100)' }}>
-                              <button onClick={() => setPreviewCurrentSlide(s => Math.max(0, s - 1))} disabled={previewCurrentSlide <= 0}
-                                className="btn btn-secondary" style={{ padding: '0.375rem 1rem', fontSize: '0.8125rem' }}><ChevronLeftIcon size={13} /> 上一页</button>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>{previewCurrentSlide + 1} / {previewSlides.length}</span>
-                              <button onClick={() => setPreviewCurrentSlide(s => Math.min(previewSlides.length - 1, s + 1))} disabled={previewCurrentSlide >= previewSlides.length - 1}
-                                className="btn btn-secondary" style={{ padding: '0.375rem 1rem', fontSize: '0.8125rem' }}>下一页 <ArrowRightIcon size={13} /></button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    }
-                    if (isText && previewText) {
-                      return (
-                        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, monospace', fontSize: '0.8125rem', lineHeight: 1.7, color: 'var(--gray-700)', margin: 0, padding: 'var(--space-4)' }}>
-                          {previewText}
-                        </pre>
-                      )
-                    }
-                    // Loading or fallback
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-8)', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
-                        {previewLoading ? (
-                          <div style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>加载中...</div>
-                        ) : (
-                          <>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--gray-300)' }}>
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>{previewFile.file.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>此文件类型暂不支持在线预览，请下载后查看</div>
-                          </>
-                        )}
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Input area */}
+          <InputArea onSend={handleSend} onFilesChange={setPastedFiles}
+            isLoading={isLoading} currentModel={currentModel}
+            onModelChange={setCurrentModel} enableThinking={enableThinking}
+            onEnableThinkingChange={storeSetEnableThinking}
+            enableWebsearch={enableWebsearch}
+            onEnableWebsearchChange={storeSetEnableWebsearch}
+            websearchAvailable={websearchAvailable}
+            availableModels={availableModels} pastedFiles={pastedFiles}
+            onStopGeneration={handleStopGeneration}
+            noApiConfigured={noApiConfigured} prefillText={prefillInput}
+            onProjectClick={() => setProjectPanelOpen(true)}
+            selectedProjectName={selectedProjectForChat ? projects.find(p => p.id === selectedProjectForChat)?.name : undefined}
+          />
         </div>
       </div>
+
+      {/* Floating Diagram Window */}
+      {diagramOpen && (
+        <DraggableWindow
+          title="图表编辑器"
+          visible={diagramOpen}
+          onClose={() => setDiagramOpen(false)}
+          defaultWidth={700} defaultHeight={500} defaultX={80} defaultY={60}
+        >
+          <DrawioEditor
+            ref={drawioRef}
+            visible={true}
+            xml={activeDiagramXml}
+            onDiagramChange={(xml) => setActiveDiagramXml(xml)}
+            onClose={() => setDiagramOpen(false)}
+          />
+        </DraggableWindow>
+      )}
+
+      {/* Floating Code Runner Window */}
+      {codeRunnerOpen && (
+        <DraggableWindow
+          title="代码运行器"
+          visible={codeRunnerOpen}
+          onClose={() => setCodeRunnerOpen(false)}
+          defaultWidth={650} defaultHeight={450} defaultX={160} defaultY={100}
+        >
+          <CodeRunnerPanel
+            key={codeRunnerKey}
+            code={codeRunnerCode}
+            language={codeRunnerLanguage}
+            onClose={() => setCodeRunnerOpen(false)}
+          />
+        </DraggableWindow>
+      )}
+
+      {/* Create Project Modal */}
+      {showCreateProjectModal && <Modal title="新建项目" onClose={() => { setShowCreateProjectModal(false); setNewProjectName(''); setNewProjectDesc(''); setNewProjectPrompt(''); setNewProjectDoc(null); setNewProjectDocName('') }}>{projectFormFields}</Modal>}
+
+      {/* Edit Project Modal */}
+      {showEditProjectModal && editingProject && <Modal title="编辑项目" onClose={() => { setShowEditProjectModal(false); setEditingProject(null); setNewProjectName(''); setNewProjectDesc(''); setNewProjectPrompt(''); setNewProjectDoc(null); setNewProjectDocName('') }}>{editFormFields}</Modal>}
+
+      {/* File Preview Overlay */}
+      {previewFile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'oklch(0 0 0 / 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 'var(--space-8)', backdropFilter: 'blur(4px)' }}>
+          <div className="fade-in" style={{
+            maxWidth: '95%', maxHeight: '95%',
+            width: (() => {
+              const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
+              if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return '100%'
+              return 'auto'
+            })(),
+            height: (() => {
+              const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
+              if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return '90vh'
+              return 'auto'
+            })(),
+            backgroundColor: 'white', borderRadius: 'var(--radius-xl)', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-xl)',
+          }}>
+            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 500, fontFamily: 'var(--font-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{previewFile.file.name}</span>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexShrink: 0 }}>
+                <button onClick={async () => {
+                  if (previewFile.fileId) {
+                    try {
+                      const resp = await chatApi.getFileInfo(previewFile.fileId)
+                      if (resp.data) {
+                        const binaryStr = atob(resp.data.base64)
+                        const bytes = new Uint8Array(binaryStr.length)
+                        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+                        const blob = new Blob([bytes], { type: resp.data.mime_type })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url; a.download = previewFile.file.name; a.click()
+                        URL.revokeObjectURL(url)
+                      }
+                    } catch {}
+                  }
+                }} title="下载" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button onClick={() => setPreviewFile(null)} className="btn btn-secondary" style={{ padding: 'var(--space-1)', border: 'none', background: 'none', color: 'var(--gray-400)' }}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div style={{
+              overflow: 'auto', flex: 1,
+              padding: (() => {
+                const t = previewFile.file.type; const n = previewFile.file.name.toLowerCase()
+                if (t === 'application/pdf' || n.endsWith('.docx') || n.endsWith('.doc')) return 0
+                return 'var(--space-4)'
+              })(),
+            }}>
+              {(() => {
+                const t = previewFile.file.type
+                const n = previewFile.file.name.toLowerCase()
+                const isImage = t.startsWith('image/')
+                const isPdf = t === 'application/pdf'
+                const isDocx = n.endsWith('.docx') || n.endsWith('.doc')
+                const isPptx = n.endsWith('.pptx') || n.endsWith('.ppt')
+                const isText = n.endsWith('.txt') || n.endsWith('.md')
+
+                if (isImage) {
+                  return <img src={previewFile.preview} alt={previewFile.file.name} style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 'var(--radius-md)' }} />
+                }
+                if (isPdf) {
+                  return <iframe src={previewFile.preview} style={{ width: '100%', height: 'calc(90vh - 52px)', border: 'none' }} title={previewFile.file.name} />
+                }
+                if (isDocx && previewDocxHtml) {
+                  return (
+                    <div className="markdown-content" style={{ padding: 'var(--space-8)', maxWidth: 800, margin: '0 auto', lineHeight: 1.8, fontSize: '0.9375rem' }}
+                      dangerouslySetInnerHTML={{ __html: previewDocxHtml }} />
+                  )
+                }
+                if (isPptx && previewSlides) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 300 }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8)', backgroundColor: 'var(--gray-50)' }}>
+                        <div style={{ width: '100%', maxWidth: 600, minHeight: 200, backgroundColor: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-8)', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginBottom: 'var(--space-3)', textAlign: 'center' }}>
+                            幻灯片 {previewCurrentSlide + 1} / {previewSlides.length}
+                          </div>
+                          {(previewSlides[previewCurrentSlide] || []).length > 0 ? (
+                            <ul style={{ fontSize: '1rem', lineHeight: 2, color: 'var(--gray-800)', paddingLeft: 'var(--space-5)', margin: 0 }}>
+                              {previewSlides[previewCurrentSlide].map((t, i) => <li key={i}>{t}</li>)}
+                            </ul>
+                          ) : (
+                            <div style={{ textAlign: 'center', color: 'var(--gray-400)' }}>此幻灯片无文字内容</div>
+                          )}
+                        </div>
+                      </div>
+                      {previewSlides.length > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)', padding: 'var(--space-3)', borderTop: '1px solid var(--gray-100)' }}>
+                          <button onClick={() => setPreviewCurrentSlide(s => Math.max(0, s - 1))} disabled={previewCurrentSlide <= 0}
+                            className="btn btn-secondary" style={{ padding: '0.375rem 1rem', fontSize: '0.8125rem' }}><ChevronLeftIcon size={13} /> 上一页</button>
+                          <span style={{ fontSize: '0.8125rem', color: 'var(--gray-500)' }}>{previewCurrentSlide + 1} / {previewSlides.length}</span>
+                          <button onClick={() => setPreviewCurrentSlide(s => Math.min(previewSlides.length - 1, s + 1))} disabled={previewCurrentSlide >= previewSlides.length - 1}
+                            className="btn btn-secondary" style={{ padding: '0.375rem 1rem', fontSize: '0.8125rem' }}>下一页 <ArrowRightIcon size={13} /></button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+                if (isText && previewText) {
+                  return (
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, monospace', fontSize: '0.8125rem', lineHeight: 1.7, color: 'var(--gray-700)', margin: 0, padding: 'var(--space-4)' }}>
+                      {previewText}
+                    </pre>
+                  )
+                }
+                // Loading or fallback
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-8)', backgroundColor: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
+                    {previewLoading ? (
+                      <div style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>加载中...</div>
+                    ) : (
+                      <>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--gray-300)' }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>{previewFile.file.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>此文件类型暂不支持在线预览，请下载后查看</div>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
