@@ -1,29 +1,29 @@
-/* ── Notebook Dark Theme ── */
+/* ── Notebook Theme — aligned with project palette ── */
 
 :root {
-  --nb-bg-page: #18191f;
-  --nb-bg-sidebar: #14151a;
-  --nb-bg-card: #1e1f26;
-  --nb-bg-card-hover: #25262e;
-  --nb-bg-input: #2a2b32;
-  --nb-text-primary: #e8e6df;
-  --nb-text-secondary: #9ca0aa;
-  --nb-text-muted: #6b6e78;
-  --nb-accent: #8b8cff;
-  --nb-accent-bg: rgba(139, 140, 255, 0.10);
-  --nb-accent-bg-hover: rgba(139, 140, 255, 0.16);
-  --nb-border: rgba(255, 255, 255, 0.08);
-  --nb-border-light: rgba(255, 255, 255, 0.05);
-  --nb-danger: #f87171;
-  --nb-danger-bg: rgba(248, 113, 113, 0.10);
-  --nb-danger-hover: rgba(248, 113, 113, 0.18);
-  --nb-success: #4ade80;
-  --nb-warning: #fbbf24;
-  --nb-info: #38bdf8;
+  --nb-bg-page: var(--app-bg-page, #F3F4F6);
+  --nb-bg-sidebar: var(--app-bg-card, #FFFFFF);
+  --nb-bg-card: var(--app-bg-card, #FFFFFF);
+  --nb-bg-card-hover: var(--app-bg-card-alt, #F9FAFB);
+  --nb-bg-input: var(--app-bg-card, #FFFFFF);
+  --nb-text-primary: var(--app-text-heading, #1F2937);
+  --nb-text-secondary: var(--app-text-secondary, #6B7280);
+  --nb-text-muted: var(--app-text-muted, #9CA3AF);
+  --nb-accent: var(--app-brand, #0369A1);
+  --nb-accent-bg: var(--app-brand-bg, #F0F9FF);
+  --nb-accent-bg-hover: rgba(3, 105, 161, 0.12);
+  --nb-border: var(--app-border, #E5E7EB);
+  --nb-border-light: var(--app-border, #E5E7EB);
+  --nb-danger: var(--app-danger, #EF4444);
+  --nb-danger-bg: var(--app-bg-danger, #FEF2F2);
+  --nb-danger-hover: rgba(239, 68, 68, 0.12);
+  --nb-success: var(--app-success, #10B981);
+  --nb-warning: var(--app-warning, #F59E0B);
+  --nb-info: var(--app-info, #0284C7);
   --nb-radius-sm: 6px;
   --nb-radius-md: 8px;
   --nb-radius-lg: 12px;
-  --nb-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --nb-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
   --nb-transition: 0.15s ease;
 }
 
@@ -125,7 +125,7 @@
 }
 
 .nb-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
 
@@ -223,7 +223,7 @@
 }
 
 .nb-article::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
 
@@ -311,7 +311,7 @@
 }
 
 .nb-resource-card:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(0, 0, 0, 0.1);
   background: var(--nb-bg-card-hover);
 }
 
@@ -420,7 +420,7 @@
 }
 
 .nb-toc::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
 }
 
@@ -480,7 +480,7 @@
 .nb-toolbar-btn:hover {
   background: var(--nb-accent-bg);
   color: var(--nb-text-primary);
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .nb-toolbar-btn svg {
@@ -511,7 +511,7 @@
   background: var(--nb-bg-card);
   border: 1px solid var(--nb-border);
   border-radius: var(--nb-radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
   z-index: 100;
   overflow: hidden;
 }
