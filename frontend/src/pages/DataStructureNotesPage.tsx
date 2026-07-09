@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chapters, type NoteChapter, type NoteSection } from '../components/notes/ds-notes'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import TutorChat from '../components/notes/TutorChat'
 import '../components/notes/notes.css'
 
 /** 支持的语言 */
@@ -206,6 +207,12 @@ export default function DataStructureNotesPage() {
           </div>
         )}
       </main>
+
+      {/* AI 编程导师 — 浮动对话框 */}
+      <TutorChat
+        chapter={selectedSection?.chapter ?? null}
+        section={selectedSection?.section ?? null}
+      />
     </div>
   )
 }

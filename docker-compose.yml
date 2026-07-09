@@ -96,9 +96,9 @@ services:
       LOGIN_MAX_FAILURES: "5"
       LOGIN_LOCKOUT_MINUTES: "15"
       DEEPSEEK_MODEL: deepseek-v4-pro
-      DEEPSEEK_API_KEY: ""
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: https://api.deepseek.com/v1
-      QWEN_API_KEY: ""
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
       QWEN_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
       QWEN_MODEL: qwen-plus
       DATA_DIR: /app/data

@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.db.database import Base, engine
-from app.api.endpoints import auth, profile, profile_v2, chat, project, api_settings, ocr, files, question_bank, exam_paper, path, resources, video_resources, cloud_drive, code_execution, recommend, dashboard, recommendations, agent, review, knowledge_graph
+from app.api.endpoints import auth, profile, profile_v2, chat, project, api_settings, ocr, files, question_bank, exam_paper, path, resources, video_resources, cloud_drive, code_execution, recommend, dashboard, recommendations, agent, review, knowledge_graph, notes_tutor
 from app.models.api_settings import ApiSettings
 from app.models.question_bank import Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, ExamPaper
 from app.models.path import LearningPath
@@ -172,6 +172,7 @@ app.include_router(recommendations.router, prefix=settings.API_V1_STR)
 app.include_router(agent.router, prefix=settings.API_V1_STR)
 app.include_router(review.router, prefix=settings.API_V1_STR)
 app.include_router(knowledge_graph.router, prefix=settings.API_V1_STR)
+app.include_router(notes_tutor.router, prefix=settings.API_V1_STR)
 
 # 视频文件（音频）静态服务 — 使用路由而非 app.mount（避免 uvicorn HTTP layer 兼容问题）
 from fastapi import Path as FPath

@@ -15,6 +15,91 @@ export interface NoteSection {
 
 export const chapters: NoteChapter[] = [
   {
+    id: 'basics',
+    title: '零、数据结构基础',
+    icon: '📐',
+    sections: [
+      {
+        id: 'logical-physical',
+        title: '0.1 逻辑结构与物理结构',
+        content: `## 数据结构基本概念
+
+数据结构是计算机存储、组织数据的方式，包含三个要素：**逻辑结构**、**存储结构**和**数据的运算**。
+
+### 逻辑结构（Logical Structure）
+
+逻辑结构是数据元素之间的抽象关系，独立于计算机存储，分为四种类型：
+
+| 类型 | 特点 | 实例 |
+|------|------|------|
+| **集合结构** | 元素间无逻辑关系，组织形式松散 | 集合、哈希集 |
+| **线性结构** | 元素间存在「一对一」的线性关系 | 数组、链表、栈、队列 |
+| **树形结构** | 元素间存在「一对多」的层次关系 | 二叉树、B树、文件系统 |
+| **图形结构** | 元素间存在「多对多」的网状关系 | 社交网络、地图导航 |
+
+### 物理结构（Storage Structure）
+
+物理结构是数据在计算机内存中的存放方式，分为两种：
+
+| 存储方式 | 特点 | 优点 | 缺点 |
+|---------|------|------|------|
+| **顺序存储** | 地址连续，逻辑与物理关系一致 | 随机存取 O(1)，空间利用率高 | 需要整块连续空间，可能产生外部碎片 |
+| **链式存储** | 借助指针链接，物理上可不连续 | 无碎片，充分利用零散空间 | 额外存储指针，只能顺序存取 |
+
+![顺序存储与链式存储](https://img-blog.csdnimg.cn/377bc986fa784c40a68825479e96b332.png)
+
+> **核心思想**：逻辑结构与物理结构分离。线性表是逻辑结构，顺序表（数组）和链表是物理实现。同一逻辑结构可有多种存储方式。
+
+### 数据结构三要素
+
+1. **逻辑结构** — 数据元素间的抽象关系（面向问题）
+2. **存储结构** — 数据在计算机中的存放方式（面向机器）
+3. **数据运算** — 施加在数据上的操作（插入、删除、查找、排序等）
+
+> 算法的设计取决于逻辑结构，算法的实现依赖于存储结构。`
+      },
+      {
+        id: 'complexity',
+        title: '0.2 算法复杂度分析',
+        content: `## 算法复杂度分析
+
+### 时间复杂度
+
+**定义**：算法中基本操作重复执行的次数是问题规模 n 的函数 T(n)，若有辅助函数 f(n)，使 n→∞ 时 T(n)/f(n) 的极限为非零常数，则称 **T(n) = O(f(n))** 为算法的渐进时间复杂度。
+
+![常见数量阶](https://img-blog.csdnimg.cn/b0a9352ec69a4eff8d530e088b6e54c9.png)
+
+### 时间复杂度的计算规则
+
+| 规则 | 说明 | 示例 |
+|------|------|------|
+| 基本操作 | 常数项 → O(1) | 赋值、比较、算术运算 |
+| 顺序结构 | **加法**规则 | T = T₁+T₂ ⇒ O(max(f₁, f₂)) |
+| 循环结构 | **乘法**规则 | T = T₁×T₂ ⇒ O(f₁×f₂) |
+| 分支结构 | 取最大值 | 只关注最坏情况 |
+| 忽略次要项 | 只保留最高次项 | 3n²+2n+1 → O(n²) |
+
+### 常见时间复杂度排序
+
+O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!) < O(nⁿ)
+
+### 空间复杂度
+
+空间复杂度 S(n) 定义为算法所耗费的存储空间，是问题规模 n 的函数。
+
+![空间复杂度](https://img-blog.csdnimg.cn/8a6c5bf4a79f4d009bbc42a8e7f28c13.png)
+
+| 类型 | 说明 |
+|------|------|
+| **算法原地工作** | 辅助空间为常量，即 O(1) |
+| **输入数据所占空间** | 取决于问题本身，不计入算法空间复杂度 |
+| **递归栈空间** | 递归算法的空间复杂度 = 递归深度 × 每层所需空间 |
+
+> 判断算法效率时，通常**只关注最高次项**，次要项和常数项可忽略。无特殊说明时，时间复杂度均指**最坏时间复杂度**。`
+      }
+    ]
+  },
+  {
     id: 'linear-list',
     title: '一、线性表',
     icon: '📋',
@@ -25,6 +110,8 @@ export const chapters: NoteChapter[] = [
         content: `## 顺序表（数组）
 
 顺序表是最基础的数据结构，用**一组连续的内存空间**存储数据，支持通过下标 **O(1)** 随机访问。
+
+![顺序存储](https://img-blog.csdnimg.cn/377bc986fa784c40a68825479e96b332.png)
 
 ### 核心特性
 
@@ -243,6 +330,8 @@ void al_free(ArrayList *al) {
         content: `## 链表
 
 链表通过**指针**将零散的内存块串联起来，每个节点包含**数据域**和**指针域**。
+
+![链式存储](https://img-blog.csdnimg.cn/93e6ec67d1054c6296b28752968f8307.png)
 
 ### 链表类型
 
@@ -824,6 +913,137 @@ void queue_free(Queue *q) { free(q->data); }
 - **消息队列**：系统解耦、异步处理
 - **滑动窗口最大值**：双端队列 O(n)
 - **生产者-消费者模型**：线程间通信`
+      },
+      {
+        id: 'string',
+        title: '2.3 字符串',
+        content: `## 字符串（String）
+
+串（String）是由零个或多个字符组成的有限序列，记为 **S = 'a₁a₂…aₙ'**（n ≥ 0）。
+
+### 基本概念
+
+| 术语 | 说明 |
+|------|------|
+| **串长** | 串中字符个数 n，n=0 时为空串 |
+| **子串** | 串中任意连续字符组成的子序列 |
+| **主串** | 包含子串的串 |
+| **空格串** | 由一个或多个空格组成的串（≠ 空串） |
+| **串相等** | 长度相等且每个对应位置字符相等 |
+
+### 存储方式
+
+| 方式 | 特点 | 适用场景 |
+|------|------|---------|
+| **定长顺序存储** | 预定义最大长度，超出截断 | 已知最大长度 |
+| **堆分配存储** | 动态分配数组，按需扩容 | 通用场景 |
+| **块链存储** | 链表节点存放多个字符 | 插入/删除频繁 |
+
+### KMP 模式匹配算法
+
+KMP 算法的核心是利用已匹配部分的信息，避免主串指针回溯，时间复杂度 **O(n+m)**。
+
+<!-- LANG:python -->
+\`\`\`python
+def kmp_search(text, pattern):
+    """KMP 字符串匹配 — O(n+m)"""
+    if not pattern: return 0
+
+    # 构建 next 数组（部分匹配表）
+    next_arr = [0] * len(pattern)
+    j = 0
+    for i in range(1, len(pattern)):
+        while j > 0 and pattern[i] != pattern[j]:
+            j = next_arr[j - 1]
+        if pattern[i] == pattern[j]:
+            j += 1
+            next_arr[i] = j
+
+    # 匹配过程
+    j = 0
+    for i, ch in enumerate(text):
+        while j > 0 and ch != pattern[j]:
+            j = next_arr[j - 1]
+        if ch == pattern[j]:
+            j += 1
+        if j == len(pattern):
+            return i - j + 1  # 匹配成功，返回起始位置
+    return -1
+
+print(kmp_search("ababcabcacbab", "abcac"))  # 5
+\`\`\`
+<!-- /LANG -->
+
+<!-- LANG:cpp -->
+\`\`\`cpp
+#include <vector>
+#include <string>
+using namespace std;
+
+vector<int> buildNext(const string& pat) {
+    int m = pat.size();
+    vector<int> next(m, 0);
+    for (int i = 1, j = 0; i < m; i++) {
+        while (j > 0 && pat[i] != pat[j]) j = next[j - 1];
+        if (pat[i] == pat[j]) next[i] = ++j;
+    }
+    return next;
+}
+
+int kmpSearch(const string& txt, const string& pat) {
+    if (pat.empty()) return 0;
+    auto next = buildNext(pat);
+    for (int i = 0, j = 0; i < txt.size(); i++) {
+        while (j > 0 && txt[i] != pat[j]) j = next[j - 1];
+        if (txt[i] == pat[j]) j++;
+        if (j == pat.size()) return i - j + 1;
+    }
+    return -1;
+}
+\`\`\`
+<!-- /LANG -->
+
+<!-- LANG:c -->
+\`\`\`c
+#include <string.h>
+#include <stdlib.h>
+
+/* 构建 next 数组 */
+void build_next(const char *pat, int *next, int m) {
+    next[0] = 0;
+    for (int i = 1, j = 0; i < m; i++) {
+        while (j > 0 && pat[i] != pat[j]) j = next[j - 1];
+        if (pat[i] == pat[j]) j++;
+        next[i] = j;
+    }
+}
+
+/* KMP 匹配，返回首次匹配位置，未找到返回 -1 */
+int kmp_search(const char *txt, const char *pat) {
+    int n = strlen(txt), m = strlen(pat);
+    if (m == 0) return 0;
+    int *next = (int*)malloc(m * sizeof(int));
+    build_next(pat, next, m);
+    int j = 0, result = -1;
+    for (int i = 0; i < n; i++) {
+        while (j > 0 && txt[i] != pat[j]) j = next[j - 1];
+        if (txt[i] == pat[j]) j++;
+        if (j == m) { result = i - m + 1; break; }
+    }
+    free(next);
+    return result;
+}
+\`\`\`
+<!-- /LANG -->
+
+### 算法对比
+
+| 算法 | 时间复杂度 | 特点 |
+|------|-----------|------|
+| **暴力匹配** | O(n×m) | 简单直观，主串指针回溯 |
+| **KMP** | O(n+m) | 避免回溯，需预处理 next 数组 |
+| **BM** | 最好 O(n/m) | 从右向左匹配，坏字符+好后缀 |
+| **Sunday** | 平均 O(n) | 比 KMP 更简单高效 |`
       }
     ]
   },
@@ -1189,6 +1409,92 @@ TreeNode* bst_delete(TreeNode *root, int val) {
 ### 平衡问题
 
 > 普通 BST 在插入有序数据时会**退化成链表**，所有操作变成 O(n)。解决方法是使用**平衡二叉搜索树**（AVL、红黑树），通过旋转操作保持树的高度在 O(log n)。`
+      },
+      {
+        id: 'avl',
+        title: '3.4 平衡二叉树（AVL）',
+        content: `## 平衡二叉树（AVL）
+
+AVL 树是**任意节点左右子树高度差不超过 1** 的二叉搜索树，通过**旋转**操作保持平衡。
+
+### 平衡因子
+
+**平衡因子 = 左子树高度 − 右子树高度**，AVL 树中每个节点的平衡因子只能是 **-1、0、1**。
+
+![AVL 树](https://img-blog.csdnimg.cn/b4f24d04f0274274821775224a8932d0.png)
+
+### 四种旋转
+
+当插入导致失衡时，通过旋转恢复平衡：
+
+| 类型 | 插入位置 | 旋转方式 |
+|------|---------|---------|
+| **LL** | 左子树的左子树 | 右单旋 |
+| **RR** | 右子树的右子树 | 左单旋 |
+| **LR** | 左子树的右子树 | 先左旋后右旋 |
+| **RL** | 右子树的左子树 | 先右旋后左旋 |
+
+![LL旋转](https://img-blog.csdnimg.cn/c2399b3e07024ff9960b97128395db0e.png)
+![RR旋转](https://img-blog.csdnimg.cn/d25b8b2dab554ab59f81bac6a2753d86.png)
+![LR旋转](https://img-blog.csdnimg.cn/ec481fa5c1a4412bb3d6b0222539fb86.png)
+![RL旋转](https://img-blog.csdnimg.cn/e1d7759e463346939cef623989eb23e3.png)
+
+### 操作复杂度
+
+| 操作 | 时间复杂度 | 说明 |
+|------|-----------|------|
+| 查找 | O(log n) | 与普通 BST 相同 |
+| 插入 | O(log n) | 最多 1 次旋转（单旋或双旋） |
+| 删除 | O(log n) | 可能需要 O(log n) 次旋转 |
+
+### 与红黑树对比
+
+| 特性 | AVL 树 | 红黑树 |
+|------|--------|--------|
+| 平衡条件 | 严格（高度差 ≤1） | 宽松（最长 ≤ 最短×2） |
+| 查找 | 更快（更平衡） | 略慢 |
+| 插入/删除 | 旋转次数多 | 旋转次数少 |
+| 适用场景 | 频繁查找 | 频繁插入/删除 |
+| 典型应用 | 数据库索引 | C++ map/set, Java TreeMap |
+
+> **记忆诀窍**：LL → 右单旋（提起左孩子），RR → 左单旋（提起右孩子），LR → 先左后右（左孩子先左旋→再整体右旋），RL → 先右后左（右孩子先右旋→再整体左旋）。`
+      },
+      {
+        id: 'btree',
+        title: '3.5 B树与B+树',
+        content: `## B树与B+树
+
+B树是一种**多路平衡查找树**，广泛应用于文件系统和数据库索引。
+
+### B树（B-Tree）
+
+**m 阶 B 树**满足以下性质：
+- 每个节点最多 **m** 个孩子，最多 **m-1** 个关键字
+- 非根非叶节点至少有 **⌈m/2⌉** 个孩子
+- 根节点至少 2 个孩子（非叶时）
+- 所有叶节点在同一层
+- 节点内关键字有序排列
+
+![B树结构](https://img-blog.csdnimg.cn/174cdd08ed644e5a92e88d49a9c8005a.png)
+
+### B+树
+
+B+树是 B 树的变形，广泛应用于数据库索引（MySQL InnoDB）：
+
+![B+树结构](https://img-blog.csdnimg.cn/bd254def21d042e5a4f1feced51b2ba3.png)
+
+### B树 vs B+树
+
+| 特性 | B树 | B+树 |
+|------|-----|------|
+| **数据存储** | 所有节点都存数据 | 仅叶子节点存数据 |
+| **内部节点** | 存关键字+数据指针 | 仅存关键字索引 |
+| **叶子节点** | 独立 | 通过链表连接（范围查询） |
+| **查找** | 可能在内部节点结束 | 必须到叶子节点 |
+| **范围查询** | 需中序遍历 | O(log n + k)，链表遍历 |
+| **应用** | 文件系统 | 数据库索引（MySQL） |
+
+> MySQL InnoDB 使用 B+ 树作为聚簇索引，数据按主键顺序存于叶子节点；非聚簇索引的叶子节点存主键值，需回表查询。`
       },
       {
         id: 'heap',
@@ -1741,6 +2047,97 @@ void dijkstra(int **graph, int start, int V, int *dist) {
 | Bellman-Ford | 可处理负权边 |
 | Floyd-Warshall | 多源最短路径 |
 | A* | 带启发式的寻路 |`
+      },
+      {
+        id: 'graph-mst',
+        title: '4.4 最小生成树（Prim & Kruskal）',
+        content: `## 最小生成树（MST）
+
+最小生成树是连通带权图的**极小连通子图**，包含所有顶点，且边权值之和最小。
+
+### Prim 算法（加点法）
+
+从任意顶点开始，每次选择**连接已选集合和未选集合的最小权边**，将对应顶点加入。
+
+![Prim算法](https://img-blog.csdnimg.cn/c27ac192ad0142fc857c5d1f958f990e.png)
+
+- **时间复杂度**：O(V²) 朴素实现，O((V+E)log V) 堆优化
+- **适用**：稠密图
+
+### Kruskal 算法（加边法）
+
+按边权升序排列，依次选择**不构成环的最小权边**，直到选出 V-1 条边。
+
+![Kruskal算法](https://img-blog.csdnimg.cn/62cba09c6a5749939744f625ed2fdcf1.png)
+
+- **时间复杂度**：O(E log E)，主要耗时在排序
+- **适用**：稀疏图
+
+### 对比
+
+| | Prim | Kruskal |
+|---|------|---------|
+| 核心思想 | 加点 | 加边 |
+| 数据结构 | 优先队列 | 并查集 |
+| 适合图类型 | 稠密图 | 稀疏图 |
+| 时间复杂度 | O(V²) / O(E log V) | O(E log E) |`
+      },
+      {
+        id: 'graph-topo',
+        title: '4.5 拓扑排序与关键路径',
+        content: `## 拓扑排序
+
+拓扑排序是将**有向无环图（DAG）** 的所有顶点排成一个线性序列，满足：若存在边 u→v，则 u 在序列中出现在 v 之前。
+
+![拓扑排序](https://img-blog.csdnimg.cn/d3e314b7f24a40a88c7f12f99dae646e.png)
+
+### Kahn 算法（BFS）
+
+1. 计算所有顶点的入度
+2. 入度为 0 的顶点入队
+3. 出队时将其邻居入度减 1，新入度为 0 则入队
+4. 若最终序列长度 < V，说明存在环
+
+<!-- LANG:python -->
+\`\`\`python
+from collections import deque
+
+def topological_sort(graph, V):
+    indegree = [0] * V
+    for u in graph:
+        for v, _ in graph[u]:
+            indegree[v] += 1
+    q = deque([i for i in range(V) if indegree[i] == 0])
+    result = []
+    while q:
+        u = q.popleft()
+        result.append(u)
+        for v, _ in graph.get(u, []):
+            indegree[v] -= 1
+            if indegree[v] == 0:
+                q.append(v)
+    return result if len(result) == V else []  # 空列表 = 有环
+\`\`\`
+<!-- /LANG -->
+
+### 关键路径
+
+关键路径是项目中**决定总工期的最长路径**，关键路径上的活动不能有任何延误。
+
+### AOE 网概念
+
+| 概念 | 说明 |
+|------|------|
+| **AOE 网** | 边表示活动（Activity On Edge），顶点表示事件 |
+| **事件最早发生时间 ve** | 从源点到该事件的最长路径 |
+| **事件最晚发生时间 vl** | 不推迟工期的前提下，事件最晚发生时间 |
+| **活动最早开始 e** | e(i) = ve(活动起点) |
+| **活动最晚开始 l** | l(i) = vl(活动终点) − 活动持续时间 |
+| **关键活动** | e(i) = l(i) 的活动，即无时间余量 |
+
+![关键路径](https://img-blog.csdnimg.cn/b8151fe5f476449abd9b9837ac913647.png)
+
+> 求关键路径步骤：① 拓扑排序求各事件 ve ② 逆拓扑求各事件 vl ③ 计算各活动 e 和 l ④ e = l 的活动为关键活动。`
       }
     ]
   },
@@ -1886,8 +2283,45 @@ int lower_bound(int arr[], int n, int target) {
 3. 边界更新写成 \`left = mid\` 导致死循环`
       },
       {
+        id: 'search-analysis',
+        title: '5.2 查找算法分析',
+        content: `## 查找算法分析
+
+### 平均查找长度（ASL）
+
+**ASL = Σ(Pᵢ × Cᵢ)**，Pᵢ 为查找第 i 个元素的概率，Cᵢ 为查找所需的比较次数。
+
+![ASL](https://img-blog.csdnimg.cn/2630afa057ce49e19eb5f43bee0112b1.png)
+
+### 顺序查找 vs 折半查找
+
+| | 顺序查找 | 折半查找 |
+|---|---------|---------|
+| **前提** | 无要求 | 有序表 + 随机存取 |
+| **ASL(成功)** | (n+1)/2 | log₂(n+1)−1 |
+| **ASL(失败)** | n | ⌊log₂n⌋+1 |
+| **时间复杂度** | O(n) | O(log n) |
+| **存储结构** | 均可 | 仅顺序表 |
+
+![折半查找](https://img-blog.csdnimg.cn/9846670db92642f99f701264f0814063.png)
+
+### 分块查找（索引顺序查找）
+
+数据分块，块间有序、块内无序。先查索引定位块，再块内顺序查找。
+
+![分块查找](https://img-blog.csdnimg.cn/8600df6bed524e14bd9a11e6d43d512d.png)
+
+| 特性 | 说明 |
+|------|------|
+| **时间复杂度** | O(√n)（最优分块大小 = √n） |
+| **优点** | 插入删除方便 |
+| **适用** | 动态变化的查找表 |
+
+> 分块查找兼顾了查找效率和插入删除的灵活性，是折半与顺序的折中。`
+      },
+      {
         id: 'hash-table',
-        title: '5.2 哈希表',
+        title: '5.3 哈希表',
         content: `## 哈希表
 
 哈希表通过**哈希函数**将键映射到数组下标，实现 O(1) 平均查找时间。
