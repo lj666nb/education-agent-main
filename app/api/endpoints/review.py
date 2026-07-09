@@ -202,13 +202,8 @@ async def get_knowledge_points(
         if r.point_id:
             user_record_map[str(r.point_id)] = r
 
-    # 2. 从 Subject 出发：仅种子学科 + 用户自己的学科
-    #    构建学科 → 章节 → 知识点 的完整层级
-    from sqlalchemy import or_
-    seed_sid = UUID("d91a4645-ab5f-4819-8379-d9e6524f0937")
-    subjects_query = db.query(Subject).filter(
-        or_(Subject.id == seed_sid, Subject.creator_id == current_user.student_id)
-    ).order_by(Subject.sort_order, Subject.name)
+    # 2. 查询所有学科 → 章节 → 知识点 的完整层级（与学习路径保持一致）
+    subjects_query = db.query(Subject).order_by(Subject.sort_order, Subject.name)
     if subject_id:
         subjects_query = subjects_query.filter(Subject.id == UUID(subject_id))
     all_subjects = subjects_query.all()

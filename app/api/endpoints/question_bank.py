@@ -19,7 +19,9 @@ from app.models.question_bank import (
     Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, StudentAnswer, PracticeSession,
     WrongAnswerRecord, DailyPracticeRecord, KnowledgePointRecord,
 )
+from app.models.path_state import LearningPathState
 from app.models.resource import KnowledgeResource
+from app.services.path_state_manager import PathStateManager
 from app.schemas.question_bank import (
     SubjectCreate, SubjectResponse,
     KnowledgeDomainCreate, KnowledgeDomainResponse,
@@ -184,11 +186,7 @@ def _safe_uuid(val: Any) -> Optional[UUID]:
 
 @router.get("/subjects", response_model=SubjectListResponse)
 async def list_subjects(db: Session = Depends(get_db), current_user=Depends(get_current_active_user)):
-    # 仅返回种子学科 + 用户自己创建的学科（其他用户创建的学科不可见）
-    seed_subject_id = UUID("d91a4645-ab5f-4819-8379-d9e6524f0937")
-    subjects = db.query(Subject).filter(
-        or_(Subject.id == seed_subject_id, Subject.creator_id == current_user.student_id)
-    ).order_by(Subject.sort_order, Subject.name).all()
+    subjects = db.query(Subject).order_by(Subject.sort_order, Subject.name).all()
     return SubjectListResponse(
         subjects=[SubjectResponse.model_validate(s) for s in subjects],
         total=len(subjects)
@@ -1579,8 +1577,7 @@ def _update_profile_after_answer(
                     from datetime import timedelta
                     kpr.next_review_at = datetime.utcnow() + timedelta(days=interval)
                 elif kpr.consecutive_errors >= 3:
-                    if kpr.status != "reviewing":
-                        kpr.status = "learning"
+                    kpr.status = "reviewing"
 
             db.commit()
         except Exception as e:
@@ -1704,6 +1701,27 @@ def _get_recommended_resources(
         return []
 
 
+def _replan_active_path_after_practice(db: Session, student_id: UUID, trigger: str = "practice") -> None:
+    try:
+        active_state = (
+            db.query(LearningPathState)
+            .filter(
+                LearningPathState.user_id == student_id,
+                LearningPathState.phase != "completed",
+            )
+            .order_by(LearningPathState.updated_at.desc())
+            .first()
+        )
+        if active_state:
+            PathStateManager(db).replan_path(
+                user_id=str(student_id),
+                state_id=str(active_state.id),
+                trigger=trigger,
+            )
+    except Exception as e:
+        logger.warning(f"练习后动态调整路径失败: {e}")
+
+
 @router.post("/questions/{question_id}/submit-answer", response_model=AnswerSubmitResponse)
 async def submit_answer(
     question_id: UUID, data: AnswerSubmitRequest,
@@ -1735,6 +1753,7 @@ async def submit_answer(
         data.is_correct, data.time_spent_seconds,
         db, neo4j, mongodb,
     )
+    _replan_active_path_after_practice(db, current_user.student_id, trigger="practice_answer")
 
     # 答错时推荐已有资源
     recommended = []
@@ -1816,6 +1835,8 @@ async def submit_answers_batch(
                             )
                 except Exception:
                     pass
+
+    _replan_active_path_after_practice(db, student_id, trigger="practice_batch")
 
     return BatchAnswerSubmitResponse(results=results)
 

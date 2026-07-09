@@ -625,15 +625,10 @@ async def get_knowledge_graph_data(
 
 @router.get("/list")
 async def list_knowledge_graphs(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    """列出已构建的知识图谱（仅种子学科 + 用户自己创建的学科）"""
+    """列出所有已构建的知识图谱（与学习路径保持一致）"""
     from app.models.question_bank import Subject, KnowledgeDomain, KnowledgePoint
-    from sqlalchemy import or_
-    from uuid import UUID
 
-    seed_subject_id = UUID("d91a4645-ab5f-4819-8379-d9e6524f0937")
-    subjects = db.query(Subject).filter(
-        or_(Subject.id == seed_subject_id, Subject.creator_id == current_user.student_id)
-    ).order_by(Subject.sort_order, Subject.name).all()
+    subjects = db.query(Subject).order_by(Subject.sort_order, Subject.name).all()
 
     result = []
     for s in subjects:
