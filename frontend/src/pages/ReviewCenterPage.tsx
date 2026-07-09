@@ -544,12 +544,7 @@ export default function ReviewCenterPage() {
             </div>
           )}
           {duePoints.length === 0 && (
-            <button onClick={() => navigate('/home')} style={{
-              marginTop: 10, padding: '6px 14px', borderRadius: 8, border: '1px solid var(--app-brand)', background: 'var(--app-brand-bg)',
-              color: 'var(--app-brand)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500,
-            }}>
-              去学习薄弱知识点 →
-            </button>
+            <div style={{ marginTop: 10, fontSize: '0.72rem', color: 'var(--app-success)' }}>暂无待复习知识点 ✅</div>
           )}
         </div>
 
@@ -575,18 +570,11 @@ export default function ReviewCenterPage() {
             </div>
           </div>
           {wrongAnswerCount > 0 && (
-            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-              <button onClick={() => navigate('/wrong-answers')}
-                style={{ flex: 1, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-bg-card)',
-                  color: 'var(--app-text-body)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
-                查看全部错题
-              </button>
-              <button onClick={handleBatchReviewWrong}
-                style={{ flex: 1, padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--app-warning)',
-                  color: '#fff', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>
-                ⚡ 一键批量复习
-              </button>
-            </div>
+            <button onClick={() => navigate('/wrong-answers')}
+              style={{ marginTop: 10, width: '100%', padding: '6px 12px', borderRadius: 8, border: '1px solid var(--app-border)', background: 'var(--app-bg-card)',
+                color: 'var(--app-text-body)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>
+              查看全部错题 →
+            </button>
           )}
           {wrongAnswerCount === 0 && (
             <div style={{ marginTop: 10, fontSize: '0.72rem', color: 'var(--app-text-muted)' }}>暂无错题记录 ✅</div>
@@ -766,10 +754,6 @@ export default function ReviewCenterPage() {
                   style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--app-warning)',
                     color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
                   ⚡ 批量加入复习计划
-                </button>
-                <button onClick={() => navigate('/wrong-answers')}
-                  className="btn btn-secondary" style={{ fontSize: '0.78rem', cursor: 'pointer' }}>
-                  导出错题
                 </button>
               </div>
             </>
