@@ -208,11 +208,8 @@ export default function Sidebar({
       {/* ── Collapsed sidebar — icon-only mode ── */}
       {!isOpen && (
         <div style={{
-          position: 'fixed',
-          top: 'var(--chat-header-height)',
-          left: 0,
           width: 'var(--chat-sidebar-collapsed)',
-          height: 'calc(100vh - var(--chat-header-height))',
+          height: '100%',
           backgroundColor: '#FFFFFF',
           borderRight: '1px solid #F0F0F0',
           display: 'flex',
@@ -220,7 +217,7 @@ export default function Sidebar({
           alignItems: 'center',
           paddingTop: '16px',
           gap: '16px',
-          zIndex: 250,
+          flexShrink: 0,
         }}>
           <button onClick={onToggle} title="展开侧边栏" style={collapseIconBtnStyle}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.06)' }}
@@ -262,17 +259,14 @@ export default function Sidebar({
 
       {/* ── Expanded sidebar ── */}
       <div style={{
-        position: 'fixed',
-        top: 'var(--chat-header-height)',
-        left: 0,
         width: isOpen ? 'var(--chat-sidebar-width)' : '0',
-        height: 'calc(100vh - var(--chat-header-height))',
+        height: '100%',
         backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #F0F0F0',
+        borderRight: isOpen ? '1px solid #F0F0F0' : 'none',
         boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.04)' : 'none',
         transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
-        zIndex: 250,
+        flexShrink: 0,
       }}>
         <div style={{
           width: 'var(--chat-sidebar-width)',

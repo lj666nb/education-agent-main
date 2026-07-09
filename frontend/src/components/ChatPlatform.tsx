@@ -1096,8 +1096,6 @@ export default function ChatPlatform() {
         {/* Chat area */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          marginLeft: sidebarOpen ? 'var(--chat-sidebar-width)' : 'var(--chat-sidebar-collapsed)',
-          transition: 'margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden', minWidth: 0,
         }}>
           {/* Attachments bar */}
