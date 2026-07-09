@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, Plus, Star, MessageSquare, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-react'
 
 interface ChatSession {
@@ -251,7 +251,7 @@ export default function Sidebar({
         height: 'calc(100vh - var(--chat-header-height))',
         backgroundColor: '#FFFFFF',
         borderRight: '1px solid #F0F0F0',
-        boxShadow: '2px 0 12px rgba(0,0,0,0.04)',
+        boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.04)' : 'none',
         transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         zIndex: 100,
