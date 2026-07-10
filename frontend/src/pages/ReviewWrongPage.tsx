@@ -134,7 +134,6 @@ export default function ReviewWrongPage() {
             <QuestionCard
               question={toPracticeQuestion(item, item.user_answer)}
               onSubmit={() => {}}   // readonly 模式下不提交
-              onAskAI={() => {}}
               readonly={true}
               hideAnswer={false}
               savedAnswer={{

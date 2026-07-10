@@ -1,9 +1,12 @@
 import api from './auth'
 
+export type CodingDifficulty = 'basic' | 'intermediate' | 'advanced' | string
+export type JudgeVerdict = 'accepted' | 'wrong_answer' | 'compile_error' | 'runtime_error' | 'time_limit' | string
+
 export interface ProblemSummary {
   id: string
   title: string
-  difficulty: string
+  difficulty: CodingDifficulty
   status: 'not_started' | 'attempted' | 'completed'
 }
 
@@ -26,15 +29,81 @@ export interface CodingTreeResponse {
   domains: DomainNode[]
 }
 
+export interface ProblemExample {
+  input: string
+  output: string
+  explanation?: string
+}
+
+export interface ProblemHint {
+  level?: number
+  title?: string
+  content: string
+}
+
+export interface PublicTestCase {
+  id: string
+  name: string
+  input: string
+  expected_output: string
+}
+
+export interface CodingProblemContent {
+  stem?: string
+  description?: string
+  learning_objectives?: string[]
+  task_steps?: string[]
+  input_format?: string
+  output_format?: string
+  examples?: ProblemExample[]
+  sample_input?: string
+  sample_output?: string
+  constraints?: string[]
+  edge_cases?: string[]
+  interface?: {
+    mode?: string
+    language?: string
+    entry?: string
+    [key: string]: unknown
+  }
+  supported_languages?: string[]
+  code_template?: string | Record<string, string>
+  hints?: Array<ProblemHint | string>
+  source_problem_id?: string
+  source_url?: string
+  source_platform?: string
+  visual_type?: string
+  judge_mode?: string
+  [key: string]: unknown
+}
+
 export interface CodingProblemResponse {
   id: string
   title: string
   type: string
-  content: Record<string, any>
-  difficulty: string
+  content: CodingProblemContent
+  answer: {
+    explanation?: string
+    complexity?: string
+    suggested_time_seconds?: number
+    [key: string]: unknown
+  }
+  difficulty: CodingDifficulty
   knowledge_point_uuids: string[]
   tags: string[]
+  source: string | null
   user_last_code: string | null
+  attempt_count: number
+  public_cases: PublicTestCase[]
+}
+
+export interface TraceDataStructure {
+  type: string
+  elements?: unknown[]
+  top?: number
+  nodes?: Array<{ id: string; label?: string }>
+  edges?: Array<{ from: string; to: string }>
+  [key: string]: unknown
 }
 
 export interface AnalyzeStep {
@@ -42,90 +111,81 @@ export interface AnalyzeStep {
   line: number
   line_code: string
   action: string
-  variables: Record<string, any>
-  data_structure: {
-    type: string
-    elements: any[]
-    top?: number
-    [key: string]: any
-  }
+  variables: Record<string, unknown>
+  data_structure: TraceDataStructure | null
   explanation: string
 }
 
+export interface JudgeRequest {
+  code: string
+  language: string
+  trace?: boolean
+}
+
+export interface JudgeCaseResult {
+  case_no: number
+  name: string
+  visibility: 'sample' | 'hidden' | string
+  status: JudgeVerdict
+  passed: boolean
+  input: string | null
+  expected: string | null
+  actual: string | null
+  stderr: string
+  execution_time: number
+}
+
+export interface JudgeResponse {
+  verdict: JudgeVerdict
+  passed_cases: number
+  total_cases: number
+  all_passed: boolean
+  runtime: number
+  cases: JudgeCaseResult[]
+  trace: AnalyzeStep[]
+  submission_id: string | null
+}
+
+export interface SubmissionHistoryItem {
+  id: string
+  created_at: string
+  language: string
+  verdict: JudgeVerdict
+  is_correct: boolean
+  passed_cases: number
+  total_cases: number
+  runtime: number
+}
+
+export interface CodingSolutionResponse {
+  explanation: string
+  complexity: string
+  standard_answer: string | Record<string, string>
+}
+
 export const codingApi = {
-  getTree: (subjectId?: string) =>
+  getTree: (subjectId?: string, source?: string) =>
     api.get<CodingTreeResponse>('/coding/tree', {
-      params: subjectId ? { subject_id: subjectId } : {},
+      params: {
+        ...(subjectId ? { subject_id: subjectId } : {}),
+        ...(source ? { source } : {}),
+      },
     }),
 
   getProblem: (id: string) =>
     api.get<CodingProblemResponse>(`/coding/problems/${id}`),
 
-  analyzeCode: (
-    data: { problem_id: string; code: string; language: string },
-    callbacks: {
-      onStatus: (msg: string) => void
-      onStep: (step: AnalyzeStep) => void
-      onComplete: (result: { output: string }, summary: string) => void
-      onError: (msg: string) => void
-    },
-  ) => {
-    const token = localStorage.getItem('access_token')
-    return fetch('/api/v1/coding/analyze', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    }).then(async (response) => {
-      if (!response.ok) {
-        callbacks.onError(`请求失败: ${response.status}`)
-        return
-      }
-      const reader = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
+  runProblem: (id: string, data: JudgeRequest) =>
+    api.post<JudgeResponse>(`/coding/problems/${id}/run`, data),
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+  submitProblem: (id: string, data: JudgeRequest) =>
+    api.post<JudgeResponse>(`/coding/problems/${id}/submit`, data),
 
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed.startsWith('data: ')) continue
-          try {
-            const event = JSON.parse(trimmed.slice(6))
-            switch (event.type) {
-              case 'status':
-                callbacks.onStatus(event.content)
-                break
-              case 'step':
-                callbacks.onStep(event.data)
-                break
-              case 'complete':
-                callbacks.onComplete(event.result, event.summary)
-                break
-              case 'error':
-                callbacks.onError(event.content)
-                break
-            }
-          } catch { /* skip malformed events */ }
-        }
-      }
-    }).catch((err) => {
-      callbacks.onError(err.message || '网络错误')
-    })
-  },
+  getSubmissions: (id: string, page = 1, pageSize = 20) =>
+    api.get<SubmissionHistoryItem[]>(`/coding/problems/${id}/submissions`, {
+      params: { page, page_size: pageSize },
+    }),
 
-  submitResult: (data: {
-    problem_id: string
-    code: string
-    language: string
-    is_correct: boolean
-    time_spent_seconds?: number
-  }) => api.post<{ success: boolean; answer_id: string }>('/coding/submit-result', data),
+  getSolution: (id: string) =>
+    api.get<CodingSolutionResponse>(`/coding/problems/${id}/solution`),
 }

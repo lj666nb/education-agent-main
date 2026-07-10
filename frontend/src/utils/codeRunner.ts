@@ -80,6 +80,72 @@ function hasMainFunction(code: string, language: string): boolean {
   }
 }
 
+/**
+ * Parse a code template into driver (read-only) and solution (editable) parts.
+ *
+ * Marker format (language-agnostic comment):
+ *   // === DRIVER START ===   or  # === DRIVER START ===
+ *   ... driver code ...
+ *   // === SOLUTION START === or  # === SOLUTION START ===
+ *   ... solution code (user editable) ...
+ *   // === SOLUTION END ===   or  # === SOLUTION END ===
+ *   ... more driver code ...
+ *   // === DRIVER END ===     or  # === DRIVER END ===
+ *
+ * If no markers are found, the entire template is treated as solution code.
+ */
+export function parseTemplate(code: string): { driver: string; solution: string } {
+  if (!code || !code.trim()) return { driver: '', solution: '' }
+
+  const lines = code.split('\n')
+  const driverLines: string[] = []
+  const solutionLines: string[] = []
+  let inDriver = true
+  let inSolution = false
+  let foundMarker = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Check for SOLUTION START marker
+    if (/^(#|\/\/|\/\*|\*)\s*SOLUTION\s*START/.test(trimmed)) {
+      foundMarker = true
+      inDriver = false
+      inSolution = true
+      continue
+    }
+
+    // Check for SOLUTION END marker
+    if (/^(#|\/\/|\/\*|\*)\s*SOLUTION\s*END/.test(trimmed)) {
+      inSolution = false
+      inDriver = true
+      continue
+    }
+
+    // Skip DRIVER START/END markers
+    if (/^(#|\/\/|\/\*|\*)\s*DRIVER\s*(START|END)/.test(trimmed)) {
+      foundMarker = true
+      continue
+    }
+
+    if (inSolution) {
+      solutionLines.push(line)
+    } else if (inDriver) {
+      driverLines.push(line)
+    }
+  }
+
+  // If no markers found, the entire code is solution
+  if (!foundMarker) {
+    return { driver: '', solution: code }
+  }
+
+  return {
+    driver: driverLines.join('\n').trim(),
+    solution: solutionLines.join('\n').trim(),
+  }
+}
+
 export function autoCompleteCode(code: string, language: string): string {
   const trimmed = code.trim()
   if (!trimmed) return ''
@@ -94,6 +160,11 @@ export function autoCompleteCode(code: string, language: string): string {
       const pyFuncMatch = trimmed.match(/def\s+(\w+)\s*\(/)
       if (pyFuncMatch) {
         return `${trimmed}\n\nif __name__ == "__main__":\n    ${pyFuncMatch[1]}()`
+      }
+      // If code has class definitions but no main, add a simple test harness
+      const pyClassMatch = trimmed.match(/class\s+(\w+)/)
+      if (pyClassMatch) {
+        return `${trimmed}\n\nif __name__ == "__main__":\n    # 测试代码\n    obj = ${pyClassMatch[1]}()\n    print(obj)`
       }
       // Plain script code (e.g. print('hello')), execute as-is
       return trimmed

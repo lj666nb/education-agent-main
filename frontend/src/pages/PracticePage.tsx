@@ -5,7 +5,6 @@ import QuestionCard, { type PracticeQuestion } from '../components/QuestionCard'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import PracticeRecommendPopover from '../components/PracticeRecommendPopover'
 import ChapterCompletePopover from '../components/ChapterCompletePopover'
-import ChatPanel from '../components/ChatPanel'
 import { ArrowLeftIcon, ArrowRightIcon, StarIcon, CheckIcon, ZapIcon } from '../components/Icons'
 import { formatSeconds } from '../utils/time'
 import { QTYPE_LABELS, DIFF_LABELS, getDifficultyLabel } from '../constants/labels'
@@ -80,8 +79,6 @@ export default function PracticePage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [practiceStartTime, setPracticeStartTime] = useState<number>(0)
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
-  const [showChat, setShowChat] = useState(false)
-  const [chatQId, setChatQId] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const questionCardRef = useRef<any>(null)
   const practiceStateRef = useRef<any>(null)
@@ -228,6 +225,15 @@ export default function PracticePage() {
     handleStartPractice()
   }, [phase, loading, bankId])
 
+  // ── auto-start practice when `domain_ids` param is present (来自专项刷题) ──
+  useEffect(() => {
+    if (!bankId || phase !== 'config' || loading || autoStartedRef.current) return
+    const domainIds = searchParams.get('domain_ids')
+    if (!domainIds) return
+    autoStartedRef.current = true
+    handleStartPractice()
+  }, [phase, loading, bankId])
+
   // ── restore exam session from session_id ──
   const loadSessionQuestions = async (sid: string, isReview = false) => {
     setLoading(true)
@@ -347,11 +353,14 @@ export default function PracticePage() {
 
       const pointParam = searchParams.get('point')
       const knowledgePointUuids = pointParam ? [pointParam] : []
+      const domainIdsParam = searchParams.get('domain_ids')
+      const domainIdsToUse = domainIdsParam ? domainIdsParam.split(',').filter(Boolean) : selectedDomainIds
+      const typesToUse = domainIdsParam ? ['single_choice', 'true_false'] : selectedTypes
       const res = await questionBankApi.startPractice(bankId!, {
         time_limit_minutes: timeLimit,
         question_count: actualCount,
-        question_types: selectedTypes,
-        domain_ids: selectedDomainIds,
+        question_types: typesToUse,
+        domain_ids: domainIdsToUse,
         knowledge_point_uuids: knowledgePointUuids,
         only_unanswered: onlyUnanswered,
         only_wrong: onlyWrong,
@@ -786,6 +795,14 @@ export default function PracticePage() {
 
   /* ────────────── CONFIG PHASE ────────────── */
   if (phase === 'config') {
+    // Show loading while auto-starting from external params
+    if (searchParams.get('point') || searchParams.get('domain_ids')) {
+      return (
+        <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 15, color: 'var(--app-text-secondary)', fontWeight: 500 }}>正在加载专项练习...</div>
+        </div>
+      )
+    }
     return (
       <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', padding: '24px 16px' }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -1111,7 +1128,6 @@ export default function PracticePage() {
               ref={questionCardRef}
               question={currentQ}
               onSubmit={handleAnswer}
-              onAskAI={() => { setChatQId(currentQ.id); setShowChat(true) }}
               hideAnswer={answerMode === 'after' && !reviewMode}
               savedAnswer={getAnswerForQuestion(currentQ.id) ? {
                 answerContent: getAnswerForQuestion(currentQ.id)!.answerContent,
@@ -1211,18 +1227,6 @@ export default function PracticePage() {
           )}
         </div>
 
-        <ChatPanel visible={showChat} questionId={chatQId}
-          question={(() => {
-            const q = questions.find(q => q.id === chatQId)
-            if (!q) return undefined
-            return {
-              stem: q.content.stem || '',
-              type: QTYPE_LABELS[q.type] || q.type,
-              answer: (() => { const ca = q.answer?.correct_answer; return Array.isArray(ca) ? ca.join(', ') : String(ca || '') })(),
-              difficulty: DIFF_LABELS[q.difficulty] || q.difficulty,
-            }
-          })()}
-          recommendedLevel="L2" onClose={() => setShowChat(false)} />
       </div>
     )
   }

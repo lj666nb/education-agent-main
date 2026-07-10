@@ -61,6 +61,8 @@ export default function LeetBookExploreMap({
 }: Props) {
   const visibleGroups = selectedDomain ? groups.filter(g => g.domain === selectedDomain) : groups
   const activeNode = nodes.find(n => n.status === 'learning') || nodes.find(n => n.status === 'reviewing')
+  // Weak knowledge points: mastery > 0% AND < 50%
+  const weakNodes = nodes.filter(n => (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50)
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: PAGE }}>
@@ -89,19 +91,6 @@ export default function LeetBookExploreMap({
               按章节推进，每个知识点都可以进入独立章节页查看讲义、练习、测评和复习资料。
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' }}>
-              <button onClick={onReplan} disabled={loading} style={{
-                padding: '8px 14px',
-                borderRadius: 6,
-                border: 'none',
-                background: loading ? '#CBD5E1' : BRAND,
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit',
-              }}>
-                动态重排
-              </button>
               <button onClick={onToggleWeakMode} style={{
                 padding: '8px 14px',
                 borderRadius: 6,
@@ -113,7 +102,7 @@ export default function LeetBookExploreMap({
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}>
-                薄弱高亮
+                薄弱知识点
               </button>
             </div>
           </div>
@@ -220,7 +209,6 @@ export default function LeetBookExploreMap({
                 }}>
                   {group.nodes.map((node, index) => {
                     const meta = statusMeta(node)
-                    const weak = weakMode && (node.mastery_score || 0) < 40
                     return (
                       <button
                         key={node.point_id}
@@ -230,8 +218,8 @@ export default function LeetBookExploreMap({
                           onNodeContext?.(event, node)
                         }}
                         style={{
-                          border: `1px solid ${weak ? '#FCA5A5' : meta.border}`,
-                          background: weak ? '#FEF2F2' : meta.bg,
+                          border: `1px solid ${meta.border}`,
+                          background: meta.bg,
                           borderRadius: 8,
                           padding: 14,
                           minHeight: 112,
@@ -243,6 +231,15 @@ export default function LeetBookExploreMap({
                           justifyContent: 'space-between',
                           gap: 12,
                           boxShadow: node.status === 'learning' ? '0 8px 18px rgba(22,119,232,0.12)' : 'none',
+                          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = BRAND
+                          e.currentTarget.style.boxShadow = '0 0 0 2px rgba(22,119,232,0.15), 0 4px 12px rgba(22,119,232,0.08)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = meta.border
+                          e.currentTarget.style.boxShadow = node.status === 'learning' ? '0 8px 18px rgba(22,119,232,0.12)' : 'none'
                         }}
                       >
                         <div>
@@ -263,7 +260,7 @@ export default function LeetBookExploreMap({
                             <div style={{
                               height: '100%',
                               width: `${node.mastery_score || 0}%`,
-                              background: node.mastery_score >= 80 ? '#10B981' : weak ? '#EF4444' : BRAND,
+                              background: node.mastery_score >= 80 ? '#10B981' : BRAND,
                               borderRadius: 999,
                             }} />
                           </div>
@@ -274,6 +271,108 @@ export default function LeetBookExploreMap({
                 </div>
               </section>
             ))}
+          </div>
+        )}
+
+        {/* Weak knowledge points section — shown when weak mode is active */}
+        {weakMode && weakNodes.length > 0 && (
+          <section style={{
+            background: '#fff',
+            border: '1px solid #FECACA',
+            borderRadius: 8,
+            padding: '18px 20px',
+            marginTop: 4,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: '#FEF2F2', color: '#DC2626',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: 16, flexShrink: 0,
+              }}>⚠</span>
+              <div>
+                <h3 style={{ margin: 0, color: INK, fontSize: 16, fontWeight: 800 }}>
+                  薄弱知识点
+                </h3>
+                <p style={{ margin: '3px 0 0', color: MUTED, fontSize: 12 }}>
+                  掌握度大于 0% 且小于 50%，共 {weakNodes.length} 个知识点需要加强
+                </p>
+              </div>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+              gap: 12,
+            }}>
+              {weakNodes.map(node => {
+                const meta = statusMeta(node)
+                return (
+                  <button
+                    key={node.point_id}
+                    onClick={() => onNodeClick(node)}
+                    style={{
+                      border: '1px solid #FCA5A5',
+                      background: '#FEF2F2',
+                      borderRadius: 8,
+                      padding: 14,
+                      minHeight: 100,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = BRAND
+                      e.currentTarget.style.boxShadow = '0 0 0 2px rgba(22,119,232,0.15), 0 4px 12px rgba(22,119,232,0.08)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = '#FCA5A5'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ color: MUTED, fontSize: 11, fontWeight: 800 }}>{node.domain_name}</span>
+                        <span style={{ color: '#DC2626', fontSize: 11, fontWeight: 800 }}>薄弱</span>
+                      </div>
+                      <div style={{ color: INK, fontSize: 15, fontWeight: 800, marginTop: 9, lineHeight: 1.35 }}>
+                        {node.point_name}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: MUTED, fontSize: 11, marginBottom: 5 }}>
+                        <span>掌握度</span>
+                        <span style={{ color: '#DC2626', fontWeight: 700 }}>{node.mastery_score || 0}%</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 999, background: '#FEE2E2', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${node.mastery_score || 0}%`,
+                          background: '#EF4444',
+                          borderRadius: 999,
+                        }} />
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {weakMode && weakNodes.length === 0 && (
+          <div style={{
+            background: '#fff', border: '1px solid #D1FAE5', borderRadius: 8,
+            padding: '24px', textAlign: 'center', marginTop: 4,
+          }}>
+            <span style={{ fontSize: 28 }}>🎉</span>
+            <p style={{ margin: '8px 0 0', color: '#059669', fontSize: 14, fontWeight: 600 }}>
+              没有薄弱知识点！所有知识点掌握度均达标
+            </p>
           </div>
         )}
       </div>

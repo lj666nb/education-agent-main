@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useImperativeHandle, forwardRef, useRef } from 'react'
 import MarkdownRenderer from './MarkdownRenderer'
-import { AlertTriangleIcon, CheckIcon, CloseIcon, MessageCircleIcon } from './Icons'
+import { AlertTriangleIcon, CheckIcon, CloseIcon } from './Icons'
 
 export interface PracticeQuestion {
   id: string
@@ -32,13 +32,12 @@ const DIFF_COLORS: Record<string, string> = {
 const QuestionCard = forwardRef<any, {
   question: PracticeQuestion
   onSubmit: (answer: string, isCorrect: boolean, skipBackend?: boolean) => void
-  onAskAI: () => void
   readonly?: boolean
   hideAnswer?: boolean
   savedAnswer?: { answerContent: string; isCorrect: boolean } | null
   examMode?: boolean
 }>(function QuestionCard({
-  question, onSubmit, onAskAI, readonly, hideAnswer, savedAnswer, examMode,
+  question, onSubmit, readonly, hideAnswer, savedAnswer, examMode,
 }, ref) {
   const q = question
 
@@ -350,12 +349,6 @@ const QuestionCard = forwardRef<any, {
                   style={{ flex: 1, padding: '12px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
                   重新作答
                 </button>
-                {!isCorrect && (
-                  <button onClick={onAskAI}
-                    style={{ flex: 1, padding: '12px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-                    <MessageCircleIcon size={14} /> 问AI
-                  </button>
-                )}
               </div>
             )}
             {hideAnswer && (
@@ -385,16 +378,6 @@ const QuestionCard = forwardRef<any, {
         )}
       </div>
 
-      <button onClick={onAskAI}
-        style={{
-          position: 'fixed', right: '24px', bottom: '120px',
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'var(--app-brand)', color: '#fff', border: 'none',
-          fontSize: '24px', cursor: 'pointer', zIndex: 100,
-          boxShadow: '0 4px 16px rgba(30,58,138,0.3)',
-        }}>
-        <MessageCircleIcon size={24} />
-      </button>
     </div>
   )
 })

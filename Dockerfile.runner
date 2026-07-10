@@ -1,0 +1,11 @@
+FROM python:3.12-slim
+
+WORKDIR /runner
+COPY runner/sandbox_runner.py /runner/sandbox_runner.py
+
+ENV CODE_RUNNER_SOCKET=/run/code-runner/runner.sock \
+    CODE_RUNNER_TIMEOUT=3 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+CMD ["python", "/runner/sandbox_runner.py"]

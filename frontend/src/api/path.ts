@@ -389,6 +389,10 @@ export const pathApi = {
   /** 提交掌握度测评答案 */
   submitAssess: (pointId: string, answers: AssessAnswer[]) =>
     api.post<AssessSubmitResponse>(`/path/knowledge/${pointId}/assess/submit`, { answers }),
+
+  /** 批量生成知识点阅读讲义（point_ids 为空则自动发现全部空讲义） */
+  batchGenerateReviewMaterials: (pointIds?: string[]) =>
+    api.post<BatchReviewResponse>('/path/knowledge/batch-review-materials', { point_ids: pointIds || [] }),
 }
 
 export interface AssessQuestion {
@@ -419,4 +423,19 @@ export interface AssessSubmitResponse {
   score: number
   path_replanned?: boolean
   path_changed_count?: number
+}
+
+export interface BatchReviewItem {
+  point_id: string
+  point_name: string
+  success: boolean
+  content: string
+  message: string
+}
+
+export interface BatchReviewResponse {
+  total_found: number
+  generated: number
+  failed: number
+  items: BatchReviewItem[]
 }

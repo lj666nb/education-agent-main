@@ -102,6 +102,7 @@ services:
       QWEN_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
       QWEN_MODEL: qwen-plus
       DATA_DIR: /app/data
+      CODE_RUNNER_SOCKET: /run/code-runner/runner.sock
     env_file:
       - path: .env
         required: false
@@ -110,6 +111,7 @@ services:
       - ./requirements.txt:/app/requirements.txt
       - ./data:/app/data
       - ./uploads:/app/uploads
+      - runner_socket:/run/code-runner
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,6 +121,31 @@ services:
         condition: service_started
       mongodb:
         condition: service_healthy
+      code-runner:
+        condition: service_started
+
+  code-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    container_name: ea-code-runner
+    restart: unless-stopped
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    volumes:
+      - runner_socket:/run/code-runner
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+    pids_limit: 64
+    mem_limit: 320m
+    cpus: 1.0
 
   frontend:
     build:
@@ -147,3 +174,4 @@ volumes:
   redisdata:
   neo4jdata:
   mongodbdata:
+  runner_socket:

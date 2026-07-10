@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { useAuthStore } from './store/auth'
 import { ThemeProvider } from './store/theme'
 import Layout from './components/Layout'
@@ -8,9 +8,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 
 // Landing page — eager loaded for instant hero animation
 import LandingPage from './pages/LandingPage'
-
-// Eagerly loaded (always needed)
-// Layout, ProtectedRoute
 
 // Lazy-loaded page components
 const BusinessHome = lazy(() => import('./pages/HomePage'))
@@ -45,37 +42,47 @@ const KnowledgePointsPage = lazy(() => import('./pages/KnowledgePointsPage'))
 const KnowledgeGraphPage = lazy(() => import('./pages/KnowledgeGraphPage'))
 const CodingPracticePage = lazy(() => import('./pages/CodingPracticePage'))
 
-const PageSkeleton = () => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'var(--app-bg-page, #F7FAFF)',
-  }}>
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 16,
-    }}>
-      {/* Animated brand spinner */}
-      <div style={{
-        width: 40, height: 40, borderRadius: 10,
-        background: 'linear-gradient(135deg, #1677E8, #38BDF8)',
-        animation: 'skeletonPulse 1.2s ease-in-out infinite',
-      }} />
-      <div style={{
-        fontSize: '0.85rem',
-        color: 'var(--app-text-muted, #94A3B8)',
-        fontWeight: 500,
-        fontFamily: "'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif",
-      }}>
-        加载中...
+// ── Static element styles (memoized to avoid recreation) ──
+const SKELETON_STYLE: React.CSSProperties = {
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'var(--app-bg-page, #F7FAFF)',
+}
+
+const SKELETON_INNER_STYLE: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 16,
+}
+
+const SPINNER_STYLE: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 10,
+  background: 'linear-gradient(135deg, #1677E8, #38BDF8)',
+  animation: 'skeletonPulse 1.2s ease-in-out infinite',
+}
+
+const SKELETON_TEXT_STYLE: React.CSSProperties = {
+  fontSize: '0.85rem',
+  color: 'var(--app-text-muted, #94A3B8)',
+  fontWeight: 500,
+  fontFamily: "'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif",
+}
+
+function PageSkeleton() {
+  return (
+    <div style={SKELETON_STYLE}>
+      <div style={SKELETON_INNER_STYLE}>
+        <div style={SPINNER_STYLE} />
+        <div style={SKELETON_TEXT_STYLE}>加载中...</div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -90,7 +97,30 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ── Prefetch critical routes on idle ──
+const CRITICAL_PREFETCH = [
+  () => import('./pages/HomePage'),
+  () => import('./pages/LoginPage'),
+]
+
+function schedulePrefetch() {
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => {
+      CRITICAL_PREFETCH.forEach(fn => fn().catch(() => {}))
+    })
+  } else {
+    setTimeout(() => {
+      CRITICAL_PREFETCH.forEach(fn => fn().catch(() => {}))
+    }, 3000)
+  }
+}
+
 function App() {
+  // ── Prefetch critical chunks after mount ──
+  useMemo(() => {
+    schedulePrefetch()
+  }, [])
+
   return (
     <ThemeProvider>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -141,6 +171,7 @@ function App() {
           <Route path="path/history" element={<ProtectedRoute><LazyRoute><PathHistoryPage /></LazyRoute></ProtectedRoute>} />
           <Route path="agent/tasks" element={<ProtectedRoute><LazyRoute><AgentTasksPage /></LazyRoute></ProtectedRoute>} />
           <Route path="coding-practice" element={<ProtectedRoute><LazyRoute><CodingPracticePage /></LazyRoute></ProtectedRoute>} />
+          <Route path="coding-practice/problems/:problemId" element={<ProtectedRoute><LazyRoute><CodingPracticePage /></LazyRoute></ProtectedRoute>} />
         </Route>
       </Routes>
       </ErrorBoundary>

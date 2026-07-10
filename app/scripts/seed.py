@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.db.neo4j import get_neo4j, Neo4jConnection
 from app.models.question_bank import (
-    Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question,
+    Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, CodingTestCase,
 )
 from app.models.resource import KnowledgeResource
 from app.models.user import User, UserProfile, UserRole, UserStatus
@@ -632,6 +632,21 @@ def _seed_data_structures_from_json(db: Session) -> bool:
     db.flush()
 
     banks_data = seed.get("banks") or [bank_data]
+
+    # Replace legacy generic programming rows with the curated OJ catalog. The
+    # source JSON still carries objective questions; programming data lives in a
+    # dedicated module so cases, scaffolds and hints remain reviewable.
+    from app.seed_data.coding_oj_catalog import build_curated_coding_questions, CODE_BANK_ID
+    point_id_by_name = {point.name: str(point.id) for point in point_by_seed_id.values()}
+    curated_coding_questions = build_curated_coding_questions(point_id_by_name)
+    questions_data = [item for item in questions_data if item.get("type") != "programming"] + curated_coding_questions
+
+    for item in banks_data:
+        if item["id"] == CODE_BANK_ID:
+            item["name"] = "数据结构编程训练（简单 / 中等 / 困难）"
+            item["description"] = "每个核心知识点最多三题，难度各一；提供结构化题面、Python 脚手架、真实多用例判题与运行轨迹。"
+            item["tags"] = ["数据结构", "编程题", "牛客", "力扣", "真实判题"]
+
     bank_by_seed_id: dict[str, QuestionBank] = {}
     desired_bank_ids = {UUID(item["id"]) for item in banks_data}
 
@@ -671,32 +686,21 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             seed_questions_by_bank.setdefault(bank_id, []).append(question_data)
 
     existing_questions = db.query(Question).filter(Question.bank_id.in_(list(desired_bank_ids))).all()
-    existing_counts: dict[UUID, int] = {}
+    existing_by_id = {str(question.id): question for question in existing_questions}
+    desired_ids = {
+        item["id"]
+        for item in questions_data
+        if item.get("type") not in {"short_answer", "essay"}
+    }
+
+    # Preserve StudentAnswer history: obsolete seed rows are archived, never
+    # deleted. Stable ids are updated in place.
     for question in existing_questions:
-        existing_counts[question.bank_id] = existing_counts.get(question.bank_id, 0) + 1
+        if str(question.id) not in desired_ids:
+            question.status = "archived"
 
-    needs_replace = (
-        len(existing_questions) != sum(len(items) for items in seed_questions_by_bank.values())
-        or any(q.source != "curated_seed" for q in existing_questions)
-        or any("�" in (q.content or {}).get("stem", "") for q in existing_questions)
-        or any(existing_counts.get(bank_id, 0) != len(items) for bank_id, items in seed_questions_by_bank.items())
-    )
-    if not needs_replace:
-        for bank_id, items in seed_questions_by_bank.items():
-            bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
-            if bank:
-                bank.total_questions = len(items)
-        db.flush()
-        logger.info(f"数据结构系统题库已是新版：{sum(len(items) for items in seed_questions_by_bank.values())} 道题")
-        return True
-
-    for question in existing_questions:
-        db.expunge(question)
-    db.query(Question).filter(Question.bank_id.in_(list(desired_bank_ids))).delete(synchronize_session=False)
-    db.flush()
-
-    created = 0
-    created_by_bank: dict[UUID, int] = {}
+    upserted = 0
+    published_by_bank: dict[UUID, int] = {}
     for question_data in questions_data:
         question_type = question_data.get("type", "single_choice")
         if question_type in {"short_answer", "essay"}:
@@ -706,29 +710,56 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             continue
 
         kp_ids = []
+        points_by_real_id = {str(item.id): item for item in point_by_seed_id.values()}
         for seed_kp_id in question_data.get("knowledge_point_uuids", []):
-            point = point_by_seed_id.get(seed_kp_id)
+            # Objective questions reference ids from the JSON seed, while the
+            # curated OJ catalog is built after upsert and therefore carries
+            # the actual database ids. Support both without silently dropping
+            # the programming question's knowledge-point relationship.
+            point = point_by_seed_id.get(seed_kp_id) or points_by_real_id.get(str(seed_kp_id))
             if point:
                 kp_ids.append(str(point.id))
 
-        question = Question(
-            id=UUID(question_data["id"]),
-            bank_id=bank_id,
-            type=question_type,
-            difficulty=question_data.get("difficulty", "basic"),
-            status=question_data.get("status", "published"),
-            priority=question_data.get("priority", 0),
-            content=question_data.get("content", {}),
-            answer=question_data.get("answer", {}),
-            knowledge_point_uuids=kp_ids,
-            tags=question_data.get("tags", []),
-            ai_generated=question_data.get("ai_generated", False),
-            source=question_data.get("source", "curated_seed"),
-            created_by=SYSTEM_OWNER_ID,
-        )
-        db.add(question)
-        created += 1
-        created_by_bank[bank_id] = created_by_bank.get(bank_id, 0) + 1
+        question = existing_by_id.get(question_data["id"])
+        if not question:
+            question = Question(id=UUID(question_data["id"]))
+            db.add(question)
+
+        primary_point_id = question_data.get("primary_knowledge_point_id")
+        question.bank_id = bank_id
+        question.type = question_type
+        question.difficulty = question_data.get("difficulty", "basic")
+        question.status = question_data.get("status", "published")
+        question.priority = question_data.get("priority", 0)
+        question.content = question_data.get("content", {})
+        question.answer = question_data.get("answer", {})
+        question.knowledge_point_uuids = kp_ids
+        question.primary_knowledge_point_id = UUID(primary_point_id) if primary_point_id else None
+        question.tags = question_data.get("tags", [])
+        question.ai_generated = question_data.get("ai_generated", False)
+        question.source = question_data.get("source", "curated_seed")
+        question.created_by = SYSTEM_OWNER_ID
+        db.flush()
+
+        if question_type == "programming":
+            db.query(CodingTestCase).filter(CodingTestCase.question_id == question.id).delete(synchronize_session=False)
+            for case_order, case in enumerate(question_data.get("test_cases", []), start=1):
+                db.add(CodingTestCase(
+                    id=_uuid.uuid5(_uuid.UUID("1238254c-d167-4878-9e09-7a09ecbbcf77"), f"{question.id}:{case_order}"),
+                    question_id=question.id,
+                    case_order=case_order,
+                    name=case.get("name") or f"测试 {case_order}",
+                    visibility="sample" if case.get("is_public") else "hidden",
+                    input_data=case.get("input", ""),
+                    expected_output=case.get("expected_output", ""),
+                    comparator=case.get("comparator", "trim_lines"),
+                    time_limit_ms=case.get("time_limit_ms", 3000),
+                    memory_limit_mb=case.get("memory_limit_mb", 256),
+                ))
+
+        upserted += 1
+        if question.status == "published":
+            published_by_bank[bank_id] = published_by_bank.get(bank_id, 0) + 1
         try:
             _sync_question_to_neo4j(neo4j, question)
         except Exception as e:
@@ -737,9 +768,9 @@ def _seed_data_structures_from_json(db: Session) -> bool:
     for bank_id in desired_bank_ids:
         bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
         if bank:
-            bank.total_questions = created_by_bank.get(bank_id, 0)
+            bank.total_questions = published_by_bank.get(bank_id, 0)
     db.flush()
-    logger.info(f"数据结构系统题库已加载：{len(banks_data)} 个题库，{len(domains_data)} 章，{len(points_data)} 个知识点，{created} 道题")
+    logger.info(f"数据结构系统题库已同步：{len(banks_data)} 个题库，{len(domains_data)} 章，{len(points_data)} 个知识点，{upserted} 道题")
     return True
 
 def _seed_comprehensive_data(db: Session):

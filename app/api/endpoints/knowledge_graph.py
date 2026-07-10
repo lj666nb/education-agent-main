@@ -1,12 +1,13 @@
-"""知识图谱 API — PDF 上传 + LLM 提取 + Neo4j/PostgreSQL 导入
+"""知识图谱 API — 文档上传 + LLM 提取 + Neo4j/PostgreSQL 导入
 
-POST /knowledge-graph/upload    上传 PDF，启动异步 KG 提取流水线
+POST /knowledge-graph/upload    上传 PDF/DOCX/PPTX，启动异步 KG 提取流水线
 GET  /knowledge-graph/status    获取提取任务状态
 GET  /knowledge-graph/list      列出已构建的知识图谱
 """
 
 import asyncio, json, hashlib, logging, os, re, time, uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Optional, Dict, Any, List
 
 import fitz  # PyMuPDF
@@ -242,33 +243,81 @@ async def extract_keywords_llm(question: str, api_key: str) -> List[str]:
     return extract_keywords_simple(question)
 
 
-async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: str, api_key: str, user_id: str = None):
-    """后台运行完整的 PDF→KG 流水线"""
-    try:
-        # ══ Stage 1: Parse PDF ══
-        _update_task(task_id, "parsing", 0.05, "正在解析 PDF 文件...")
-        doc = fitz.open(stream=file_content, filetype="pdf")
-        total_pages = doc.page_count
-
-        # Extract text by chunks
-        chunks = []
-        for page_num in range(total_pages):
-            page_text = doc[page_num].get_text()
-            if not page_text or len(page_text.strip()) < 20:
-                continue
-            paragraphs = [p.strip() for p in page_text.split('\n\n') if len(p.strip()) > 30]
-            for para in paragraphs:
-                if len(para) < 30:
+def _text_blocks_to_chunks(blocks: list[tuple[int, str]]) -> list[dict]:
+    """将带页码/幻灯片编号的文本块切成适合 LLM 抽取的短块。"""
+    chunks: list[dict] = []
+    for page_number, raw_text in blocks:
+        paragraphs = [part.strip() for part in re.split(r"\n\s*\n|(?<=。)\s*", raw_text) if len(part.strip()) >= 20]
+        for paragraph in paragraphs:
+            for start in range(0, len(paragraph), 800):
+                text_part = paragraph[start:start + 800].strip()
+                if len(text_part) < 20:
                     continue
-                chunk_id = hashlib.md5(f'p{page_num}_{len(chunks)}'.encode()).hexdigest()[:10]
-                chunks.append({'id': chunk_id, 'page': page_num + 1, 'text': para[:800], 'char_count': min(len(para), 800)})
-                if len(chunks) >= 100:  # Max 100 chunks for async processing
-                    break
-            if len(chunks) >= 100:
-                break
-        doc.close()
+                chunk_id = hashlib.md5(f"p{page_number}_{len(chunks)}".encode()).hexdigest()[:10]
+                chunks.append({
+                    "id": chunk_id,
+                    "page": page_number,
+                    "text": text_part,
+                    "char_count": len(text_part),
+                })
+                if len(chunks) >= 100:
+                    return chunks
+    return chunks
 
-        _update_task(task_id, "parsing", 0.15, f"PDF 解析完成：{total_pages} 页, {len(chunks)} 个文本块")
+
+def _extract_document_chunks(file_content: bytes, filename: str) -> tuple[list[dict], str]:
+    """解析支持的文档，并返回统一的 RAG 文本块和来源描述。"""
+    extension = os.path.splitext(filename)[1].lower()
+
+    if extension == ".pdf":
+        doc = fitz.open(stream=file_content, filetype="pdf")
+        try:
+            blocks = [(page_num + 1, doc[page_num].get_text()) for page_num in range(doc.page_count)]
+            source_description = f"{doc.page_count} 页"
+        finally:
+            doc.close()
+        return _text_blocks_to_chunks(blocks), source_description
+
+    if extension == ".docx":
+        from app.services.docx_parser import extract_docx_text
+
+        document_text = extract_docx_text(file_content, max_chars=80000)
+        return _text_blocks_to_chunks([(1, document_text)]), "Word 文档"
+
+    if extension == ".pptx":
+        from pptx import Presentation
+
+        presentation = Presentation(BytesIO(file_content))
+        blocks: list[tuple[int, str]] = []
+        for slide_number, slide in enumerate(presentation.slides, start=1):
+            slide_parts: list[str] = []
+            for shape in slide.shapes:
+                if getattr(shape, "has_text_frame", False):
+                    text_value = shape.text.strip()
+                    if text_value:
+                        slide_parts.append(text_value)
+                if getattr(shape, "has_table", False):
+                    for row in shape.table.rows:
+                        row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                        if row_text:
+                            slide_parts.append(row_text)
+            if slide_parts:
+                blocks.append((slide_number, "\n\n".join(slide_parts)))
+        return _text_blocks_to_chunks(blocks), f"{len(presentation.slides)} 页幻灯片"
+
+    raise ValueError("不支持的文档格式")
+
+
+async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: str, api_key: str, user_id: str = None):
+    """后台运行完整的文档→KG 流水线。"""
+    try:
+        # ══ Stage 1: Parse document ══
+        _update_task(task_id, "parsing", 0.05, f"正在解析文档：{filename}")
+        chunks, source_description = _extract_document_chunks(file_content, filename)
+        if not chunks:
+            raise ValueError("文档中未提取到足够的文字内容；扫描版 PDF 请先完成 OCR，旧版 Office 文件请另存为新格式")
+
+        _update_task(task_id, "parsing", 0.15, f"文档解析完成：{source_description}，{len(chunks)} 个文本块")
 
         # ── 创建 subject + 保存文本块（用于 RAG 关键词检索）──
         subj_id = str(uuid.uuid4())
@@ -279,7 +328,7 @@ async def _run_extraction_pipeline(task_id: str, file_content: bytes, filename: 
         try:
             db_ctx.execute(
                 text("INSERT INTO subjects (id, name, description, creator_id, sort_order, created_at, updated_at) VALUES (:i, :n, :d, :cr, 1, :ca, :ua)"),
-                {'i': subj_id, 'n': f'从{filename[:20]}提取', 'd': f'自动提取自PDF: {filename[:50]}',
+                {'i': subj_id, 'n': f'从{filename[:20]}提取', 'd': f'自动提取自文档: {filename[:50]}',
                  'cr': user_id, 'ca': now_time, 'ua': now_time}
             )
             db_ctx.commit()
@@ -434,15 +483,19 @@ def _update_task(task_id: str, status: str, progress: float, message: str, resul
 # ═══════════════════════════════════════════════════════
 
 @router.post("/upload")
-async def upload_pdf_for_kg(
+async def upload_document_for_kg(
     file: UploadFile = File(...),
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """上传 PDF 文件，启动知识图谱提取流水线"""
+    """上传 PDF、DOCX 或 PPTX 文件，启动知识图谱提取流水线。"""
     # Validate file type
-    if not file.filename or not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(400, detail="仅支持 PDF 文件")
+    extension = os.path.splitext(file.filename or "")[1].lower()
+    if extension in {".doc", ".ppt"}:
+        target_extension = ".docx" if extension == ".doc" else ".pptx"
+        raise HTTPException(400, detail=f"旧版 {extension} 文件无法解析文本，建议另存为 {target_extension} 格式后重新上传")
+    if extension not in {".pdf", ".docx", ".pptx"}:
+        raise HTTPException(400, detail="仅支持 PDF、DOCX、PPTX 文档")
 
     # Get user's API key
     from app.models.api_settings import ApiSettings
@@ -453,23 +506,23 @@ async def upload_pdf_for_kg(
     ).first()
 
     if not api_setting or not api_setting.api_key:
-        raise HTTPException(400, detail="请先配置 DeepSeek 或 Qwen API Key 后再上传 PDF")
+        raise HTTPException(400, detail="请先配置 DeepSeek 或 Qwen API Key 后再上传文档")
 
     # Read file
     content = await file.read()
     if len(content) > 50 * 1024 * 1024:  # 50MB limit
-        raise HTTPException(400, detail="PDF 文件不能超过 50MB")
+        raise HTTPException(400, detail="文档不能超过 50MB")
     if len(content) < 1000:
-        raise HTTPException(400, detail="PDF 文件内容过少，无法提取")
+        raise HTTPException(400, detail="文档内容过少，无法提取")
 
     # Create task
     task_id = str(uuid.uuid4())[:8]
     _update_task(task_id, "pending", 0, f"已接收文件: {file.filename}")
 
     # Start background processing
-    asyncio.create_task(_run_extraction_pipeline(task_id, content, file.filename or "unknown.pdf", api_setting.api_key, str(current_user.student_id)))
+    asyncio.create_task(_run_extraction_pipeline(task_id, content, file.filename or "unknown", api_setting.api_key, str(current_user.student_id)))
 
-    return {"task_id": task_id, "message": "PDF 已上传，正在后台构建知识图谱", "filename": file.filename}
+    return {"task_id": task_id, "message": "文档已上传，正在后台构建知识图谱", "filename": file.filename}
 
 
 @router.get("/status")

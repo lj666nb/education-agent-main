@@ -211,6 +211,7 @@ useEffect(() => {
 | LP-28 | 路径历史与版本控制 | P2 | 🔴 否 | 🔴 否 | - | 每次调整写入PathHistory，前端展示演变时间线 |
 | LP-29 | LeetBook 风格探索地图与知识点章节页 | P1 | ✅ 是 | ✅ 是 | - | 路径总览改为探索知识地图；点击知识点进入独立章节页 |
 | LP-30 | 数据结构参考讲义与知识拔高 | P1 | ✅ 是 | ✅ 是 | - | 阅读讲义按基础讲解、知识拔高、易错辨析、练习导向生成，并标注参考来源 |
+| LP-31 | GraphRAG 工作台式知识图谱界面 | P0 | ✅ 是 | ✅ 是 | - | 固定顶栏 + 图库/导入/问答侧栏 + 常驻 D3 图谱画布；支持 PDF/DOCX/PPTX 构建并保留 KG→Path 链路；Playwright 已通过 |
 
 ### JSON 版
 
@@ -366,6 +367,11 @@ useEffect(() => {
       "description": "数据结构参考讲义与知识拔高",
       "completed": true, "passed": true, "user_feedback": null,
       "notes": "2026-07-09 已完成：新增 knowledge_lecture_builder，根据数据结构复习资料和 CK_0ff 复习笔记的章节索引为知识点构建讲义提示词；线性表等知识点输出基础讲解、知识拔高、易错辨析、练习导向、自测清单和参考来源；无 DeepSeek/Qwen 配置时生成资料参考讲义，有配置时调用模型生成个性化 Markdown 讲义；前端统一为阅读讲义文案。"
+    },
+    "LP-31_knowledge_graph_workspace": {
+      "description": "GraphRAG 工作台式知识图谱界面",
+      "completed": true, "passed": true, "user_feedback": null,
+      "notes": "2026-07-10 已完成并通过 Playwright：KnowledgeGraphPage 改为固定顶栏、图库/导入/问答侧栏和常驻 D3 图谱画布；测试账号真实图谱渲染 57 个节点，RAG 面板正常；知识点导航和携带 subjectId 生成学习路径链路通过；知识图谱上传新增 DOCX/PPTX 文本解析，旧版 DOC/PPT 中文另存提示与禁用状态通过。"
     }
   }
 }
@@ -504,12 +510,13 @@ LearningPathPage DashboardScreen：
 | API客户端 | `frontend/src/api/path.ts` | ✅ generatePath / checkApi / submitStyleAssessment |
 | 路径页面 | `frontend/src/pages/LearningPathPage.tsx` | ✅ CreateScreen: checkApi→StyleModal→generatePath→预览 |
 
-### 2.7 PDF 知识图谱构建页
+### 2.7 知识图谱工作台与文档构建
 
 | 组件 | 文件 | 状态 |
 |------|------|------|
-| KG构建页 | `frontend/src/pages/KnowledgeGraphPage.tsx` | ✅ 拖拽上传 + 异步进度轮询 + KG列表 |
-| 后端端点 | `app/api/endpoints/knowledge_graph.py` | ✅ upload / status / list |
+| KG工作台 | `frontend/src/pages/KnowledgeGraphPage.tsx` | ✅ 图库/导入/问答侧栏 + 常驻 D3 画布 + 异步进度轮询 |
+| 工作台样式 | `frontend/src/pages/KnowledgeGraphPage.css` | ✅ GraphRAG 式固定顶栏与分栏布局，含移动端适配 |
+| 后端端点 | `app/api/endpoints/knowledge_graph.py` | ✅ upload / status / list / graph / chat；PDF/DOCX/PPTX 解析 |
 
 ---
 

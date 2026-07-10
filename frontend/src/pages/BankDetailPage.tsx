@@ -6,7 +6,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
 import 'katex/dist/katex.min.css'
-import { ArrowLeftIcon, PlayIcon, BookmarkIcon, FileTextIcon, BarChartIcon, BookIcon, ChevronUpIcon, ChevronDownIcon, CloseIcon, AlertTriangleIcon, EditIcon, BookOpenIcon, EyeIcon, BotIcon, CheckCircleIcon, CheckIcon, FileIcon, LinkIcon } from '../components/Icons'
+import { ArrowLeftIcon, PlayIcon, PlusIcon, BookmarkIcon, FileTextIcon, BarChartIcon, BookIcon, ChevronUpIcon, ChevronDownIcon, CloseIcon, AlertTriangleIcon, EditIcon, BookOpenIcon, EyeIcon, BotIcon, CheckCircleIcon, CheckIcon, FileIcon, LinkIcon } from '../components/Icons'
 import { QTYPE_LABELS, DIFF_LABELS } from '../constants/labels'
 
 /* ── 常量映射 ── */
@@ -285,6 +285,12 @@ export default function BankDetailPage() {
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--app-text-muted)' }}>加载中...</div>
   if (!bank) return null
 
+  // 代码题库直接跳转到编程练习界面
+  if (bank.name.includes('代码')) {
+    navigate('/coding-practice', { replace: true })
+    return null
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', padding: '24px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
@@ -296,14 +302,32 @@ export default function BankDetailPage() {
             <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--app-text-heading)', margin: '8px 0 2px' }}>{bank.name}</h1>
             <span style={{ fontSize: '13px', color: 'var(--app-text-muted)' }}>{totalQuestions} 道题</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => navigate(`/banks/${bankId}/practice${pointParam ? `?point=${pointParam}` : ''}`)}
-              style={{ padding: '10px 24px', background: 'var(--app-success)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-              <PlayIcon size={14} color="#fff" /> {pointParam ? '知识点练习' : '练习'}
+              style={{
+                padding: '10px 22px', background: 'linear-gradient(135deg, #10B981, #34D399)',
+                color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 600,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px',
+                boxShadow: '0 3px 12px rgba(16, 185, 129, 0.28)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(16, 185, 129, 0.38)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(16, 185, 129, 0.28)'; }}
+            >
+              <PlayIcon size={15} color="#fff" /> 开始练习
             </button>
             <button onClick={() => { setEditQuestion(null); setShowEditor(true) }}
-              style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-              + 新建题目
+              style={{
+                padding: '10px 22px', background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+                color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 600,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px',
+                boxShadow: '0 3px 12px rgba(59, 130, 246, 0.28)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(59, 130, 246, 0.38)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(59, 130, 246, 0.28)'; }}
+            >
+              <PlusIcon size={15} color="#fff" /> 新建题目
             </button>
           </div>
         </div>
@@ -370,9 +394,13 @@ export default function BankDetailPage() {
                   {/* 1-缩进：领域/章节 */}
                   <div style={{
                     padding: '14px 20px 14px 36px', display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', borderTop: '1px solid #F9FAFB', background: expandedDomain === domain.id ? 'var(--app-bg-card-alt)' : 'transparent',
+                    alignItems: 'center', borderTop: '1px solid #F9FAFB', borderLeft: '3px solid transparent',
+                    background: expandedDomain === domain.id ? 'var(--app-bg-card-alt)' : 'transparent',
                     transition: 'all 0.2s ease',
-                  }}>
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderLeftColor = 'var(--app-primary)'; e.currentTarget.style.background = expandedDomain === domain.id ? 'var(--app-bg-card-alt)' : 'var(--app-bg-page)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderLeftColor = 'transparent'; e.currentTarget.style.background = expandedDomain === domain.id ? 'var(--app-bg-card-alt)' : 'transparent' }}
+                  >
                     <div onClick={() => {
                       if (expandedDomain === domain.id) { setExpandedDomain(null); setExpandedPoint(null) }
                       else { setExpandedDomain(domain.id); setExpandedPoint(null); loadPoints(domain.id) }
@@ -397,7 +425,7 @@ export default function BankDetailPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                       {/* Quick practice button */}
-                      <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bankId}/practice`) }}
+                      <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bankId}/practice?domain_ids=${encodeURIComponent(domain.id)}&domain_name=${encodeURIComponent(domain.name)}`) }}
                         style={{ padding: '3px 10px', fontSize: '11px', background: '#ECFDF5', color: 'var(--app-success)', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         <PlayIcon size={10} color="#10B981" /> 专项刷题
                       </span>
@@ -425,9 +453,13 @@ export default function BankDetailPage() {
                             {/* 2-缩进：知识点 */}
                             <div style={{
                               padding: '10px 20px 10px 52px', display: 'flex', justifyContent: 'space-between',
-                              alignItems: 'center', borderTop: '1px solid #F9FAFB',
+                              alignItems: 'center', borderTop: '1px solid #F9FAFB', borderLeft: '3px solid transparent',
                               background: expandedPoint === point.id ? 'rgba(30,58,138,0.04)' : 'transparent',
-                            }}>
+                              transition: 'all 0.15s ease',
+                            }}
+                              onMouseEnter={e => { if (expandedPoint !== point.id) e.currentTarget.style.borderLeftColor = 'var(--app-primary)' }}
+                              onMouseLeave={e => { if (expandedPoint !== point.id) e.currentTarget.style.borderLeftColor = 'transparent' }}
+                            >
                               <div onClick={() => setExpandedPoint(expandedPoint === point.id ? null : point.id)}
                                 style={{ cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ fontSize: '13px', color: '#4B5563' }}>{point.name}</span>

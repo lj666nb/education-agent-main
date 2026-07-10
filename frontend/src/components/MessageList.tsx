@@ -702,21 +702,35 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             {message.role === 'assistant' && message.reasoning_content && enableThinking && (
               <div style={{ marginBottom: 'var(--space-3)', fontSize: '0.875rem' }}>
                 {isLoading ? (
-                  <div style={{
+                  <details open style={{
                     padding: 'var(--space-3)',
                     borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--warning-bg)',
-                    color: 'var(--gray-800)',
-                    border: '1px solid oklch(from var(--warning) l c h / 0.3)',
+                    backgroundColor: 'oklch(0.98 0.02 260 / 0.5)',
+                    border: '1px solid oklch(0.55 0.18 200 / 0.2)',
                   }}>
-                    <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <Brain size={16} /> AI 深度思考中，请稍候...
+                    <summary style={{
+                      cursor: 'pointer', color: 'var(--primary)', fontWeight: 600,
+                      display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                      padding: 'var(--space-1) 0',
+                    }}>
+                      <Brain size={16} /> 深度思考中...
+                    </summary>
+                    <div style={{
+                      padding: 'var(--space-3)',
+                      marginTop: 'var(--space-2)',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'oklch(0.98 0.02 260 / 0.3)',
+                      color: 'var(--gray-700)',
+                      border: '1px solid oklch(0.55 0.18 200 / 0.1)',
+                      lineHeight: 1.7,
+                    }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.reasoning_content}</ReactMarkdown>
                     </div>
-                  </div>
+                  </details>
                 ) : (
-                  <details>
+                  <details open>
                     <summary style={{ cursor: 'pointer', color: 'var(--gray-500)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <Brain size={16} /> 深度思考（点击查看）
+                      <Brain size={16} /> 深度思考（点击收起）
                     </summary>
                     <div style={{
                       padding: 'var(--space-3)',

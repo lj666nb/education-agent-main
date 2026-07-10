@@ -1,93 +1,210 @@
-import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, BookOpen, CheckCircle2, Code2, Layers3, Search } from 'lucide-react'
 import ProblemTree from '../components/coding/ProblemTree'
 import CodePlayground from '../components/coding/CodePlayground'
-import { codingApi, type DomainNode, type CodingProblemResponse } from '../api/coding'
+import { codingApi, type CodingProblemResponse, type DomainNode } from '../api/coding'
+import TutorChat from '../components/notes/TutorChat'
+import type { NoteChapter, NoteSection } from '../components/notes/ds-notes'
+import './CodingPracticePage.css'
 
 export default function CodingPracticePage() {
-  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { problemId } = useParams()
+  const [searchParams] = useSearchParams()
+  const legacyProblemId = searchParams.get('problem')
+  const selectedId = problemId || legacyProblemId
+
   const [domains, setDomains] = useState<DomainNode[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('problem'))
   const [problem, setProblem] = useState<CodingProblemResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loadingTree, setLoadingTree] = useState(true)
+  const [loadingProblem, setLoadingProblem] = useState(false)
   const [searchText, setSearchText] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    codingApi.getTree().then((res: any) => {
-      setDomains(res.data?.domains || [])
-    }).catch(() => {}).finally(() => setLoading(false))
+    if (legacyProblemId && !problemId) {
+      navigate(`/coding-practice/problems/${legacyProblemId}`, { replace: true })
+    }
+  }, [legacyProblemId, navigate, problemId])
+
+  const loadTree = useCallback(() => {
+    setLoadingTree(true)
+    setError('')
+    codingApi.getTree(undefined, 'oj_curated')
+      .then((res) => setDomains(res.data?.domains || []))
+      .catch(() => setError('代码题目录加载失败，请稍后重试'))
+      .finally(() => setLoadingTree(false))
   }, [])
 
   useEffect(() => {
-    if (selectedId) {
+    loadTree()
+  }, [loadTree])
+
+  useEffect(() => {
+    if (!selectedId) {
       setProblem(null)
-      codingApi.getProblem(selectedId).then((res: any) => setProblem(res.data)).catch(() => setProblem(null))
+      return
     }
+
+    setLoadingProblem(true)
+    setProblem(null)
+    setError('')
+    codingApi.getProblem(selectedId)
+      .then((res) => setProblem(res.data))
+      .catch(() => setError('题目加载失败，请返回目录重新选择'))
+      .finally(() => setLoadingProblem(false))
   }, [selectedId])
 
-  return (
-    <div style={{
-      display: 'flex', height: 'calc(100vh - 52px)',
-      background: 'var(--app-bg-page)',
-    }}>
-      {/* 左侧目录树 */}
-      <div style={{
-        width: 260, minWidth: 260,
-        borderRight: '1px solid var(--app-border)',
-        background: 'var(--app-bg-card)',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--app-border)' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: 6,
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--app-text-heading)' }}>
-              数据结构推演题库
-            </span>
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--app-text-secondary)', fontSize: 12,
-              }}
-            >
-              返回
-            </button>
-          </div>
-          <input
-            type="text"
-            placeholder="搜索题目..."
-            value={searchText}
-            onChange={e => setSearchText(e.target.value)}
-            style={{
-              width: '100%', padding: '5px 10px', borderRadius: 6,
-              border: '1px solid var(--app-border)',
-              background: 'var(--app-bg-page)', color: 'var(--app-text)',
-              fontSize: 12, outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-        {loading ? (
-          <div style={{ padding: 20, color: 'var(--app-text-secondary)', fontSize: 13 }}>
-            加载中...
-          </div>
+  const totals = useMemo(() => {
+    const totalProblems = domains.reduce((sum, domain) => sum + domain.total_problems, 0)
+    const completedProblems = domains.reduce((sum, domain) => sum + domain.completed_count, 0)
+    const pointCount = domains.reduce((sum, domain) => sum + domain.points.length, 0)
+    return { totalProblems, completedProblems, pointCount }
+  }, [domains])
+
+  const tutorChapter: NoteChapter = {
+    id: 'curated-code-practice',
+    title: '数据结构代码题库',
+    icon: '</>',
+    sections: [],
+  }
+
+  const tutorSection: NoteSection | null = problem ? {
+    id: problem.id,
+    title: problem.title,
+    content: [
+      problem.content?.description,
+      problem.content?.input_format ? `输入：${problem.content.input_format}` : '',
+      problem.content?.output_format ? `输出：${problem.content.output_format}` : '',
+      problem.content?.constraints ? `约束：${problem.content.constraints}` : '',
+    ].filter(Boolean).join('\n\n'),
+  } : null
+
+  if (selectedId) {
+    return (
+      <div className="coding-practice-workspace">
+        {loadingProblem ? (
+          <CenteredState text="正在加载题目..." />
+        ) : problem ? (
+          <CodePlayground problem={problem} onBack={() => navigate('/coding-practice')} />
         ) : (
-          <ProblemTree
-            domains={domains}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            searchText={searchText}
+          <CenteredState
+            text={error || '未找到这道代码题'}
+            actionLabel="返回题目目录"
+            onAction={() => navigate('/coding-practice')}
           />
         )}
+        <TutorChat chapter={tutorChapter} section={tutorSection} />
       </div>
+    )
+  }
 
-      {/* 右侧编辑区 */}
-      <div style={{ flex: 1, padding: 16, overflow: 'hidden' }}>
-        <CodePlayground problem={problem} />
-      </div>
+  return (
+    <div className="coding-practice-page">
+      <main className="coding-practice-main">
+        <div className="coding-practice-topbar">
+          <button type="button" className="coding-practice-back" onClick={() => navigate('/home')}>
+            <ArrowLeft size={16} />
+            返回首页
+          </button>
+        </div>
+
+        <section className="coding-practice-hero">
+          <div className="coding-practice-intro">
+            <div className="coding-practice-eyebrow">
+              <BookOpen size={16} />
+              数据结构 · 在线编程训练
+            </div>
+            <h1>从“知道概念”到“能独立写出代码”</h1>
+            <p>
+              每个知识点最多收录 3 道题，按简单、中等、困难各一题递进。进入题目后先读清目标、输入输出和边界条件，再运行公开样例，最后提交隐藏测试判题。
+            </p>
+            <div className="coding-practice-flow" aria-label="做题流程">
+              <span>1 阅读题意</span>
+              <span>2 编写代码</span>
+              <span>3 运行样例</span>
+              <span>4 提交判题</span>
+            </div>
+          </div>
+
+          <div className="coding-practice-metrics" aria-label="练习进度">
+            <Metric icon={<CheckCircle2 size={18} />} label="已通过" value={`${totals.completedProblems}/${totals.totalProblems}`} />
+            <Metric icon={<Layers3 size={18} />} label="知识点" value={`${totals.pointCount}`} />
+            <Metric icon={<Code2 size={18} />} label="题目数" value={`${totals.totalProblems}`} />
+          </div>
+        </section>
+
+        <section className="coding-practice-catalog">
+          <div className="coding-practice-catalog-head">
+            <div>
+              <div className="coding-practice-catalog-title">
+                <Code2 size={18} />
+                选择一道题开始练习
+              </div>
+              <p>按知识点查看三档难度，圆点状态会记录你的真实提交进度。</p>
+            </div>
+            <label className="coding-practice-search">
+              <Search size={16} aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="搜索题目或知识点"
+                placeholder="搜索题目或知识点"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+              />
+            </label>
+          </div>
+
+          {loadingTree ? (
+            <CenteredState text="正在加载代码题目录..." compact />
+          ) : error ? (
+            <CenteredState text={error} actionLabel="重新加载" onAction={loadTree} compact />
+          ) : domains.length === 0 ? (
+            <CenteredState text="暂无可练习的代码题，请先联系管理员初始化题库" compact />
+          ) : (
+            <ProblemTree
+              domains={domains}
+              selectedId={null}
+              onSelect={(id) => navigate(`/coding-practice/problems/${id}`)}
+              searchText={searchText}
+            />
+          )}
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="coding-practice-metric">
+      <span className="coding-practice-metric-icon">{icon}</span>
+      <span>
+        <small>{label}</small>
+        <strong>{value}</strong>
+      </span>
+    </div>
+  )
+}
+
+function CenteredState({
+  text,
+  actionLabel,
+  onAction,
+  compact = false,
+}: {
+  text: string
+  actionLabel?: string
+  onAction?: () => void
+  compact?: boolean
+}) {
+  return (
+    <div className={`coding-practice-state${compact ? ' is-compact' : ''}`}>
+      <span>{text}</span>
+      {actionLabel && onAction && (
+        <button type="button" onClick={onAction}>{actionLabel}</button>
+      )}
     </div>
   )
 }

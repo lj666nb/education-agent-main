@@ -114,15 +114,6 @@ function IconStats({ size = 20 }: { size?: number }) {
   )
 }
 
-function IconCode({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  )
-}
-
 function IconSettings({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -188,12 +179,11 @@ const topNavItems: NavItem[] = [
   { label: '首页', path: '/home', icon: <IconHome />, end: true },
   { label: 'AI 对话', path: '/chat/new', icon: <IconChat /> },
   { label: '智能题库', path: '/banks', icon: <IconBank /> },
-  { label: '编程推演', path: '/coding-practice', icon: <IconCode /> },
   { label: '学习画像', path: '/profile/dynamic', icon: <IconProfile /> },
   { label: '复习中心', path: '/review', icon: <IconReview /> },
   { label: '知识图谱', path: '/knowledge-graph', icon: <IconKnowledgeGraph /> },
   { label: '知识点总览', path: '/knowledge-points', icon: <IconKnowledgePoint /> },
-  { label: '数据结构笔记', path: '/recommendations', icon: <IconRecommend /> },
+  { label: '学科笔记', path: '/recommendations', icon: <IconRecommend /> },
   { label: '学习路径', path: '/path', icon: <IconPath /> },
   { label: '学习分析', path: '/stats', icon: <IconStats /> },
   { label: 'API 设置', path: '/settings/api', icon: <IconSettings /> },
@@ -203,12 +193,13 @@ const topNavItems: NavItem[] = [
    SidebarNav Component
    ═══════════════════════════════════════════════════════════ */
 export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => void }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
+  const [hovered, setHovered] = useState(false)
   const { user, logout } = useAuthStore()
   const { theme, toggle: toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
-  const isCollapsed = collapsed
+  const isCollapsed = collapsed && !hovered
 
   // 从 API 获取最新头像 URL
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -317,6 +308,8 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
       `}</style>
 
       <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           width: sidebarW,
           height: '100vh',
@@ -649,9 +642,9 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
           </div>
         )}
 
-        {/* ═══ Collapse Toggle Button ═══ */}
+        {/* ═══ Pin Toggle Button ═══ */}
         <button
-          onClick={() => setCollapsed(!isCollapsed)}
+          onClick={() => setCollapsed(!collapsed)}
           style={{
             position: 'absolute',
             right: -14,
@@ -681,9 +674,9 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
             e.currentTarget.style.borderColor = BORDER_LIGHT
             e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)'
           }}
-          title={isCollapsed ? '展开侧栏' : '收起侧栏'}
+          title={collapsed ? '固定侧栏' : '取消固定'}
         >
-          {isCollapsed ? <IconExpand /> : <IconCollapse />}
+          {collapsed ? <IconExpand /> : <IconCollapse />}
         </button>
       </aside>
     </>

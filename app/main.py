@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.db.database import Base, engine
+from app.db.migration_runner import apply_required_migrations
 from app.api.endpoints import auth, profile, profile_v2, chat, project, api_settings, ocr, files, question_bank, exam_paper, path, resources, video_resources, cloud_drive, code_execution, recommend, dashboard, recommendations, agent, review, knowledge_graph, notes_tutor, coding
 from app.models.api_settings import ApiSettings
 from app.models.question_bank import Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, ExamPaper
@@ -121,6 +122,7 @@ def _check_database():
 async def lifespan(app: FastAPI):
     _check_database()
     Base.metadata.create_all(bind=engine)
+    apply_required_migrations(engine)
     # 启动时自动加载种子数据（幂等，已存在则跳过）
     try:
         seed_database()

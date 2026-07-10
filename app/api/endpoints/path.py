@@ -616,6 +616,256 @@ async def generate_review_material(
         raise HTTPException(status_code=502, detail=f"生成阅读讲义失败: {str(e)[:200]}")
 
 
+class BatchReviewRequest(BaseModel):
+    point_ids: List[str] = []  # 空列表表示自动发现所有空阅读讲义的知识点
+
+
+class BatchReviewItem(BaseModel):
+    point_id: str
+    point_name: str
+    success: bool
+    content: str = ""
+    message: str = ""
+
+
+class BatchReviewResponse(BaseModel):
+    total_found: int  # 总共发现空阅读讲义的知识点数
+    generated: int  # 成功生成的数量
+    failed: int  # 失败的数量
+    items: List[BatchReviewItem] = []
+
+
+@router.post("/knowledge/batch-review-materials", response_model=BatchReviewResponse)
+async def batch_generate_review_materials(
+    body: BatchReviewRequest = BatchReviewRequest(),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """批量生成知识点阅读讲义
+
+    如果 point_ids 为空，则自动发现用户学习路径中所有 review_material 为空的知识点，
+    逐个调用 LLM 生成阅读讲义。
+    """
+    import httpx
+
+    user_id = str(current_user.student_id)
+
+    # ── 自动发现空阅读讲义的知识点 ──
+    if not body.point_ids:
+        # 从用户活跃路径状态中获取所有知识点
+        active_states = (
+            db.query(LearningPathState)
+            .filter(
+                LearningPathState.user_id == user_id,
+                LearningPathState.phase != "completed",
+            )
+            .order_by(LearningPathState.updated_at.desc())
+            .all()
+        )
+
+        discovered_ids = set()
+        for state in active_states:
+            for item in (state.node_order or []):
+                nid = item.get("node_id", "")
+                if nid:
+                    discovered_ids.add(nid)
+
+        if not discovered_ids:
+            return BatchReviewResponse(total_found=0, generated=0, failed=0, items=[])
+
+        # 检查哪些知识点的 review_material 为空
+        empty_ids = []
+        empty_names = {}
+        for nid in discovered_ids:
+            try:
+                pid = UUID(nid) if len(nid) == 36 else nid
+            except Exception:
+                continue
+            point = db.query(KnowledgePoint).filter(KnowledgePoint.id == pid).first()
+            if not point:
+                continue
+            record = (
+                db.query(KnowledgePointRecord)
+                .filter(
+                    KnowledgePointRecord.user_id == user_id,
+                    KnowledgePointRecord.point_id == pid,
+                )
+                .first()
+            )
+            if not record or not record.review_material:
+                empty_ids.append(nid)
+                empty_names[nid] = point.name
+
+        body.point_ids = empty_ids
+        if not body.point_ids:
+            return BatchReviewResponse(total_found=0, generated=0, failed=0, items=[])
+
+        # Store names for response
+        point_names = empty_names
+    else:
+        # 用户指定了知识点列表，需要获取名称
+        point_names = {}
+        for nid in body.point_ids:
+            try:
+                pid = UUID(nid) if len(nid) == 36 else nid
+            except Exception:
+                continue
+            point = db.query(KnowledgePoint).filter(KnowledgePoint.id == pid).first()
+            if point:
+                point_names[nid] = point.name
+
+    llm_config = _get_lecture_llm_config(db, user_id)
+
+    items: list[BatchReviewItem] = []
+    generated = 0
+    failed = 0
+
+    for nid in body.point_ids:
+        try:
+            pid = UUID(nid) if len(nid) == 36 else nid
+        except Exception:
+            items.append(BatchReviewItem(
+                point_id=nid, point_name=nid,
+                success=False, message="无效的知识点ID",
+            ))
+            failed += 1
+            continue
+
+        point = db.query(KnowledgePoint).filter(KnowledgePoint.id == pid).first()
+        if not point:
+            items.append(BatchReviewItem(
+                point_id=nid, point_name=nid,
+                success=False, message="知识点不存在",
+            ))
+            failed += 1
+            continue
+
+        pname = point_names.get(nid, point.name)
+        domain_name = point.domain.name if point.domain else ""
+        subject_name = point.domain.subject.name if point.domain and point.domain.subject else ""
+        description = point.description or ""
+
+        if not llm_config:
+            # 使用资料参考模式
+            content = build_source_based_lecture(
+                subject_name=subject_name,
+                domain_name=domain_name,
+                point_name=point.name,
+                description=description,
+            )
+            _save_review_material(
+                db, user_id=current_user.student_id,
+                point_id=pid, point_name=point.name, content=content,
+            )
+            items.append(BatchReviewItem(
+                point_id=nid, point_name=pname,
+                success=True, content=content,
+                message="资料参考模式（未配置LLM）",
+            ))
+            generated += 1
+            continue
+
+        # LLM 模式
+        prompt = build_lecture_prompt(
+            subject_name=subject_name,
+            domain_name=domain_name,
+            point_name=point.name,
+            description=description,
+        )
+
+        try:
+            chat_url = f"{llm_config['base_url'].rstrip('/')}/chat/completions"
+            async with httpx.AsyncClient(timeout=120) as client:
+                r = await client.post(
+                    chat_url,
+                    headers={
+                        "Authorization": f"Bearer {llm_config['api_key']}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": llm_config["model"],
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "你是数据结构课程讲义编写助手，只输出 Markdown 阅读讲义。",
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        "temperature": 0.45,
+                        "max_tokens": 4096,
+                    },
+                )
+            if r.status_code == 200:
+                payload = r.json()
+                content = payload["choices"][0]["message"]["content"].strip()
+                if not content:
+                    raise Exception("模型返回内容为空")
+
+                # 后处理：[DRAWIO] 块 → PNG 图片
+                if "[DRAWIO]" in content:
+                    import re as _re
+                    def _render_drawio(match):
+                        xml = match.group(1).strip()
+                        xml = _re.sub(r'^```[a-zA-Z]*\n?', '', xml)
+                        xml = _re.sub(r'\n?```$', '', xml)
+                        if not xml.strip():
+                            return "\n\n> ⚠️ 图表内容为空\n\n"
+                        try:
+                            from app.services.drawio_export import save_drawio_png
+                            png_url, _ = save_drawio_png(xml)
+                            if png_url:
+                                return f"\n\n![图表]({png_url})\n\n"
+                        except Exception:
+                            pass
+                        return match.group(0)
+                    content = _re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _render_drawio, content)
+
+                _save_review_material(
+                    db, user_id=current_user.student_id,
+                    point_id=pid, point_name=point.name, content=content,
+                )
+                items.append(BatchReviewItem(
+                    point_id=nid, point_name=pname,
+                    success=True, content=content,
+                    message=f"LLM ({llm_config['provider']}) 生成成功",
+                ))
+                generated += 1
+            else:
+                raise Exception(f"LLM 返回状态码 {r.status_code}")
+        except Exception as e:
+            # Fallback: use source-based lecture when LLM fails
+            try:
+                content = build_source_based_lecture(
+                    subject_name=subject_name,
+                    domain_name=domain_name,
+                    point_name=point.name,
+                    description=description,
+                )
+                _save_review_material(
+                    db, user_id=current_user.student_id,
+                    point_id=pid, point_name=point.name, content=content,
+                )
+                items.append(BatchReviewItem(
+                    point_id=nid, point_name=pname,
+                    success=True, content=content,
+                    message=f"资料参考模式（LLM失败回退: {str(e)[:50]}）",
+                ))
+                generated += 1
+            except Exception as fe:
+                items.append(BatchReviewItem(
+                    point_id=nid, point_name=pname,
+                    success=False, message=f"生成失败: {str(fe)[:150]}",
+                ))
+                failed += 1
+
+    return BatchReviewResponse(
+        total_found=len(body.point_ids),
+        generated=generated,
+        failed=failed,
+        items=items,
+    )
+
+
 class AssessResultRequest(BaseModel):
     answers: list  # [{question_id: str, user_choice: str}]
 

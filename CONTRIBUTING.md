@@ -523,3 +523,205 @@ PPT/Word 文档解析支持上传和自动分块索引。RAG 参考来源在 AI 
   - `test_script/screenshot-lecture-map.png`
   - `test_script/screenshot-lecture-flow-generated.png`
   - `test_script/screenshot-lecture-direct-generated.png`
+
+---
+
+## 2026-07-10 - 图码来源数据结构代码题库
+
+### 背景
+
+用户希望将“数据结构过程推演题目”替换为来自图码（totuma.cn）的代码题，并按 LeetCode 学习计划式目录展示；题目详情参考图码算法页布局，交换代码区与可视化区，增加代码可视化编辑器、标准答案和右下角智能导师。
+
+### 变更
+
+- `app/seed_data/data_structures_seed.json`
+  - 将“数据结构过程推演题库”替换为 58 道 `totuma_coding` 编程题。
+  - 每题保留 `source_url`、图码来源标识、可视化初始状态、Python/C++ 标准答案。
+- `app/scripts/build_totuma_coding_seed.py`
+  - 新增可复用生成脚本，用稳定 UUID 从图码目录生成代码题 seed。
+- `app/api/endpoints/coding.py` / `app/schemas/coding.py`
+  - 编程题详情返回 `answer` 与 `source`。
+  - 默认学科按“数据结构”名称解析，兼容新旧 seed 主键。
+- `frontend/src/pages/CodingPracticePage.tsx`
+  - 页面标题更新为“数据结构代码题库”，只加载 `source=totuma_coding`。
+  - 自动选中第一题，接入数据结构笔记页同款右下角 AI 编程导师。
+- `frontend/src/components/coding/ProblemTree.tsx`
+  - 改为学习计划式章节目录：章节进度、知识点分组、题目状态与难度标签。
+- `frontend/src/components/coding/CodePlayground.tsx`
+  - 题目详情重排为左侧代码可视化编辑器、右侧代码/标准答案编辑器。
+  - 支持编辑可视化 JSON、查看运行推演状态、切换标准答案。
+
+### 验证
+
+- `python -X utf8 -m py_compile app/schemas/coding.py app/api/endpoints/coding.py app/scripts/seed.py app/scripts/build_totuma_coding_seed.py` 通过。
+- `git diff --check` 通过。
+- `/api/v1/coding/tree?source=totuma_coding` 返回 8 个章节、58 道题；题目详情包含 `answer.standard_answer.python`。
+- `npm run build` 仍被既有问题阻塞：
+  - `src/components/KnowledgeGraphViz.tsx(355,61): Property 'radius' does not exist on type 'SimulationNodeDatum'`
+  - `src/components/MermaidRenderer.tsx(2,21): Cannot find module 'mermaid'`
+  - `src/components/path/LeetBookExploreMap.tsx(330,82): Cannot find name 'weak'`
+- Docker 已执行 `docker-compose up -d` 并重启 `backend`、`frontend`。
+- Playwright 使用 `guoketg / 123456` 登录，打开 `/coding-practice`，确认目录、图码来源、代码可视化编辑器、标准答案、来源链接、右下角 AI 编程导师均正常；Monaco 编辑器加载完成且无页面错误。截图：
+  - `test_script/screenshot-totuma-coding-page.png`
+  - `test_script/screenshot-totuma-coding-answer.png`
+  - `test_script/screenshot-totuma-coding-agent.png`
+  - `test_script/screenshot-totuma-coding-editor-loaded.png`
+
+---
+
+## 2026-07-10 - 数据结构代码题库目录页与 LeetCode 风格做题页
+
+### 背景
+
+用户希望点击题库里的“数据结构代码题库”后，先进入类似 LeetCode 学习计划的题目目录页；只有点击某道代码题后，才进入类似 LeetCode 题目详情的写代码界面。做题页需要把可视化编辑器放在题目介绍下面，并自动显示当前编辑代码的可视化结果。
+
+### 变更
+
+- `frontend/src/pages/CodingPracticePage.tsx`
+  - `/coding-practice` 改为独立目录页，不再自动选中第一题。
+  - 旧的 `?problem=` 参数会重定向到 `/coding-practice/problems/:problemId`。
+  - 目录页中间展示学习计划式题目目录、章节数、知识点数、完成进度和搜索框。
+- `frontend/src/App.tsx`
+  - 注册 `/coding-practice/problems/:problemId` 受保护路由。
+- `frontend/src/components/coding/ProblemTree.tsx`
+  - 改为居中的学习计划目录样式：章节展开、知识点分组、题目状态、难度标签。
+- `frontend/src/components/coding/CodePlayground.tsx`
+  - 做题页改为左侧题面/可视化、右侧代码编辑器的分栏布局。
+  - 可视化区放在题目介绍和示例下方，默认开启自动可视化，代码停顿后触发分析刷新画布。
+  - 保留手动“运行可视化”、标准答案切换、完成记录提交。
+- `frontend/src/components/coding/VisualizationCanvas.tsx` / `StepController.tsx`
+  - 修复乱码文案和语法风险，增强数组、栈、队列、链表、树、图的画布渲染。
+- `frontend/package.json` / `frontend/package-lock.json`
+  - 补齐既有 `MermaidRenderer` 依赖的 `mermaid` 包，使前端构建可解析该模块。
+- `frontend/src/components/KnowledgeGraphViz.tsx`
+  - 修复 `forceCollide` 泛型缺失导致的 TypeScript 类型错误。
+- `Dockerfile.backend`
+  - 将 `BACKEND_PORT` 从 build arg 同步为运行时环境变量，修复重建后 uvicorn 端口参数为空的问题。
+
+### 验证
+
+- `npm run build` 通过。
+- `npx tsc --noEmit --pretty false` 通过。
+- 已执行 `docker-compose up -d --build frontend`、`docker-compose up -d --build backend`、`docker-compose restart frontend`，当前服务：
+  - 前端：`http://localhost:3000`
+  - 后端：`http://localhost:8000`
+- Playwright 使用 `guoketg / 123456` 登录，完成完整链路：
+  - 打开 `/coding-practice`，目录页加载 58 道题。
+  - 点击第一道题跳转到 `/coding-practice/problems/d785f6d5-7b0e-5c7a-b61d-65d2314b222a`。
+  - 做题页出现可视化区、运行按钮、Monaco 编辑器和 canvas，控制台/pageerror 错误数为 0。
+  - 截图：
+    - `test_script/screenshot-coding-directory.png`
+    - `test_script/screenshot-coding-problem.png`
+
+---
+
+## 2026-07-10 - 做题页标签切换、测试结果与可视化同级化
+
+### 背景
+
+用户希望代码题详情进一步对齐力扣题目页：左侧需要支持“题目描述 / 题解 / 提交记录”的切换，并把“可视化编辑器”提升为同级标签；右侧代码区需要提供还原默认代码模板、全屏、运行与测试结果查看。可视化编辑器需要实时自动跟踪用户正在编辑的代码；编程语言选择只放在题解区域。
+
+### 变更
+
+- `frontend/src/components/coding/CodePlayground.tsx`
+  - 左侧改为四个同级标签：题目描述、题解、提交记录、可视化编辑器。
+  - 题解页内提供语言选择，并按当前语言展示标准答案；右侧代码区仅展示当前语言，不再放语言下拉。
+  - 右侧代码工具条新增还原默认代码模板、全屏/退出全屏、测试结果开关、运行、提交。
+  - 接入 `/api/v1/code/execute` 展示 stdout、stderr、退出码、耗时和示例输入/期望输出。
+  - 提交后在“提交记录”标签展示本次练习记录。
+  - 可视化分析不再依赖当前标签，代码变化后会自动跟踪刷新。
+- `frontend/src/components/coding/VisualizationCanvas.tsx`
+  - 清理中文乱码和空态文案，保留数组、栈、队列、链表、树、图的画布渲染。
+- `frontend/src/components/coding/StepController.tsx`
+  - 修复步骤控制按钮中文文案。
+- `frontend/src/components/CodeEditor.tsx`
+  - 修复 Monaco 加载态中文文案。
+- `frontend/src/api/coding.ts`
+  - 修复可视化分析接口失败时的中文错误提示。
+
+### 验证
+
+- `npx tsc --noEmit --pretty false` 通过。
+- `npm run build` 在主体改动后通过；最后补充代码执行关闭的中文提示后，`npx tsc --noEmit --pretty false` 仍通过，重复构建在 Vite transform 阶段长时间无输出后已停止。
+- `git diff --check` 通过，仅有 CRLF 换行提示。
+- 已执行 `docker-compose restart frontend`，前端 `http://localhost:3000` 返回 200。
+- Playwright 使用 `guoketg / 123456` 登录验证：
+  - `/coding-practice` 加载 58 道题。
+  - 点击第一题进入 `/coding-practice/problems/d785f6d5-7b0e-5c7a-b61d-65d2314b222a`。
+  - “题目描述”页没有语言选择，“题解”页有 1 个语言选择。
+  - “可视化编辑器”标签中 canvas 正常渲染。
+  - 点击“运行”后测试结果面板显示中文提示：当前部署未开启代码执行安全沙箱。
+  - 截图：`test_script/screenshot-coding-tabs-result.png`。
+
+---
+
+## 2026-07-10 - 知识图谱改为 GraphRAG 工作台布局
+
+### 背景
+
+知识图谱原页面采用纵向上传表单、图谱列表和全屏弹窗，图谱查看、材料导入与 RAG 问答之间需要频繁切换。此次参考 `GraphRAG-Example-master` 的工作台信息架构，将现有真实业务能力统一到固定顶栏、左侧工具区和右侧图谱画布中。
+
+### 变更
+
+- `frontend/src/pages/KnowledgeGraphPage.tsx`
+  - 改为“图库 / 导入 / 问答”三标签侧栏与常驻 D3 图谱画布。
+  - 页面加载后自动打开第一个可用图谱；切换图库时同步当前学科、节点和关系统计。
+  - 保留真实列表、图谱、RAG SSE、异步构建进度、知识点导航和携带 `subjectId` 的学习路径跳转。
+  - 文件选择器取消 `accept` 限制，改为 JavaScript 校验；旧版 DOC/PPT 显示中文另存提示。
+- `frontend/src/pages/KnowledgeGraphPage.css`
+  - 新增 GraphRAG 式固定顶栏、功能侧栏、全尺寸画布和响应式移动端布局。
+- `app/api/endpoints/knowledge_graph.py`
+  - 知识图谱构建从仅 PDF 扩展为 PDF、DOCX、PPTX。
+  - DOCX 复用统一 Word 解析器，PPTX 按幻灯片抽取文本和表格，统一切分为 RAG 文本块。
+  - 无有效文本、旧版 Office、超大文件和不支持格式均返回中文错误提示。
+- `README.md`、`request/prd-learning-path.md`
+  - 同步知识图谱工作台使用流程、文件格式和 LP-31 双格式状态记录。
+
+### 验证
+
+- `npx tsc` 已通过；完整 Vite 生产打包在项目整体 transform 阶段长时间无新输出后停止，未出现 TypeScript 或本次页面相关错误。
+- `docker-compose up -d`、`docker-compose restart backend frontend` 已执行；前端 3000 端口和后端 API 均可访问。
+- 容器内 `python -m py_compile app/api/endpoints/knowledge_graph.py` 通过；内存构造 DOCX/PPTX 后调用统一解析器均成功生成文本块。
+- Playwright 使用 `guoketg / 123456` 完成真实用户链路：
+  - `/knowledge-graph` 自动打开 1 个可用图谱，D3 画布渲染 57 个真实节点。
+  - 图库、导入、问答三个标签正常；RAG 输入区正常显示。
+  - 文件选择器无 `accept` 属性；选择旧版 DOC 后出现中文另存提示且构建按钮禁用。
+  - 点击画布工具栏“生成学习路径”后进入 `/path?subjectId=d91a4645-ab5f-4819-8379-d9e6524f0937`。
+  - 页面错误、知识图谱接口 5xx、浏览器控制台错误均为 0。
+  - 截图：`test_script/screenshot-kg-workspace.png`、`test_script/screenshot-kg-import-legacy.png`、`test_script/screenshot-kg-chat.png`。
+
+---
+
+## 2026-07-10 - 数据结构代码练习改造为服务端 OJ 闭环
+
+### 背景
+
+原代码练习题面信息不足，学生读完题后缺少明确的实现入口；运行功能没有安全执行环境，提交结果由前端自行判断；可视化又会基于默认数据或延时分析自动生成，无法证明是当前代码的真实执行过程。此次参照主流在线判题流程，并使用牛客网与力扣公开题目的来源元数据，重建从读题、编写、运行到服务端提交的完整业务链路。
+
+### 变更
+
+- `app/seed_data/coding_oj_catalog.py` / `app/scripts/seed.py`
+  - 建立 21 道来源可追溯的数据结构编程题：数组、单链表、栈、队列、哈希表、二叉树遍历、图共 7 个知识点，每点简单/中等/困难各 1 题。
+  - 题目保存来源名称、题号、标题和原题链接；项目内独立编写学习目标、任务步骤、输入输出、样例、约束、边界条件、三级提示、`TODO` 模板和测试用例。
+  - 使用稳定 ID 幂等同步题目及测试数据，归档旧的非精选编程题，避免同知识点同难度重复堆叠。
+- `migrations/013_add_coding_judge.sql` / `app/db/migration_runner.py` / `app/main.py`
+  - 新增编程题主知识点、公开/隐藏测试用例和唯一性约束。
+  - 后端启动时自动、幂等应用所需版本化迁移，已有 Docker 数据卷无需手动执行 SQL。
+- `app/api/endpoints/coding.py` / `app/services/code_judge.py`
+  - 题目详情只返回结构化题面、代码模板和公开样例，不泄露隐藏测试及参考答案。
+  - 新增公开运行、隐藏测试提交、分页提交记录和提交后查看参考解法接口。
+  - 判题结果由服务端根据实际输出计算并保存，旧的客户端自报正确接口停用。
+- `runner/sandbox_runner.py` / `Dockerfile.runner` / `docker-compose.yml`
+  - 增加独立 Python 代码运行容器，后端通过共享 Unix Socket 调用。
+  - 运行器禁用网络、使用只读根文件系统和临时目录，并限制 CPU、内存、进程数、文件与输出大小。
+- `frontend/src/pages/CodingPracticePage.tsx` / `frontend/src/components/coding/CodePlayground.tsx`
+  - 目录按知识点和简单/中等/困难组织，每知识点最多展示 3 题。
+  - 做题页重构为结构化题面、递进提示、草稿自动保存、公开测试、隐藏提交、真实执行轨迹、提交记录和参考解法闭环。
+  - 删除默认业务数据和定时自动生成的伪可视化；代码修改后旧判题结果和轨迹立即失效。
+- `README.md` / `request/prd-6-question-bank-v4.md`
+  - 补充代码练习流程、21 题范围、隔离运行器、Docker 自动迁移及 F20 双格式状态记录。
+
+### 当前验收状态
+
+- 功能代码已实现，PRD 的 F20 标记为 `completed: true`。
+- 本轮自动化回归完成后仍需用户实际体验确认，因此暂记 `passed: false`，`user_feedback: null`；未使用伪造业务数据或预填验收结论。

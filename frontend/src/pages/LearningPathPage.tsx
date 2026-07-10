@@ -26,7 +26,7 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
   const mx = Math.max(1, ...groups.map(g => g.nodes.length))
   const w = 100 + mx * (N_W + GX) + PD * 2, h = groups.length * (N_H + GY) + PD * 2
   const statusColor = (n: PathNodeStatus) => {
-    if (weakMode && (n.mastery_score || 0) < 40) return { bg:'#FEE2E2', bd:'#EF4444', tx:'#991B1B', ba:'#EF4444', label:'薄弱' }
+    if (weakMode && (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50) return { bg:'#FEE2E2', bd:'#EF4444', tx:'#991B1B', ba:'#EF4444', label:'薄弱' }
     if (n.needs_review) return { bg:'#FFFBEB', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'待复习' }
     if (n.status === 'mastered') return { bg:'#D1FAE5', bd:'#6EE7B7', tx:'#166534', ba:'#10B981', label:'已掌握' }
     if (n.status === 'reviewing') return { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'回退复习' }
@@ -630,7 +630,7 @@ export default function LearningPathPage() {
   const groups=useMemo(()=>{const m=new Map<string,PathNodeStatus[]>();nodes.forEach(n=>{const k=n.domain_name||'未分类';if(!m.has(k))m.set(k,[]);m.get(k)!.push(n)});return Array.from(m.entries()).map(([d,nds])=>({domain:d,nodes:nds}))},[nodes])
   const focus=useMemo(()=>nodes.find(n=>n.status==='learning')||nodes.find(n=>n.mastery_score<80),[nodes])
   const phases=useMemo(()=>{const p:[string,PathNodeStatus[]][]=[['基础入门',[]],['强化提升',[]],['巩固复习',[]]];nodes.forEach(n=>{if(n.mastery_score>=80)p[2][1].push(n);else if(n.mastery_score>0)p[1][1].push(n);else p[0][1].push(n)});return p.filter(([,nds])=>nds.length>0).map(([name,nds],i)=>({name,color:['#1677E8','#3B82F6','#10B981'][i],progress:nds.length?Math.round(nds.filter(n=>n.mastery_score>=80).length/nds.length*100):0}))},[nodes])
-  const reviewNodes=useMemo(()=>nodes.filter(n=>n.needs_review||(n.mastery_score||0)<40),[nodes])
+  const reviewNodes=useMemo(()=>nodes.filter(n=>n.needs_review||((n.mastery_score||0) > 0 && (n.mastery_score||0) < 50)),[nodes])
 
   // Close context menu on click outside
   useEffect(()=>{const h=()=>setCtxNode(null);if(ctxNode)document.addEventListener('click',h);return ()=>document.removeEventListener('click',h)},[ctxNode])

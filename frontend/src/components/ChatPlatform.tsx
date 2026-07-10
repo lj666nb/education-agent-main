@@ -1,19 +1,22 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Folder, Code, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
+import { Folder, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
 import Sidebar from './Sidebar'
-import MessageList, { Message } from './MessageList'
+import type { Message } from './MessageList'
 import InputArea, { PastedFile } from './InputArea'
 import { useChatStore } from '../store/chat'
 import { AlertTriangleIcon, ArrowLeftIcon as ChevronLeftIcon, ArrowRightIcon } from './Icons'
 import { chatApi, projectApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 import { resourcesApi } from '../api/resources'
-import DrawioEditor, { type DrawioEditorHandle } from './DrawioEditor'
-import CodeRunnerPanel from './CodeRunnerPanel'
-import DraggableWindow from './DraggableWindow'
+import type { DrawioEditorHandle } from './DrawioEditor'
 import { extractDrawioXml, hasDrawioContent, getDrawioSystemPrompt, stripDiagramDuringStreaming } from '../utils/drawio'
 import { ModelType, DEFAULT_MODEL } from '../constants/models'
+
+// Lazy-loaded heavy components (only loaded when needed)
+const DrawioEditor = lazy(() => import('./DrawioEditor'))
+const DraggableWindow = lazy(() => import('./DraggableWindow'))
+const MessageList = lazy(() => import('./MessageList'))
 
 interface ChatSession {
   id: string
@@ -83,6 +86,50 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
   )
 }
 
+function FloatingLoader({ label }: { label: string }) {
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000, gap: 12,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 8,
+        background: 'linear-gradient(135deg, #1677E8, #38BDF8)',
+        animation: 'skeletonPulse 1.2s ease-in-out infinite',
+      }} />
+      <span style={{ color: '#94A3B8', fontSize: '0.8125rem' }}>{label}</span>
+    </div>
+  )
+}
+
+function ChatSkeleton() {
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+        <SkeletonLine width="60%" />
+        <SkeletonLine width="80%" />
+        <SkeletonLine width="40%" align="flex-end" />
+        <SkeletonLine width="70%" />
+        <SkeletonLine width="50%" align="flex-end" />
+        <SkeletonLine width="90%" />
+      </div>
+    </div>
+  )
+}
+
+function SkeletonLine({ width, align }: { width: string; align?: string }) {
+  return (
+    <div style={{
+      alignSelf: align === 'flex-end' ? 'flex-end' : 'flex-start',
+      width, height: 14, borderRadius: 7,
+      background: '#E5E7EB',
+      opacity: 0.6,
+      animation: 'skeletonPulse 1.6s ease-in-out infinite',
+    }} />
+  )
+}
+
 /* ── Main Component ── */
 
 export default function ChatPlatform() {
@@ -128,14 +175,11 @@ export default function ChatPlatform() {
   const [isCreatingProject, setIsCreatingProject] = useState(false)
   const [availableModels, setAvailableModels] = useState<ModelType[]>([])
   const [noApiConfigured, setNoApiConfigured] = useState(true)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
   const [projectDocuments, setProjectDocuments] = useState<Record<string, ProjectDocument[]>>({})
   const [diagramOpen, setDiagramOpen] = useState(false)
   const [activeDiagramXml, setActiveDiagramXml] = useState<string | null>(null)
   const drawioRef = useRef<DrawioEditorHandle>(null)
-  const [codeRunnerOpen, setCodeRunnerOpen] = useState(false)
-  const [codeRunnerCode, setCodeRunnerCode] = useState('')
-  const [codeRunnerLanguage, setCodeRunnerLanguage] = useState('python')
-  const [codeRunnerKey, setCodeRunnerKey] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
   const sendingRef = useRef(false)
   const sendingChatIdRef = useRef<string | null>(null)
@@ -206,10 +250,12 @@ export default function ChatPlatform() {
 
   useEffect(() => {
     loadSessions()
-    loadProjects()
     loadAvailableModels()
-    loadApiSettings()
-  }, [loadSessions, loadProjects])
+    // loadProjects() — 延迟到用户打开项目面板时才加载
+    // loadApiSettings() — 延迟 2 秒后加载，避免阻塞首屏渲染
+    const timer = setTimeout(() => loadApiSettings(), 2000)
+    return () => clearTimeout(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAvailableModels = async () => {
     try {
@@ -229,6 +275,8 @@ export default function ChatPlatform() {
     } catch (error) {
       console.error('加载可用模型失败:', error)
       setNoApiConfigured(true)
+    } finally {
+      setModelsLoaded(true)
     }
   }
 
@@ -438,11 +486,12 @@ export default function ChatPlatform() {
       const diagramContext = diagramOpen && activeDiagramXml ? `\n\n[Current diagram XML for modification reference:\n${activeDiagramXml}\n]` : ''
 
       // Build system prompt with auto chart/mindmap instructions
-      let systemPrompt = getDrawioSystemPrompt()
+      let systemPrompt = ''
       if (enableAutoChart) {
-        systemPrompt += '\n\n**自动图表模式已开启**：请在每次回复中使用 [PLOT] 代码块生成一张与内容相关的图表（如柱状图、折线图、流程图等），帮助用户可视化理解。'
+        systemPrompt = getDrawioSystemPrompt()
+        systemPrompt += '\n\n**自动图表模式已开启**：请在每次回复中使用 [PLOT] 或 [MERMAID] 代码块生成至少一张与内容相关的图表（如柱状图、折线图、流程图等），帮助用户可视化理解。'
       } else {
-        systemPrompt += '\n\n**重要规则**：当前未开启图表生成功能，你绝对不能使用 [PLOT] 代码块生成任何图表。如果用户明确要求生成图表，或你的回答内容确实需要图表来辅助说明（如数据对比、趋势分析、结构关系等），请友好地提醒用户："如果您需要图表来更直观地理解，可以点击输入框左侧的加号按钮，开启「图表生成」功能哦~"。不要在其他情况下主动提及此功能。'
+        systemPrompt += '**重要规则 — 图表生成功能未开启**：你绝对不能使用任何图表标记（[MERMAID]、[PLOT]、[SVG]、[DRAWIO]）来生成图表、流程图、思维导图、知识图谱、树形图、示意图等。即使用户明确要求你"帮我画个图"、"用图表展示"、"生成一个流程图"等，你也只能用纯文字描述来回答。如果用户明确要求图表，或你的回答确实需要图表来辅助说明，请友好地提醒用户："如果您需要我生成图表来更直观地理解，可以点击输入框左侧的加号按钮 ➕，开启「图表生成」功能哦~"。除此之外不要主动提及此功能。'
       }
       if (enableAutoMindmap) {
         systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [DRAWIO] 代码块生成一张思维导图，将回复内容的核心知识点以层级结构展示。'
@@ -734,7 +783,7 @@ export default function ChatPlatform() {
   const handleNewChat = () => {
     if (currentChatId) storeResetChat(currentChatId)
     storeSetCurrentChatId(null)
-    setPastedFiles([]); setIrrelevantContentWarning(null); setActiveDiagramXml(null); setDiagramOpen(false); setCodeRunnerOpen(false)
+    setPastedFiles([]); setIrrelevantContentWarning(null); setActiveDiagramXml(null); setDiagramOpen(false)
   }
 
   const handleSelectChat = async (chatId: string | null) => {
@@ -797,11 +846,9 @@ export default function ChatPlatform() {
     } catch (error) { console.error('加载消息失败:', error); handleNewChat() }
   }
 
-  const handleRunCode = (code: string, language: string) => {
-    setCodeRunnerCode(code)
-    setCodeRunnerLanguage(language)
-    setCodeRunnerKey(k => k + 1)
-    if (!codeRunnerOpen) setCodeRunnerOpen(true)
+  const handleRunCode = (_code: string, _language: string) => {
+    // 引导用户到编程推演页面进行代码练习
+    navigate('/coding-practice')
   }
 
   const handleRollback = useCallback((messageId: string) => {
@@ -1023,7 +1070,7 @@ export default function ChatPlatform() {
         {/* Right — feature buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ position: 'relative' }}>
-            <button onClick={() => setProjectPanelOpen(!projectPanelOpen)}
+            <button onClick={() => { if (!projectPanelOpen && projects.length === 0) loadProjects(); setProjectPanelOpen(!projectPanelOpen) }}
               style={headerBtnStyle(!!selectedProjectForChat)}
               onMouseEnter={e => {
                 if (!selectedProjectForChat) {
@@ -1079,24 +1126,6 @@ export default function ChatPlatform() {
               </div>
             )}
           </div>
-          <button onClick={() => { if (!codeRunnerOpen) { setCodeRunnerCode('# 在此编写代码\nprint("Hello World")'); setCodeRunnerLanguage('python') } setCodeRunnerOpen(!codeRunnerOpen) }}
-            style={headerBtnStyle(codeRunnerOpen)}
-            onMouseEnter={e => {
-              if (!codeRunnerOpen) {
-                e.currentTarget.style.borderColor = 'var(--primary)'
-                e.currentTarget.style.boxShadow = '0 0 0 2px oklch(0.55 0.18 200 / 0.08)'
-              }
-            }}
-            onMouseLeave={e => {
-              if (!codeRunnerOpen) {
-                e.currentTarget.style.borderColor = 'var(--gray-200)'
-                e.currentTarget.style.boxShadow = 'none'
-              }
-            }}
-          >
-            <Code size={14} />
-            Code
-          </button>
           <button onClick={() => { handleNewChat(); if (!sidebarOpen) setSidebarOpen(true) }}
             style={{
               ...headerBtnStyle(false), backgroundColor: 'var(--primary)',
@@ -1108,8 +1137,8 @@ export default function ChatPlatform() {
         </div>
       </div>
 
-      {/* ═══ API 未配置警告条 ═══ */}
-      {noApiConfigured && (
+      {/* ═══ API 未配置警告条（仅在模型加载完成后显示） ═══ */}
+      {modelsLoaded && noApiConfigured && (
         <div style={{
           padding: '0.5rem 1rem', backgroundColor: '#FEF3C7', borderBottom: '1px solid #FDE68A',
           display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, fontSize: '0.8125rem', color: '#92400E',
@@ -1164,6 +1193,7 @@ export default function ChatPlatform() {
 
           {/* Chat Area — only this scrolls */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Suspense fallback={<ChatSkeleton />}>
             <MessageList
               messages={messages}
               isLoading={isLoading}
@@ -1176,6 +1206,7 @@ export default function ChatPlatform() {
                 if (!diagramOpen) setDiagramOpen(true)
               }}
             />
+            </Suspense>
           </div>
 
           {/* 无关内容警告条 */}
@@ -1239,6 +1270,7 @@ export default function ChatPlatform() {
 
       {/* Floating Diagram Window */}
       {diagramOpen && (
+        <Suspense fallback={<FloatingLoader label="图表编辑器加载中..." />}>
         <DraggableWindow
           title="图表编辑器"
           visible={diagramOpen}
@@ -1253,23 +1285,7 @@ export default function ChatPlatform() {
             onClose={() => setDiagramOpen(false)}
           />
         </DraggableWindow>
-      )}
-
-      {/* Floating Code Runner Window */}
-      {codeRunnerOpen && (
-        <DraggableWindow
-          title="代码运行器"
-          visible={codeRunnerOpen}
-          onClose={() => setCodeRunnerOpen(false)}
-          defaultWidth={650} defaultHeight={450} defaultX={160} defaultY={100}
-        >
-          <CodeRunnerPanel
-            key={codeRunnerKey}
-            code={codeRunnerCode}
-            language={codeRunnerLanguage}
-            onClose={() => setCodeRunnerOpen(false)}
-          />
-        </DraggableWindow>
+        </Suspense>
       )}
 
       {/* Clear All History Modal */}

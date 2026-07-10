@@ -103,6 +103,7 @@ class Settings(BaseSettings):
 
     # ── Execution / Timeouts ──
     CODE_EXECUTION_TIMEOUT: int = 30
+    CODE_RUNNER_SOCKET: str = "/run/code-runner/runner.sock"
     API_VALIDATION_TIMEOUT: int = 10
     DEFAULT_LLM_TIMEOUT: int = 120
 

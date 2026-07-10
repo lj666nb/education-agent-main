@@ -29,6 +29,7 @@
     "markmap-common": "^0.15.2",
     "markmap-lib": "^0.15.2",
     "markmap-view": "^0.15.2",
+    "mermaid": "^11.16.0",
     "monaco-editor": "^0.45.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -62,6 +63,7 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "playwright": "^1.60.0",
     "tailwindcss": "^4.3.0",
+    "terser": "^5.49.0",
     "typescript": "^5.2.2",
     "vite": "^5.1.4"
   }

@@ -355,7 +355,7 @@ export default function InputArea({
           }}>
             {/* Upload file */}
             <div
-              onClick={() => { fileInputRef.current?.click(); setShowFeaturePanel(false) }}
+              onClick={() => { fileInputRef.current?.click() }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 14px', borderRadius: '10px',

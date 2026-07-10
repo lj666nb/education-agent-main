@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime
 import enum
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Uuid, Integer, Boolean, Float, UniqueConstraint, Index
+from sqlalchemy import (
+    Boolean, CheckConstraint, Column, DateTime, Float, ForeignKey, Index,
+    Integer, String, Text, UniqueConstraint, Uuid, text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.db.database import Base
@@ -173,6 +176,12 @@ class Question(Base):
 
     # 知识点关联（核心：连接题库与知识图谱）
     knowledge_point_uuids = Column(JSONB, nullable=False, default=list)  # ["kp-uuid-1", ...]
+    primary_knowledge_point_id = Column(
+        Uuid,
+        ForeignKey("knowledge_points.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
 
     # 标签与来源
     tags = Column(JSONB, default=list)
@@ -183,6 +192,54 @@ class Question(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     bank = relationship("QuestionBank", back_populates="questions")
+    coding_test_cases = relationship(
+        "CodingTestCase",
+        back_populates="question",
+        cascade="all, delete-orphan",
+        order_by="CodingTestCase.case_order",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "type <> 'programming' OR status <> 'published' "
+            "OR difficulty IN ('basic', 'intermediate', 'advanced')",
+            name="ck_published_programming_difficulty",
+        ),
+        Index(
+            "uq_published_programming_point_difficulty",
+            "primary_knowledge_point_id",
+            "difficulty",
+            unique=True,
+            postgresql_where=text(
+                "type = 'programming' AND status = 'published' "
+                "AND primary_knowledge_point_id IS NOT NULL"
+            ),
+        ),
+    )
+
+
+class CodingTestCase(Base):
+    """Private/public judge case for a programming question."""
+    __tablename__ = "coding_test_cases"
+
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    question_id = Column(Uuid, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_order = Column(Integer, nullable=False)
+    name = Column(String(120), nullable=False)
+    visibility = Column(String(20), nullable=False, default="hidden")
+    input_data = Column(Text, nullable=False, default="")
+    expected_output = Column(Text, nullable=False, default="")
+    comparator = Column(String(30), nullable=False, default="trim_lines")
+    time_limit_ms = Column(Integer, nullable=False, default=3000)
+    memory_limit_mb = Column(Integer, nullable=False, default=256)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    question = relationship("Question", back_populates="coding_test_cases")
+
+    __table_args__ = (
+        UniqueConstraint("question_id", "case_order", name="uq_coding_case_order"),
+        CheckConstraint("visibility IN ('sample', 'hidden')", name="ck_coding_case_visibility"),
+    )
 
 
 class PracticeSession(Base):

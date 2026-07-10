@@ -3,6 +3,7 @@ FROM python:3.12-slim
 ARG APT_MIRROR=mirrors.tuna.tsinghua.edu.cn
 ARG PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
 ARG BACKEND_PORT=8000
+ENV BACKEND_PORT=${BACKEND_PORT}
 
 WORKDIR /app
 

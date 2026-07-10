@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { questionBankApi, type BankItem, type SubjectItem } from '../api/questionBank'
-import { BookIcon, CloseIcon, ArrowLeftIcon, EditIcon, CheckCircleIcon, BarChartIcon, ClockIcon, SearchIcon, StarIcon, BookOpenIcon } from '../components/Icons'
+import { BookIcon, CloseIcon, ArrowLeftIcon, EditIcon, CheckCircleIcon, BarChartIcon, ClockIcon, SearchIcon } from '../components/Icons'
 import { EmptyState, LoadingState } from '../components/shared'
 import { useTheme } from '../store/theme'
 
@@ -70,12 +70,6 @@ export default function BankListPage() {
       await loadData()
     } catch (err: any) { alert(err.response?.data?.detail || '创建失败') }
     setSaving(false)
-  }
-
-  const handleDelete = async (bank: BankItem) => {
-    if (!confirm(`确定删除题库「${bank.name}」？里面的题目将一并删除。`)) return
-    try { await questionBankApi.deleteBank(bank.id); setBanks(prev => prev.filter(b => b.id !== bank.id))
-    } catch (err: any) { alert(err.response?.data?.detail || '删除失败') }
   }
 
   const handleCreateSubject = async () => {
@@ -201,15 +195,20 @@ export default function BankListPage() {
               const colorIdx = i % colors.length
               const cardColor = colors[colorIdx]
               return (
-                <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
+                <div key={bank.id} onClick={() => {
+                  if (bank.name.includes('代码')) { navigate('/coding-practice') }
+                  else { navigate(`/banks/${bank.id}`) }
+                }}
                   className="bk-card bk-hover"
                   style={{
                     background: t.bgCard, borderRadius: 16, boxShadow: t.shadowSm,
-                    borderLeft: `4px solid ${cardColor}`, cursor: 'pointer',
-                    overflow: 'hidden',
+                    borderLeft: `4px solid ${cardColor}`, border: '1px solid transparent',
+                    borderLeftWidth: 4, borderLeftStyle: 'solid', borderLeftColor: cardColor,
+                    cursor: 'pointer', overflow: 'hidden',
+                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = t.shadowMd }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = t.shadowMd; e.currentTarget.style.borderColor = cardColor }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = t.shadowSm; e.currentTarget.style.borderColor = 'transparent' }}
                 >
                   <div style={{ padding: '22px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {/* Left: icon + info */}
@@ -241,34 +240,6 @@ export default function BankListPage() {
                       </div>
                     </div>
 
-                    {/* Right: ring + actions */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <button onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}`) }}
-                          style={{ padding: '7px 16px', fontSize: 12, background: t.brandLight, color: t.brand, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                          管理题目
-                        </button>
-                        <button onClick={e => { e.stopPropagation(); handleDelete(bank) }}
-                          style={{ padding: '6px 14px', fontSize: 11, background: t.dangerBg, color: t.dangerText, border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Bottom quick actions */}
-                  <div style={{ borderTop: `1px solid ${t.border}`, padding: '10px 24px 10px 86px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}/practice`) }}
-                      style={{ fontSize: 12, color: '#10B981', fontWeight: 500, cursor: 'pointer', padding: '3px 12px', borderRadius: 6, background: t.isDark ? 'rgba(16,185,129,0.12)' : '#ECFDF5', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" fill="#10B981" stroke="none" /></svg> 一键练习
-                    </span>
-                    <span onClick={e => { e.stopPropagation(); navigate(`/knowledge-points`) }}
-                      style={{ fontSize: 12, color: t.textSecondary, fontWeight: 500, cursor: 'pointer', padding: '3px 12px', borderRadius: 6, background: t.isDark ? 'rgba(148,163,184,0.08)' : '#F8FAFE' }}>
-                      <BookOpenIcon size={11} /> 查看知识点
-                    </span>
-                    {bank.total_questions > 30 && (
-                      <span onClick={e => { e.stopPropagation(); navigate(`/banks/${bank.id}?tab=papers`) }}
-                        style={{ fontSize: 11, color: t.brand, fontWeight: 500, padding: '3px 12px', borderRadius: 6, background: t.brandLight, marginLeft: 'auto', cursor: 'pointer' }}>期末配套</span>
-                    )}
                   </div>
                 </div>
               )
@@ -284,7 +255,10 @@ export default function BankListPage() {
             </h3>
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
               {banks.slice(0, Math.min(4, banks.length)).map((bank, i) => (
-                <div key={bank.id} onClick={() => navigate(`/banks/${bank.id}`)}
+                <div key={bank.id} onClick={() => {
+                  if (bank.name.includes('代码')) { navigate('/coding-practice') }
+                  else { navigate(`/banks/${bank.id}`) }
+                }}
                   style={{
                     minWidth: 200, flex: 1, padding: '16px 18px', borderRadius: 14,
                     background: t.bgCard, border: `1px solid ${t.border}`,

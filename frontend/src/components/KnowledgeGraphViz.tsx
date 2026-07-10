@@ -76,9 +76,11 @@ interface Props {
   edges: GraphEdge[]
   onNodeClick?: (node: GraphNode) => void
   highlightNodeNames?: string[]
+  focusNodeName?: string | null
+  onFocusNode?: (nodeName: string | null) => void
 }
 
-export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlightNodeNames }: Props) {
+export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlightNodeNames, focusNodeName, onFocusNode }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [hoveredNode, setHoveredNode] = useState<D3Node | null>(null)
@@ -352,7 +354,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
         .force('link', d3.forceLink<D3Node, D3Link>(d3links).id(d => d.id).distance(80))
         .force('charge', d3.forceManyBody().strength(-150))
         .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
-        .force('collision', d3.forceCollide().radius(d => d.radius + 6))
+        .force('collision', d3.forceCollide<D3Node>().radius(d => d.radius + 6))
         .on('tick', ticked)
       simRef.current = sim
     }
@@ -383,6 +385,22 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       .select('.seed-ring')
       .style('display', d => highlightSet.has(d.label) ? 'block' : 'none')
   }, [highlightNodeNames])
+
+  // ── 聚焦节点（zoom to node） ──
+  useEffect(() => {
+    if (!focusNodeName || !svgRef.current || !zoomRef.current || !containerRef.current) return
+    const targetNode = d3NodesRef.current.find(n => n.label === focusNodeName)
+    if (!targetNode || targetNode.x == null || targetNode.y == null) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const w = rect.width, h = rect.height
+    const scale = 2.5
+    const tx = w / 2 - targetNode.x * scale
+    const ty = h / 2 - targetNode.y * scale
+
+    d3.select(svgRef.current).transition().duration(600)
+      .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
+  }, [focusNodeName])
 
   // ── Zoom 控制 ──
   const zoomIn = () => {
@@ -446,26 +464,64 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
     }}>
       <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
 
-      {/* ── 图例 ── */}
+      {/* ── 知识点列表（左下角，可点击聚焦） ── */}
       <div style={{
         position: 'absolute', left: 12, bottom: 12,
         background: 'rgba(255,255,255,0.92)', borderRadius: 10,
-        border: '1px solid #E5E7EB', padding: '8px 12px',
-        fontSize: 11, maxWidth: 180, maxHeight: 200, overflowY: 'auto',
+        border: '1px solid #E5E7EB', padding: '6px 0',
+        fontSize: 11, maxWidth: 200, maxHeight: 260, overflowY: 'auto',
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>图例</div>
-        {Array.from(typeSet.entries()).map(([type, color]) => (
-          <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <div style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: color, flexShrink: 0,
-            }} />
-            <span style={{ color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {type}
-            </span>
-          </div>
-        ))}
+        <div style={{
+          fontWeight: 600, color: '#374151', padding: '4px 12px 6px',
+          borderBottom: '1px solid #F3F4F6', marginBottom: 2,
+          fontSize: 11, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span>知识点</span>
+          <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 400 }}>{d3NodesRef.current.length} 个</span>
+        </div>
+        {d3NodesRef.current.map(node => {
+          const isFocused = focusNodeName === node.label
+          const isHighlighted = node.isSeed
+          return (
+            <button
+              key={node.id}
+              type="button"
+              onClick={() => {
+                if (onFocusNode) {
+                  onFocusNode(isFocused ? null : node.label)
+                }
+              }}
+              title={`点击聚焦: ${node.label}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '3px 12px', border: 'none', borderRadius: 0,
+                background: isFocused ? 'rgba(79,109,245,0.08)' : 'transparent',
+                color: isFocused ? '#4f6df5' : '#6B7280',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                textAlign: 'left', width: '100%',
+                fontWeight: isFocused ? 600 : 400,
+                transition: 'background 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => {
+                if (!isFocused) { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.color = '#374151' }
+              }}
+              onMouseLeave={e => {
+                if (!isFocused) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280' }
+              }}
+            >
+              <span style={{
+                width: 7, height: 7, borderRadius: 999, flexShrink: 0,
+                background: node.color,
+                boxShadow: isHighlighted ? '0 0 0 2px #f59e0b' : 'none',
+              }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {node.label}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── 关系线样式说明 ── */}
