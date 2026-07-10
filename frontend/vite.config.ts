@@ -95,26 +95,6 @@ export default defineConfig({
         target: proxyTarget,
         changeOrigin: true,
       },
-      '/swagger': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/redoc-doc': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/health': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/static': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/docs': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
     },
   },
 })
