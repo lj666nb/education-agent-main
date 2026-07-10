@@ -540,20 +540,8 @@ async def get_knowledge_graph_data(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """获取指定学科的知识图谱可视化数据（节点 + 关系，仅种子或自己的学科）"""
+    """获取指定学科的知识图谱可视化数据（节点 + 关系）"""
     from app.models.question_bank import KnowledgePoint, KnowledgeDomain, Subject
-
-    # 验证学科权限：仅种子学科或用户自己的学科可查看
-    from sqlalchemy import or_
-    from uuid import UUID
-    seed_subject_id = UUID("d91a4645-ab5f-4819-8379-d9e6524f0937")
-    sub = db.query(Subject).filter(
-        Subject.id == subject_id,
-        or_(Subject.id == seed_subject_id, Subject.creator_id == current_user.student_id)
-    ).first()
-    if not sub:
-        raise HTTPException(404, detail="学科不存在或无权访问")
-    from app.models.question_bank import KnowledgePoint, KnowledgeDomain
 
     # 1. 从 PostgreSQL 获取该学科的所有知识点
     kps = (
