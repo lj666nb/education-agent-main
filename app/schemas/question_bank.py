@@ -467,7 +467,12 @@ class KnowledgePointRecordResponse(BaseModel):
     next_review_at: Optional[datetime] = None
     status: str = "not_started"
     video_url: Optional[str] = None       # 精讲视频链接
-    review_material: Optional[str] = None  # AI 复习资料
+    review_material: Optional[str] = None  # 公共原文讲义（兼容旧字段名）
+    review_source_url: Optional[str] = None
+    review_source_mode: Optional[str] = None
+    coding_problem_id: Optional[str] = None
+    coding_problem_title: Optional[str] = None
+    coding_problem_difficulty: Optional[str] = None
     model_config = {"from_attributes": True}
 
 

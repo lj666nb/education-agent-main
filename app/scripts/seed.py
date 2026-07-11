@@ -22,13 +22,13 @@ from app.db.database import SessionLocal
 from app.db.neo4j import get_neo4j, Neo4jConnection
 from app.models.question_bank import (
     Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, CodingTestCase,
-    KnowledgePointRecord,
+    KnowledgePointRecord, KnowledgePointLecture,
 )
 from app.models.path_state import LearningPathState
 from app.models.resource import KnowledgeResource
 from app.models.user import User, UserProfile, UserRole, UserStatus
 from app.core.security import get_password_hash
-from app.services.knowledge_lecture_builder import build_source_based_lecture
+from app.services.knowledge_lecture_builder import build_source_based_lecture, get_lecture_source
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("uvicorn")
@@ -472,6 +472,7 @@ def seed_database():
         _seed_demo_learning_path(db)
 
         # ====== 6. 为测试用户的知识点补全阅读讲义（无 LLM 时使用参考资料生成） ======
+        _seed_knowledge_point_lectures(db)
         _seed_review_materials(db)
 
         db.commit()
@@ -1334,28 +1335,62 @@ def _seed_demo_learning_path(db: Session):
     logger.info(f"📚 演示学习路径已创建：{subject.name}（{total_nodes} 知识点，{done_count} 已完成）")
 
 
-def _seed_review_materials(db: Session):
-    """为测试用户的知识点补全阅读讲义（review_material）
+def _seed_knowledge_point_lectures(db: Session):
+    """幂等注入数据结构知识点的公共阅读讲义。
 
-    使用参考资料（无需 LLM）为每个缺少讲义的知识点生成 Markdown 阅读材料。
-    幂等：已有 review_material 的记录不会重复生成。
+    公共讲义挂在知识点而不是测试用户上，因此新注册用户、全新数据库和
+    Docker/服务器重建后都会读取到同一份受版本控制的种子内容。
+    """
+    points = (
+        db.query(KnowledgePoint)
+        .join(KnowledgeDomain, KnowledgePoint.domain_id == KnowledgeDomain.id)
+        .join(Subject, KnowledgeDomain.subject_id == Subject.id)
+        .filter(Subject.name == SEED_SUBJECT_NAME)
+        .all()
+    )
+    seeded = 0
+    for point in points:
+        domain = point.domain
+        source = get_lecture_source(point.name, domain.name)
+        content = build_source_based_lecture(
+            subject_name=SEED_SUBJECT_NAME,
+            domain_name=domain.name,
+            point_name=point.name,
+            description=point.description or "",
+        )
+        lecture = db.query(KnowledgePointLecture).filter(
+            KnowledgePointLecture.point_id == point.id
+        ).first()
+        if not lecture:
+            lecture = KnowledgePointLecture(point_id=point.id)
+            db.add(lecture)
+        lecture.content = content
+        lecture.source_url = source.url
+        lecture.source_mode = source.mode
+        seeded += 1
+
+    db.flush()
+    logger.info(f"📚 公共阅读讲义种子已同步：{seeded} 个知识点")
+
+
+def _seed_review_materials(db: Session):
+    """让演示账号的旧用户级讲义同步到最新公共种子版本。
+
+    仅处理固定演示账号；普通用户自行生成的个性化讲义不会被覆盖。
     """
     user = db.query(User).filter(User.username == "guoketg").first()
     if not user:
         return
 
-    # 查找所有缺少阅读讲义的知识点记录
+    # 演示账号属于种子数据，启动时始终与公共讲义保持一致。
     records = (
         db.query(KnowledgePointRecord)
-        .filter(
-            KnowledgePointRecord.user_id == user.id,
-            KnowledgePointRecord.review_material.is_(None),
-        )
+        .filter(KnowledgePointRecord.user_id == user.id)
         .all()
     )
 
     if not records:
-        logger.info("📖 所有知识点已有阅读讲义，跳过")
+        logger.info("📖 演示账号暂无知识点记录，跳过用户级讲义同步")
         return
 
     generated = 0
@@ -1378,12 +1413,15 @@ def _seed_review_materials(db: Session):
                 if subj:
                     subject_name = subj.name
 
-            # 使用参考资料生成讲义（无需 LLM API）
-            content = build_source_based_lecture(
-                subject_name=subject_name,
-                domain_name=domain_name,
-                point_name=point.name,
-                description=point.description or "",
+            content = (
+                point.seed_lecture.content
+                if point.seed_lecture
+                else build_source_based_lecture(
+                    subject_name=subject_name,
+                    domain_name=domain_name,
+                    point_name=point.name,
+                    description=point.description or "",
+                )
             )
             record.review_material = content
             generated += 1
@@ -1393,4 +1431,4 @@ def _seed_review_materials(db: Session):
 
     if generated > 0:
         db.flush()
-        logger.info(f"📖 阅读讲义已补全：{generated} 个知识点")
+        logger.info(f"📖 演示账号阅读讲义已同步：{generated} 个知识点")

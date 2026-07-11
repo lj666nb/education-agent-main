@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { pathApi, type KnowledgePointRecordResponse, type NodeOrderItem } from '../api/path'
 import { questionBankApi } from '../api/questionBank'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import { ArrowRightIcon, BarChartIcon, BookOpenIcon, CodeIcon, FileTextIcon } from '../components/Icons'
 
 const BRAND = '#1677E8'
 const INK = '#1F2937'
@@ -96,6 +97,12 @@ export default function KnowledgeLeetBookDetailPage() {
       navigate(`/banks/${res.data.bank_id}/practice?point=${encodeURIComponent(pointId)}`)
     } catch (_) {
       navigate('/banks')
+    }
+  }
+
+  const startCodingPractice = () => {
+    if (detail?.coding_problem_id) {
+      navigate(`/coding-practice/problems/${detail.coding_problem_id}`)
     }
   }
 
@@ -230,15 +237,80 @@ export default function KnowledgeLeetBookDetailPage() {
 
           <section style={sectionStyle}>
             <div style={sectionTitleStyle}>本章任务</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
-              <TaskCard title="阅读讲义" desc="查看基础讲解、知识拔高和易错辨析" action="标记已学" onClick={markStudy} />
-              <TaskCard title="专项练习" desc="进入题库完成本知识点练习" action="开始练习" onClick={startPractice} primary />
-              <TaskCard title="掌握度测评" desc="用测评结果驱动动态路径重排" action="进入测评" onClick={() => navigate(`/path?view=detail&point=${pointId}${stateId ? `&state=${encodeURIComponent(stateId)}` : ''}`)} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              <TaskCard icon={<BookOpenIcon size={18} />} title="阅读讲义" desc="阅读与本知识点配对的参考来源原文" action="查看讲义" onClick={() => document.getElementById('lecture-section')?.scrollIntoView({ behavior: 'smooth' })} />
+              <TaskCard icon={<FileTextIcon size={18} />} title="专项练习" desc="进入题库完成本知识点练习" action="开始练习" onClick={startPractice} primary />
+              {detail.coding_problem_id && (
+                <TaskCard
+                  icon={<CodeIcon size={18} />}
+                  title="实战训练"
+                  desc={detail.coding_problem_title || '进入对应代码题完成编程实战'}
+                  action="打开代码题"
+                  onClick={startCodingPractice}
+                  accent="#6D5BD0"
+                />
+              )}
+              <TaskCard icon={<BarChartIcon size={18} />} title="掌握度测评" desc="用测评结果驱动动态路径重排" action="进入测评" onClick={() => navigate(`/path?view=detail&point=${pointId}${stateId ? `&state=${encodeURIComponent(stateId)}` : ''}`)} />
             </div>
           </section>
 
-          <section style={sectionStyle}>
-            <div style={sectionTitleStyle}>阅读讲义</div>
+          {detail.coding_problem_id && (
+            <section style={sectionStyle}>
+              <div style={{ ...sectionTitleStyle, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 34, height: 34, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#6D5BD0', background: '#ECE8FF' }}><CodeIcon size={18} /></span>
+                <div>
+                  <span style={{ color: INK, fontSize: 18, fontWeight: 850 }}>实战训练</span>
+                  <span style={{ display: 'block', color: MUTED, fontSize: 13, marginTop: 2 }}>
+                    {detail.coding_problem_title || '编程实战'} · {detail.coding_problem_difficulty === 'basic' ? '入门' : detail.coding_problem_difficulty === 'intermediate' ? '进阶' : detail.coding_problem_difficulty === 'advanced' ? '困难' : detail.coding_problem_difficulty || '基础'}
+                  </span>
+                </div>
+              </div>
+              <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.8, margin: '14px 0' }}>
+                本知识点配有编程实战题目，在代码编辑器中完成算法实现并通过在线评测。
+              </p>
+              <button onClick={startCodingPractice} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 18px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#6D5BD0',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}>
+                打开编程实战 <ArrowRightIcon size={16} />
+              </button>
+            </section>
+          )}
+
+          <section style={sectionStyle} id="lecture-section">
+            <div style={{ ...sectionTitleStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span>阅读讲义</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={markStudy} style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: `1px solid ${LINE}`,
+                  background: '#fff',
+                  color: BRAND,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}>
+                  标记已学
+                </button>
+                {detail.review_source_url && (
+                  <a href={detail.review_source_url} target="_blank" rel="noopener noreferrer" style={{ color: BRAND, fontSize: 12, fontWeight: 750 }}>
+                    查看原始页面 ↗
+                  </a>
+                )}
+              </div>
+            </div>
             {detail.review_material ? (
               <div style={{ color: INK, fontSize: 14, lineHeight: 1.9 }}>
                 <MarkdownRenderer content={detail.review_material} />
@@ -252,10 +324,10 @@ export default function KnowledgeLeetBookDetailPage() {
                 fontSize: 14,
                 lineHeight: 1.8,
               }}>
-                还没有阅读讲义。可以根据数据结构参考资料生成一版基础讲解与知识拔高内容，或直接进入练习用题目反推薄弱点。
+                参考原文讲义尚未加载，请点击下方按钮获取。
                 <div style={{ marginTop: 12 }}>
                   <button onClick={generateReview} disabled={reviewGenerating} style={primaryButtonStyle(reviewGenerating)}>
-                    {reviewGenerating ? '生成中...' : '生成阅读讲义'}
+                    {reviewGenerating ? '加载中...' : '加载阅读讲义'}
                   </button>
                 </div>
               </div>
@@ -280,9 +352,11 @@ export default function KnowledgeLeetBookDetailPage() {
                     ? `下次复习：${new Date(detail.next_review_at).toLocaleString('zh-CN')}`
                     : '暂无下次复习时间。完成练习或测评后，系统会根据结果更新路径。'}
                 </p>
-                <button onClick={generateReview} disabled={reviewGenerating} style={{ ...secondaryButtonStyle, marginTop: 14 }}>
-                  {reviewGenerating ? '生成中...' : '更新阅读讲义'}
-                </button>
+                {detail.coding_problem_id && (
+                  <button onClick={startCodingPractice} style={{ ...secondaryButtonStyle, marginTop: 14, color: '#6D5BD0' }}>
+                    进入本章实战训练
+                  </button>
+                )}
               </div>
             </div>
           </section>
@@ -319,17 +393,20 @@ function Metric({ label, value, color }: { label: string; value: string; color: 
   )
 }
 
-function TaskCard({ title, desc, action, onClick, primary }: {
+function TaskCard({ icon, title, desc, action, onClick, primary, accent }: {
+  icon: ReactNode
   title: string
   desc: string
   action: string
   onClick: () => void
   primary?: boolean
+  accent?: string
 }) {
+  const tone = accent || (primary ? BRAND : MUTED)
   return (
     <button onClick={onClick} style={{
-      border: `1px solid ${primary ? BRAND : LINE}`,
-      background: primary ? '#F0F7FF' : '#fff',
+      border: `1px solid ${accent || primary ? tone : LINE}`,
+      background: accent ? '#F7F5FF' : primary ? '#F0F7FF' : '#fff',
       borderRadius: 8,
       padding: 16,
       textAlign: 'left',
@@ -341,10 +418,11 @@ function TaskCard({ title, desc, action, onClick, primary }: {
       justifyContent: 'space-between',
     }}>
       <span>
+        <span style={{ width: 34, height: 34, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: tone, background: accent ? '#ECE8FF' : primary ? '#E1EFFF' : '#F2F5F8', marginBottom: 12 }}>{icon}</span>
         <span style={{ display: 'block', color: INK, fontSize: 16, fontWeight: 850, marginBottom: 7 }}>{title}</span>
         <span style={{ color: MUTED, fontSize: 13, lineHeight: 1.6 }}>{desc}</span>
       </span>
-      <span style={{ color: primary ? BRAND : MUTED, fontSize: 12, fontWeight: 800, marginTop: 12 }}>{action}</span>
+      <span style={{ color: tone, fontSize: 12, fontWeight: 800, marginTop: 12 }}>{action} →</span>
     </button>
   )
 }

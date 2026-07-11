@@ -2,6 +2,7 @@ from pymongo import MongoClient, ASCENDING, DESCENDING
 from app.core.config import settings
 from typing import Optional, Dict, List, Any
 from datetime import datetime
+from urllib.parse import quote_plus
 import uuid
 
 
@@ -14,7 +15,7 @@ class MongoDBConnection:
     def _connect(self):
         if self.client is None:
             connection_string = (
-                f"mongodb://{settings.MONGODB_USER}:{settings.MONGODB_PASSWORD}@"
+                f"mongodb://{quote_plus(settings.MONGODB_USER)}:{quote_plus(settings.MONGODB_PASSWORD)}@"
                 f"{settings.MONGODB_HOST}:{settings.MONGODB_PORT}/"
                 f"?authSource=admin"
             )

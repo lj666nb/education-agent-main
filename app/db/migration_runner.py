@@ -19,7 +19,13 @@ def apply_required_migrations(engine: Engine) -> None:
     so upgraded Docker deployments need a tiny tracked migration step.
     """
 
-    migrations = [("013_add_coding_judge", Path("/app/migrations/013_add_coding_judge.sql"))]
+    migration_root = Path("/app/migrations")
+    if not migration_root.is_dir():
+        migration_root = Path(__file__).resolve().parents[2] / "migrations"
+    migrations = [
+        ("013_add_coding_judge", migration_root / "013_add_coding_judge.sql"),
+        ("014_add_knowledge_point_lectures", migration_root / "014_add_knowledge_point_lectures.sql"),
+    ]
     with engine.begin() as connection:
         connection.exec_driver_sql(
             """

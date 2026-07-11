@@ -97,6 +97,11 @@ export interface KnowledgePointRecordResponse {
   status: string
   video_url: string | null
   review_material: string | null
+  review_source_url: string | null
+  review_source_mode: string | null
+  coding_problem_id: string | null
+  coding_problem_title: string | null
+  coding_problem_difficulty: string | null
 }
 
 // ═══════════════════════════════════════════════════

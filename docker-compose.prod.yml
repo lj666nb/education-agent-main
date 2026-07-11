@@ -7,6 +7,9 @@ services:
 
   neo4j:
     ports: !reset []
+    environment:
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1g
 
   mongodb:
     ports: !reset []
@@ -32,12 +35,17 @@ services:
       retries: 5
       start_period: 30s
 
+  code-runner:
+    read_only: false
+    security_opt: !override []
+    cap_drop: !override []
+    cap_add: !override []
+
   frontend:
     build:
       context: ./frontend
       dockerfile: ../Dockerfile.frontend.prod
     ports: !override
-      - "80:80"
       - "3000:80"
     volumes: !reset []
     environment: !reset []

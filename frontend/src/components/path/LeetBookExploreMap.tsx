@@ -1,5 +1,7 @@
 import type { CSSProperties, MouseEvent } from 'react'
 import type { PathNodeStatus } from '../../api/path'
+import { ArrowRightIcon, BookOpenIcon, CheckCircleIcon, CodeIcon, TargetIcon } from '../Icons'
+import './LeetBookExploreMap.css'
 
 const BRAND = '#1677E8'
 const INK = '#1F2937'
@@ -63,6 +65,11 @@ export default function LeetBookExploreMap({
   const activeNode = nodes.find(n => n.status === 'learning') || nodes.find(n => n.status === 'reviewing')
   // Weak knowledge points: mastery > 0% AND < 50%
   const weakNodes = nodes.filter(n => (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50)
+  const chapterProgress = groups.map(group => ({
+    ...group,
+    completed: group.nodes.filter(node => node.status === 'mastered').length,
+    percentage: group.nodes.length ? Math.round(group.nodes.filter(node => node.status === 'mastered').length / group.nodes.length * 100) : 0,
+  }))
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: PAGE }}>
@@ -374,6 +381,114 @@ export default function LeetBookExploreMap({
               没有薄弱知识点！所有知识点掌握度均达标
             </p>
           </div>
+        )}
+
+        {!loading && !error && nodes.length > 0 && (
+          <>
+          <section className="leetbook-afterword">
+            <div className="leetbook-afterword-head">
+              <div>
+                <span className="leetbook-afterword-kicker">PATH COMPASS</span>
+                <h3>从地图走向真正掌握</h3>
+                <p>章节不是终点。用"读原文—做练习—写代码—再测一次"的闭环，把每个知识点变成可调用的能力。</p>
+              </div>
+              {activeNode && (
+                <button onClick={() => onNodeClick(activeNode)}>
+                  继续 {activeNode.point_name}<ArrowRightIcon size={15} />
+                </button>
+              )}
+            </div>
+
+            <div className="leetbook-afterword-grid">
+              <article className="leetbook-chapter-rail">
+                <div className="leetbook-panel-title"><TargetIcon size={17} /><span>章节推进</span><small>{completed}/{total} 已完成</small></div>
+                <div className="leetbook-rail-list">
+                  {chapterProgress.map((chapter, index) => (
+                    <div className="leetbook-rail-item" key={chapter.domain}>
+                      <span>{String(index + 1).padStart(2, '0')}</span>
+                      <div><div><strong>{chapter.domain}</strong><em>{chapter.completed}/{chapter.nodes.length}</em></div><i><b style={{ width: `${chapter.percentage}%` }} /></i></div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="leetbook-loop-panel">
+                <div className="leetbook-panel-title"><CheckCircleIcon size={17} /><span>本章学习闭环</span></div>
+                <div className="leetbook-loop-steps">
+                  <div><span><BookOpenIcon size={18} /></span><strong>读原文</strong><p>带着定义与边界问题阅读</p></div>
+                  <div><span><TargetIcon size={18} /></span><strong>做练习</strong><p>用反馈定位理解断点</p></div>
+                  <div><span><CodeIcon size={18} /></span><strong>写代码</strong><p>把结构和操作落到实现</p></div>
+                </div>
+                <div className="leetbook-loop-note">
+                  <strong>{weakNodes.length ? `${weakNodes.length} 个薄弱点等待巩固` : '当前没有明显薄弱点'}</strong>
+                  <span>{reviewCount ? `${reviewCount} 个知识点已进入复习队列` : '完成练习后，系统会自动安排复习节点'}</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section style={{
+            marginTop: 22,
+            padding: 26,
+            border: '1px solid var(--app-border)',
+            borderRadius: 14,
+            background: 'var(--app-bg-card)',
+            boxShadow: '0 14px 34px rgba(22, 51, 84, .06)',
+          }}>
+            <div style={{ paddingBottom: 22, borderBottom: '1px solid var(--app-border)', marginBottom: 18 }}>
+              <span style={{ color: 'var(--app-brand)', font: '800 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace', letterSpacing: '.14em' }}>LEARNING RESOURCES</span>
+              <h3 style={{ margin: '7px 0 5px', color: 'var(--app-text-heading)', fontSize: 23, letterSpacing: '-.02em' }}>推荐学习资源</h3>
+              <p style={{ maxWidth: 720, margin: 0, color: 'var(--app-text-muted)', fontSize: 13, lineHeight: 1.7 }}>
+                以下资源来自成熟学习平台，可帮助加深对数据结构知识点的理解。
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+              {[
+                { name: 'OI Wiki', note: '算法与数据结构原理详解', url: 'https://oi-wiki.org/ds/', tone: '#0891B2', bg: '#ECFEFF' },
+                { name: '中国大学 MOOC', note: '系统课程与章节讲解', url: 'https://www.icourse163.org/search.htm?search=数据结构', tone: '#2563EB', bg: '#EFF6FF' },
+                { name: 'LeetCode 中国', note: '数据结构专题练习', url: 'https://leetcode.cn/problemset/?search=数据结构', tone: '#EA580C', bg: '#FFF7ED' },
+                { name: 'VisuAlgo', note: '可视化交互学习数据结构', url: 'https://visualgo.net/zh', tone: '#7C3AED', bg: '#F5F3FF' },
+                { name: 'Hello 算法', note: '动画图解数据结构与算法', url: 'https://www.hello-algo.com/', tone: '#059669', bg: '#ECFDF5' },
+                { name: 'Bilibili 教程', note: '换个方式听讲解', url: 'https://search.bilibili.com/all?keyword=数据结构', tone: '#DB2777', bg: '#FDF2F8' },
+              ].map(resource => (
+                <a key={resource.name} href={resource.url} target="_blank" rel="noopener noreferrer" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: 14,
+                  borderRadius: 10,
+                  border: '1px solid var(--app-border)',
+                  background: '#fff',
+                  textDecoration: 'none',
+                  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = resource.tone; e.currentTarget.style.boxShadow = `0 4px 16px ${resource.tone}18` }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = 'none' }}
+                >
+                  <span style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 10,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: resource.bg,
+                    color: resource.tone,
+                    fontWeight: 800,
+                    fontSize: 15,
+                    flexShrink: 0,
+                  }}>
+                    {resource.name.charAt(0)}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: 'var(--app-text-heading)', fontSize: 15, fontWeight: 800 }}>{resource.name}</div>
+                    <div style={{ color: 'var(--app-text-muted)', fontSize: 12, marginTop: 3 }}>{resource.note}</div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+          </>
         )}
       </div>
     </div>

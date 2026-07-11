@@ -42,7 +42,6 @@ from app.services.learning_agent import LearningAgent
 from app.services.path_planner import PathPlanner
 from app.services.path_state_manager import PathStateManager
 from app.services.knowledge_lecture_builder import (
-    build_lecture_prompt,
     build_source_based_lecture,
 )
 from app.core.config import settings
@@ -368,6 +367,39 @@ async def get_knowledge_detail(
         Question.knowledge_point_uuids.contains([str(pid)])
     ).count()
 
+    # 章节任务只在确实存在已发布代码题时展示“实战训练”。兼容新主知识点
+    # 外键和旧版 knowledge_point_uuids 两种关联方式。
+    coding_problem = next((
+        question
+        for question in (
+            db.query(Question)
+            .filter(Question.type == "programming", Question.status == "published")
+            .order_by(Question.priority.desc(), Question.created_at.asc())
+            .all()
+        )
+        if str(question.primary_knowledge_point_id or "") == str(pid)
+        or str(pid) in (question.knowledge_point_uuids or [])
+    ), None)
+    coding_content = (coding_problem.content or {}) if coding_problem else {}
+    coding_title = (
+        coding_content.get("title")
+        or coding_content.get("stem")
+        or coding_content.get("description")
+    ) if coding_problem else None
+    public_lecture = point.seed_lecture
+    public_content = public_lecture.content if public_lecture else (record.review_material if record else None)
+    public_source_url = public_lecture.source_url if public_lecture else None
+    public_source_mode = public_lecture.source_mode if public_lecture else None
+
+    common_detail = {
+        "review_material": public_content,
+        "review_source_url": public_source_url,
+        "review_source_mode": public_source_mode,
+        "coding_problem_id": str(coding_problem.id) if coding_problem else None,
+        "coding_problem_title": str(coding_title)[:100] if coding_title else None,
+        "coding_problem_difficulty": coding_problem.difficulty if coding_problem else None,
+    }
+
     if record:
         return KnowledgePointRecordResponse(
             point_id=str(point.id),
@@ -387,7 +419,7 @@ async def get_knowledge_detail(
             next_review_at=record.next_review_at,
             status=record.status,
             video_url=point.video_url,
-            review_material=record.review_material,
+            **common_detail,
         )
 
     return KnowledgePointRecordResponse(
@@ -398,60 +430,12 @@ async def get_knowledge_detail(
         status="not_started",
         video_url=point.video_url,
         total_questions=total_questions,
+        **common_detail,
     )
 
 
 class VideoUrlRequest(BaseModel):
     video_url: str
-
-
-def _get_lecture_llm_config(db: Session, user_id: str) -> Optional[dict]:
-    """Return a compatible chat-completions config for lecture generation."""
-    from app.models.api_settings import ApiSettings
-
-    provider_defaults = {
-        "qwen": {
-            "base_url": settings.QWEN_BASE_URL,
-            "model": settings.QWEN_MODEL or "qwen-plus",
-            "env_key": settings.QWEN_API_KEY,
-        },
-        "deepseek": {
-            "base_url": settings.DEEPSEEK_BASE_URL,
-            "model": settings.DEEPSEEK_MODEL or "deepseek-chat",
-            "env_key": settings.DEEPSEEK_API_KEY,
-        },
-    }
-
-    for provider in ("qwen", "deepseek"):
-        user_setting = (
-            db.query(ApiSettings)
-            .filter(
-                ApiSettings.user_id == user_id,
-                ApiSettings.provider == provider,
-                ApiSettings.is_enabled == True,
-            )
-            .first()
-        )
-        defaults = provider_defaults[provider]
-        if user_setting and user_setting.api_key:
-            return {
-                "provider": provider,
-                "api_key": user_setting.api_key,
-                "base_url": user_setting.base_url or defaults["base_url"],
-                "model": user_setting.model_version or defaults["model"],
-            }
-
-    for provider in ("qwen", "deepseek"):
-        defaults = provider_defaults[provider]
-        if defaults["env_key"]:
-            return {
-                "provider": provider,
-                "api_key": defaults["env_key"],
-                "base_url": defaults["base_url"],
-                "model": defaults["model"],
-            }
-
-    return None
 
 
 def _save_review_material(
@@ -504,116 +488,37 @@ async def generate_review_material(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """生成知识点阅读讲义"""
-    import httpx
+    """获取知识点阅读讲义（直接返回参考来源原文）"""
 
     pid = UUID(point_id) if len(point_id) == 36 else point_id
     point = db.query(KnowledgePoint).filter(KnowledgePoint.id == pid).first()
     if not point:
         raise HTTPException(status_code=404, detail="知识点不存在")
 
-    user_id_str = str(current_user.student_id)
-
     domain_name = point.domain.name if point.domain else ""
     subject_name = point.domain.subject.name if point.domain and point.domain.subject else ""
     description = point.description or ""
 
-    llm_config = _get_lecture_llm_config(db, user_id_str)
-    if not llm_config:
-        content = build_source_based_lecture(
-            subject_name=subject_name,
-            domain_name=domain_name,
-            point_name=point.name,
-            description=description,
-        )
-        _save_review_material(
-            db,
-            user_id=current_user.student_id,
-            point_id=pid,
-            point_name=point.name,
-            content=content,
-        )
-        return {
-            "success": True,
-            "content": content,
-            "source_mode": "reference",
-            "message": "未配置 DeepSeek/Qwen，已生成资料参考讲义。",
-        }
-
-    prompt = build_lecture_prompt(
+    # 直接使用参考来源原文，不调用 LLM
+    content = build_source_based_lecture(
         subject_name=subject_name,
         domain_name=domain_name,
         point_name=point.name,
         description=description,
     )
-
-    try:
-        chat_url = f"{llm_config['base_url'].rstrip('/')}/chat/completions"
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                chat_url,
-                headers={
-                    "Authorization": f"Bearer {llm_config['api_key']}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": llm_config["model"],
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "你是数据结构课程讲义编写助手，只输出 Markdown 阅读讲义。",
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.45,
-                    "max_tokens": 4096,
-                },
-            )
-        if r.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"讲义生成失败：LLM 调用返回 {r.status_code}")
-
-        payload = r.json()
-        content = payload["choices"][0]["message"]["content"].strip()
-        if not content:
-            raise HTTPException(status_code=502, detail="讲义生成失败：模型返回内容为空")
-
-        # 后处理：[DRAWIO] 块 → PNG 图片
-        if "[DRAWIO]" in content:
-            import re as _re
-            def _render_drawio(match):
-                xml = match.group(1).strip()
-                xml = _re.sub(r'^```[a-zA-Z]*\n?', '', xml)
-                xml = _re.sub(r'\n?```$', '', xml)
-                if not xml.strip():
-                    return "\n\n> ⚠️ 图表内容为空\n\n"
-                try:
-                    from app.services.drawio_export import save_drawio_png
-                    png_url, _ = save_drawio_png(xml)
-                    if png_url:
-                        return f"\n\n![图表]({png_url})\n\n"
-                except Exception:
-                    pass
-                return match.group(0)
-            content = _re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _render_drawio, content)
-
-        _save_review_material(
-            db,
-            user_id=current_user.student_id,
-            point_id=pid,
-            point_name=point.name,
-            content=content,
-        )
-
-        return {
-            "success": True,
-            "content": content,
-            "source_mode": llm_config["provider"],
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"生成阅读讲义失败: {str(e)[:200]}")
+    _save_review_material(
+        db,
+        user_id=current_user.student_id,
+        point_id=pid,
+        point_name=point.name,
+        content=content,
+    )
+    return {
+        "success": True,
+        "content": content,
+        "source_mode": "reference_original",
+        "message": "已加载参考来源原文。",
+    }
 
 
 class BatchReviewRequest(BaseModel):
@@ -641,12 +546,11 @@ async def batch_generate_review_materials(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """批量生成知识点阅读讲义
+    """批量获取知识点阅读讲义（直接返回参考来源原文）
 
     如果 point_ids 为空，则自动发现用户学习路径中所有 review_material 为空的知识点，
-    逐个调用 LLM 生成阅读讲义。
+    直接加载参考来源原文。
     """
-    import httpx
 
     user_id = str(current_user.student_id)
 
@@ -714,8 +618,6 @@ async def batch_generate_review_materials(
             if point:
                 point_names[nid] = point.name
 
-    llm_config = _get_lecture_llm_config(db, user_id)
-
     items: list[BatchReviewItem] = []
     generated = 0
     failed = 0
@@ -745,8 +647,8 @@ async def batch_generate_review_materials(
         subject_name = point.domain.subject.name if point.domain and point.domain.subject else ""
         description = point.description or ""
 
-        if not llm_config:
-            # 使用资料参考模式
+        # 直接使用参考来源原文
+        try:
             content = build_source_based_lecture(
                 subject_name=subject_name,
                 domain_name=domain_name,
@@ -760,103 +662,15 @@ async def batch_generate_review_materials(
             items.append(BatchReviewItem(
                 point_id=nid, point_name=pname,
                 success=True, content=content,
-                message="资料参考模式（未配置LLM）",
+                message="已加载参考来源原文",
             ))
             generated += 1
-            continue
-
-        # LLM 模式
-        prompt = build_lecture_prompt(
-            subject_name=subject_name,
-            domain_name=domain_name,
-            point_name=point.name,
-            description=description,
-        )
-
-        try:
-            chat_url = f"{llm_config['base_url'].rstrip('/')}/chat/completions"
-            async with httpx.AsyncClient(timeout=120) as client:
-                r = await client.post(
-                    chat_url,
-                    headers={
-                        "Authorization": f"Bearer {llm_config['api_key']}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": llm_config["model"],
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "你是数据结构课程讲义编写助手，只输出 Markdown 阅读讲义。",
-                            },
-                            {"role": "user", "content": prompt},
-                        ],
-                        "temperature": 0.45,
-                        "max_tokens": 4096,
-                    },
-                )
-            if r.status_code == 200:
-                payload = r.json()
-                content = payload["choices"][0]["message"]["content"].strip()
-                if not content:
-                    raise Exception("模型返回内容为空")
-
-                # 后处理：[DRAWIO] 块 → PNG 图片
-                if "[DRAWIO]" in content:
-                    import re as _re
-                    def _render_drawio(match):
-                        xml = match.group(1).strip()
-                        xml = _re.sub(r'^```[a-zA-Z]*\n?', '', xml)
-                        xml = _re.sub(r'\n?```$', '', xml)
-                        if not xml.strip():
-                            return "\n\n> ⚠️ 图表内容为空\n\n"
-                        try:
-                            from app.services.drawio_export import save_drawio_png
-                            png_url, _ = save_drawio_png(xml)
-                            if png_url:
-                                return f"\n\n![图表]({png_url})\n\n"
-                        except Exception:
-                            pass
-                        return match.group(0)
-                    content = _re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _render_drawio, content)
-
-                _save_review_material(
-                    db, user_id=current_user.student_id,
-                    point_id=pid, point_name=point.name, content=content,
-                )
-                items.append(BatchReviewItem(
-                    point_id=nid, point_name=pname,
-                    success=True, content=content,
-                    message=f"LLM ({llm_config['provider']}) 生成成功",
-                ))
-                generated += 1
-            else:
-                raise Exception(f"LLM 返回状态码 {r.status_code}")
         except Exception as e:
-            # Fallback: use source-based lecture when LLM fails
-            try:
-                content = build_source_based_lecture(
-                    subject_name=subject_name,
-                    domain_name=domain_name,
-                    point_name=point.name,
-                    description=description,
-                )
-                _save_review_material(
-                    db, user_id=current_user.student_id,
-                    point_id=pid, point_name=point.name, content=content,
-                )
-                items.append(BatchReviewItem(
-                    point_id=nid, point_name=pname,
-                    success=True, content=content,
-                    message=f"资料参考模式（LLM失败回退: {str(e)[:50]}）",
-                ))
-                generated += 1
-            except Exception as fe:
-                items.append(BatchReviewItem(
-                    point_id=nid, point_name=pname,
-                    success=False, message=f"生成失败: {str(fe)[:150]}",
-                ))
-                failed += 1
+            items.append(BatchReviewItem(
+                point_id=nid, point_name=pname,
+                success=False, message=f"加载失败: {str(e)[:150]}",
+            ))
+            failed += 1
 
     return BatchReviewResponse(
         total_found=len(body.point_ids),

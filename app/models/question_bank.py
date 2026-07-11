@@ -92,6 +92,30 @@ class KnowledgePoint(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     domain = relationship("KnowledgeDomain", back_populates="knowledge_points")
+    seed_lecture = relationship(
+        "KnowledgePointLecture",
+        back_populates="point",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class KnowledgePointLecture(Base):
+    """部署时注入的知识点级阅读讲义，不依赖任何用户学习记录。"""
+    __tablename__ = "knowledge_point_lectures"
+
+    point_id = Column(
+        Uuid,
+        ForeignKey("knowledge_points.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    content = Column(Text, nullable=False)
+    source_url = Column(Text, nullable=False)
+    source_mode = Column(String(30), nullable=False, default="site_summary")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    point = relationship("KnowledgePoint", back_populates="seed_lecture")
 
 
 class KgFileContent(Base):

@@ -150,6 +150,11 @@ export default function ReviewCenterPage() {
   const openQuestion = async (item: WrongAnswerItem) => {
     setStartingId(item.id)
     try {
+      // 代码题直接跳转到编程练习页面（coding OJ 系统）
+      if (item.question?.type === 'programming') {
+        navigate(`/coding-practice/problems/${item.question_id}`)
+        return
+      }
       const session = await questionBankApi.createPracticeSession(item.bank_id, {
         mode: 'wrong_answer', question_order: [item.question_id], answer_mode: 'during',
       })
@@ -252,7 +257,6 @@ export default function ReviewCenterPage() {
                             <i>错 {item.wrong_count} 次</i>
                           </span>
                           <strong>{stem}</strong>
-                          {isCode && item.question?.content?.code_template && <code>{item.question.content.code_template.split('\n').slice(0, 3).join('\n')}</code>}
                         </span>
                         <span className="rc-question-go">{startingId === item.id ? <Loader2 className="spin" size={18} /> : <ArrowRight size={18} />}</span>
                       </button>

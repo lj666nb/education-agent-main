@@ -248,6 +248,11 @@ async def get_knowledge_points(
                 if rec:
                     last_practice = rec.last_practice_at
                     next_review = rec.next_review_at
+                    # 确保 naive datetime 加上时区后才能与 aware now 比较
+                    if next_review and next_review.tzinfo is None:
+                        next_review = next_review.replace(tzinfo=CHINA_TZ)
+                    if last_practice and last_practice.tzinfo is None:
+                        last_practice = last_practice.replace(tzinfo=CHINA_TZ)
                     subject_map[sub_key]["domains"][dom_key]["points"].append({
                         "point_id": pid,
                         "point_name": pt.name,
@@ -379,6 +384,10 @@ async def get_weak_points(
                     if subj:
                         subject_name = subj.name
 
+        next_review = r.next_review_at
+        if next_review and next_review.tzinfo is None:
+            next_review = next_review.replace(tzinfo=CHINA_TZ)
+
         weak_points.append({
             "point_id": str(r.point_id) if r.point_id else None,
             "point_name": r.point_name or "未知知识点",
@@ -386,7 +395,7 @@ async def get_weak_points(
             "consecutive_errors": r.consecutive_errors or 0,
             "domain_name": domain_name,
             "subject_name": subject_name,
-            "needs_review": bool(r.next_review_at and r.next_review_at <= _now()) if r.next_review_at else False,
+            "needs_review": bool(next_review and next_review <= _now()) if next_review else False,
         })
 
     return {"weak_points": weak_points, "total": len(weak_points)}

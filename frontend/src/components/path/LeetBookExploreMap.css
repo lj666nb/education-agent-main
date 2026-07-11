@@ -1,0 +1,113 @@
+.leetbook-afterword {
+  margin-top: 22px;
+  padding: 26px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-bg-card);
+  box-shadow: 0 14px 34px rgba(22, 51, 84, .06);
+}
+
+.leetbook-afterword-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.leetbook-afterword-kicker {
+  color: var(--app-brand);
+  font: 800 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .14em;
+}
+
+.leetbook-afterword h3 {
+  margin: 7px 0 5px;
+  color: var(--app-text-heading);
+  font-size: 23px;
+  letter-spacing: -.02em;
+}
+
+.leetbook-afterword-head p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.leetbook-afterword-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--app-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.leetbook-afterword-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(310px, .75fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.leetbook-chapter-rail,
+.leetbook-loop-panel {
+  padding: 17px;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-bg-page);
+}
+
+.leetbook-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  color: var(--app-brand);
+}
+
+.leetbook-panel-title span { color: var(--app-text-heading); font-size: 13px; font-weight: 800; }
+.leetbook-panel-title small { margin-left: auto; color: var(--app-text-muted); font-size: 10px; }
+.leetbook-rail-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 18px; }
+.leetbook-rail-item { display: flex; align-items: center; gap: 9px; }
+.leetbook-rail-item > span { color: var(--app-text-muted); font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.leetbook-rail-item > div { flex: 1; min-width: 0; }
+.leetbook-rail-item > div > div { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.leetbook-rail-item strong { overflow: hidden; color: var(--app-text-body); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.leetbook-rail-item em { color: var(--app-text-muted); font-size: 9px; font-style: normal; }
+.leetbook-rail-item i { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: var(--app-border); }
+.leetbook-rail-item b { display: block; height: 100%; border-radius: inherit; background: var(--app-brand); }
+
+.leetbook-loop-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.leetbook-loop-steps > div { min-width: 0; padding: 12px 9px; border-radius: 9px; background: var(--app-bg-card); text-align: center; }
+.leetbook-loop-steps span { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px; border-radius: 50%; color: var(--app-brand); background: #EAF4FF; }
+.leetbook-loop-steps strong { display: block; color: var(--app-text-heading); font-size: 11px; }
+.leetbook-loop-steps p { margin: 4px 0 0; color: var(--app-text-muted); font-size: 9px; line-height: 1.45; }
+.leetbook-loop-note { display: flex; flex-direction: column; gap: 4px; margin-top: 11px; padding: 11px 12px; border-left: 3px solid #6D5BD0; border-radius: 0 8px 8px 0; background: #F2EFFF; }
+.leetbook-loop-note strong { color: #4F3BAE; font-size: 11px; }
+.leetbook-loop-note span { color: #6F649F; font-size: 9px; line-height: 1.5; }
+
+@media (max-width: 860px) {
+  .leetbook-afterword-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .leetbook-afterword { padding: 18px; }
+  .leetbook-afterword-head { align-items: flex-start; flex-direction: column; }
+  .leetbook-rail-list { grid-template-columns: 1fr; }
+  .leetbook-loop-steps { grid-template-columns: 1fr; }
+  .leetbook-loop-steps > div { text-align: left; }
+  .leetbook-loop-steps span { margin: 0 9px 0 0; vertical-align: middle; }
+  .leetbook-loop-steps strong { display: inline; }
+  .leetbook-loop-steps p { margin-left: 46px; }
+}
