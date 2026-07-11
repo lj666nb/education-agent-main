@@ -13,7 +13,7 @@ from app.db.database import get_db
 from app.db.neo4j import get_neo4j, Neo4jConnection
 from app.models.question_bank import (
     Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question,
-    StudentAnswer, CodingTestCase,
+    StudentAnswer, CodingTestCase, WrongAnswerRecord,
 )
 from app.schemas.coding import (
     CodingTreeResponse, CodingProblemResponse, DomainNode, PointNode, ProblemSummary,
@@ -27,6 +27,7 @@ from app.services.code_judge import execute_in_sandbox, normalize_output, trace_
 from app.api.dependencies import get_current_active_user
 from app.crud.api_settings import api_settings_crud
 from app.core.config import settings
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -464,6 +465,31 @@ async def submit_coding_problem(
     db.add(answer)
     db.commit()
     db.refresh(answer)
+
+    # 若提交未通过全部测试，记录到错题本（WrongAnswerRecord）
+    if not response.all_passed:
+        try:
+            existing = db.query(WrongAnswerRecord).filter(
+                WrongAnswerRecord.user_id == current_user.student_id,
+                WrongAnswerRecord.question_id == problem_id,
+            ).first()
+            if existing:
+                existing.wrong_count = (existing.wrong_count or 0) + 1
+                existing.last_wrong_at = datetime.utcnow()
+            else:
+                record = WrongAnswerRecord(
+                    user_id=current_user.student_id,
+                    question_id=problem_id,
+                    bank_id=question.bank_id,
+                    wrong_count=1,
+                    first_wrong_at=datetime.utcnow(),
+                    last_wrong_at=datetime.utcnow(),
+                )
+                db.add(record)
+            db.commit()
+        except Exception as e:
+            logger.warning(f"记录代码题错题失败（非致命）: {e}")
+
     response.submission_id = str(answer.id)
     return response
 
