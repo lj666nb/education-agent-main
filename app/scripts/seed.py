@@ -28,6 +28,7 @@ from app.models.path_state import LearningPathState
 from app.models.resource import KnowledgeResource
 from app.models.user import User, UserProfile, UserRole, UserStatus
 from app.core.security import get_password_hash
+from app.services.knowledge_lecture_builder import build_source_based_lecture
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("uvicorn")
@@ -469,6 +470,9 @@ def seed_database():
 
         # ====== 5. 为测试用户创建演示学习路径（数据结构） ======
         _seed_demo_learning_path(db)
+
+        # ====== 6. 为测试用户的知识点补全阅读讲义（无 LLM 时使用参考资料生成） ======
+        _seed_review_materials(db)
 
         db.commit()
         logger.info("🎉 所有种子数据加载完成")
@@ -1328,3 +1332,65 @@ def _seed_demo_learning_path(db: Session):
     db.flush()
 
     logger.info(f"📚 演示学习路径已创建：{subject.name}（{total_nodes} 知识点，{done_count} 已完成）")
+
+
+def _seed_review_materials(db: Session):
+    """为测试用户的知识点补全阅读讲义（review_material）
+
+    使用参考资料（无需 LLM）为每个缺少讲义的知识点生成 Markdown 阅读材料。
+    幂等：已有 review_material 的记录不会重复生成。
+    """
+    user = db.query(User).filter(User.username == "guoketg").first()
+    if not user:
+        return
+
+    # 查找所有缺少阅读讲义的知识点记录
+    records = (
+        db.query(KnowledgePointRecord)
+        .filter(
+            KnowledgePointRecord.user_id == user.id,
+            KnowledgePointRecord.review_material.is_(None),
+        )
+        .all()
+    )
+
+    if not records:
+        logger.info("📖 所有知识点已有阅读讲义，跳过")
+        return
+
+    generated = 0
+    for record in records:
+        try:
+            # 获取知识点的章节和学科信息
+            point = db.query(KnowledgePoint).filter(
+                KnowledgePoint.id == record.point_id
+            ).first()
+            if not point:
+                continue
+
+            domain = db.query(KnowledgeDomain).filter(
+                KnowledgeDomain.id == point.domain_id
+            ).first()
+            domain_name = domain.name if domain else ""
+            subject_name = ""
+            if domain:
+                subj = db.query(Subject).filter(Subject.id == domain.subject_id).first()
+                if subj:
+                    subject_name = subj.name
+
+            # 使用参考资料生成讲义（无需 LLM API）
+            content = build_source_based_lecture(
+                subject_name=subject_name,
+                domain_name=domain_name,
+                point_name=point.name,
+                description=point.description or "",
+            )
+            record.review_material = content
+            generated += 1
+
+        except Exception as e:
+            logger.warning(f"  生成讲义失败 [{point.name if point else '?'}]: {e}")
+
+    if generated > 0:
+        db.flush()
+        logger.info(f"📖 阅读讲义已补全：{generated} 个知识点")
