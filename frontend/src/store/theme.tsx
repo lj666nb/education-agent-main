@@ -21,9 +21,8 @@ function loadTheme(): Theme {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved === 'dark' || saved === 'light') return saved
-    // 跟随系统
-    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
   } catch {}
+  // 默认浅色模式，不跟随系统偏好
   return DEFAULT_THEME
 }
 
@@ -39,17 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme)
   }, [theme])
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => {
-      // 只在用户没有手动设置过时跟随系统
-      if (!localStorage.getItem(STORAGE_KEY)) {
-        setThemeState(e.matches ? 'dark' : 'light')
-      }
-    }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+  // 默认浅色模式，不跟随系统主题变化
 
   const toggle = () => setThemeState(prev => prev === 'light' ? 'dark' : 'light')
   const setTheme = (t: Theme) => setThemeState(t)

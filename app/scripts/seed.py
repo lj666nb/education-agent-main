@@ -22,10 +22,13 @@ from app.db.database import SessionLocal
 from app.db.neo4j import get_neo4j, Neo4jConnection
 from app.models.question_bank import (
     Subject, KnowledgeDomain, KnowledgePoint, QuestionBank, Question, CodingTestCase,
+    KnowledgePointRecord,
 )
+from app.models.path_state import LearningPathState
 from app.models.resource import KnowledgeResource
 from app.models.user import User, UserProfile, UserRole, UserStatus
 from app.core.security import get_password_hash
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("uvicorn")
 
@@ -463,6 +466,9 @@ def seed_database():
 
         # ====== 4. 注入演示资源（图文讲解/视频脚本/文档/思维导图） ======
         _seed_demo_resources(db)
+
+        # ====== 5. 为测试用户创建演示学习路径（数据结构） ======
+        _seed_demo_learning_path(db)
 
         db.commit()
         logger.info("🎉 所有种子数据加载完成")
@@ -1130,3 +1136,195 @@ def _seed_demo_resources(db: Session):
         logger.info(f"   {label}: {count} 个")
     if failed_kps:
         logger.info(f"   ⚠️ 未匹配知识点的资源: {', '.join(sorted(failed_kps)[:8])}")
+
+
+def _seed_demo_learning_path(db: Session):
+    """为测试用户 guoketg 创建「数据结构」演示学习路径（幂等）
+
+    模拟真实用户正在学习数据结构的状态：
+    - 前 2 章（绪论、线性表）大部分已完成
+    - 中间章节部分学习中
+    - 后面章节待学习
+
+    使得新用户访问首页时能看到学习路径，而非空状态。
+    """
+    user = db.query(User).filter(User.username == "guoketg").first()
+    if not user:
+        logger.warning("跳过演示学习路径：测试用户 guoketg 不存在")
+        return
+
+    subject = db.query(Subject).filter(Subject.name == "数据结构").first()
+    if not subject:
+        logger.warning("跳过演示学习路径：学科「数据结构」不存在")
+        return
+
+    user_id = str(user.id)
+    subject_id = str(subject.id)
+
+    # 幂等检查：已有活跃路径则跳过
+    existing = (
+        db.query(LearningPathState)
+        .filter(
+            LearningPathState.user_id == user.id,
+            LearningPathState.subject_id == subject.id,
+            LearningPathState.phase != "completed",
+        )
+        .first()
+    )
+    if existing:
+        logger.info("📚 演示学习路径已存在，跳过创建")
+        return
+
+    # 获取所有知识点（按章节排序）
+    domains = (
+        db.query(KnowledgeDomain)
+        .filter(KnowledgeDomain.subject_id == subject.id)
+        .order_by(KnowledgeDomain.sort_order)
+        .all()
+    )
+
+    if not domains:
+        logger.warning("跳过演示学习路径：学科下无章节数据")
+        return
+
+    # 定义每章的完成策略：前 2 章已完成，中间 2 章部分学习中，其余待学习
+    CHINA_TZ = timezone(timedelta(hours=8))
+    now = datetime.now(CHINA_TZ)
+
+    node_order = []
+    all_points = []  # (point, domain)
+
+    for domain in domains:
+        points = (
+            db.query(KnowledgePoint)
+            .filter(KnowledgePoint.domain_id == domain.id)
+            .order_by(KnowledgePoint.sort_order)
+            .all()
+        )
+        for pt in points:
+            all_points.append((pt, domain))
+
+    # 为前几章的知识点创建掌握度记录
+    for idx, (pt, domain) in enumerate(all_points):
+        pid = str(pt.id)
+
+        # 前 2 章 (~15 个知识点) 已掌握
+        if idx < 15:
+            mastery = 85 + (idx % 10)  # 85~94
+            status = "done"
+            completed_at = (now - timedelta(days=15 - idx)).isoformat()
+            study_count = 3 + (idx % 3)
+            total_practiced = 5 + (idx % 10)
+            total_correct = max(1, total_practiced - (idx % 3))
+        # 第 3~4 章 (~14 个知识点) 学习中
+        elif idx < 29:
+            mastery = 30 + (idx % 40)  # 30~69
+            status = "pending"
+            completed_at = None
+            study_count = 1 + (idx % 3)
+            total_practiced = 2 + (idx % 4)
+            total_correct = max(1, total_practiced - (idx % 2))
+        # 其余待学习
+        else:
+            mastery = 0
+            status = "pending"
+            completed_at = None
+            study_count = 0
+            total_practiced = 0
+            total_correct = 0
+
+        # 创建 KnowledgePointRecord（幂等）
+        existing_record = (
+            db.query(KnowledgePointRecord)
+            .filter(
+                KnowledgePointRecord.user_id == user.id,
+                KnowledgePointRecord.point_id == pt.id,
+            )
+            .first()
+        )
+        if not existing_record:
+            record = KnowledgePointRecord(
+                user_id=user.id,
+                point_id=pt.id,
+                point_name=pt.name,
+                mastery_score=mastery,
+                recent_accuracy=mastery - (idx % 10),
+                consecutive_errors=0 if mastery >= 60 else (idx % 3),
+                total_practiced=total_practiced,
+                total_correct=total_correct,
+                total_time_spent_seconds=total_practiced * 120,
+                study_count=study_count,
+                last_study_at=now - timedelta(days=idx % 7) if study_count > 0 else None,
+                last_practice_at=now - timedelta(days=idx % 5) if total_practiced > 0 else None,
+                next_review_at=now + timedelta(days=1) if status == "done" and idx % 3 == 0 else None,
+                status=(
+                    "mastered" if mastery >= 80
+                    else "learning" if mastery > 0
+                    else "not_started"
+                ),
+            )
+            db.add(record)
+
+        node_order.append({
+            "node_id": pid,
+            "name": pt.name,
+            "domain_name": domain.name,
+            "status": status,
+            "mastery_score": mastery,
+            "sort_order": pt.sort_order,
+            "started_at": None,
+            "completed_at": completed_at,
+        })
+
+    db.flush()
+
+    # 设置第一个 pending 节点为当前焦点
+    first_pending = next((n for n in node_order if n["status"] == "pending"), None)
+    current_node_id = None
+    current_node_name = None
+    if first_pending:
+        first_pending["status"] = "active"
+        current_node_id = UUID(first_pending["node_id"])
+        current_node_name = first_pending["name"]
+
+    total_nodes = len(node_order)
+    done_count = sum(1 for n in node_order if n["status"] == "done")
+
+    # 创建路径状态
+    state = LearningPathState(
+        id=_uuid.uuid4(),
+        user_id=user.id,
+        subject_id=subject.id,
+        goal_type="学期提升",
+        goal_description="系统掌握数据结构课程全部核心知识点，为期末考试打好基础",
+        phase="learning",
+        current_node_id=current_node_id,
+        current_node_name=current_node_name,
+        node_order=node_order,
+        total_nodes=total_nodes,
+        completed_nodes=done_count,
+        version=1,
+        metadata={
+            "path_name": "数据结构系统学习路径",
+            "description": "按教材章节循序渐进，先掌握基础概念和线性结构，再攻克树、图、查找、排序等高级主题",
+            "total_days": 45,
+            "phases": [
+                {"name": "基础入门", "description": "绪论 + 线性表", "days": 7, "point_count": 15},
+                {"name": "栈队列串", "description": "栈和队列 + 串", "days": 7, "point_count": 14},
+                {"name": "树和图", "description": "数组矩阵 + 树 + 图", "days": 14, "point_count": 32},
+                {"name": "算法进阶", "description": "查找 + 排序", "days": 14, "point_count": 23},
+                {"name": "综合复习", "description": "全面复习和刷题", "days": 3, "point_count": 84},
+            ],
+            "strategy_notes": [
+                "前两章已完成，当前重点攻克栈和队列的应用",
+                "树和图是数据结构核心难点，建议多画图理解",
+                "查找和排序算法需配合编程练习巩固",
+            ],
+            "daily_suggestion": "建议每天学习 2-3 个知识点，配合题库练习巩固",
+            "generation_reason": "种子演示数据 — 基于数据结构教材章节顺序编排",
+        },
+    )
+    db.add(state)
+    db.flush()
+
+    logger.info(f"📚 演示学习路径已创建：{subject.name}（{total_nodes} 知识点，{done_count} 已完成）")
