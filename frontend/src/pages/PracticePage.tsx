@@ -355,7 +355,8 @@ export default function PracticePage() {
       const knowledgePointUuids = pointParam ? [pointParam] : []
       const domainIdsParam = searchParams.get('domain_ids')
       const domainIdsToUse = domainIdsParam ? domainIdsParam.split(',').filter(Boolean) : selectedDomainIds
-      const typesToUse = domainIdsParam ? ['single_choice', 'true_false'] : selectedTypes
+      // 专项刷题不过滤题型，保证与章节目录显示的题目数量一致
+      const typesToUse = domainIdsParam ? [] : selectedTypes
       const res = await questionBankApi.startPractice(bankId!, {
         time_limit_minutes: timeLimit,
         question_count: actualCount,
