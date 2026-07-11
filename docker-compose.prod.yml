@@ -1,0 +1,52 @@
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  neo4j:
+    ports: !reset []
+
+  mongodb:
+    ports: !reset []
+
+  backend:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+    volumes: !override
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./migrations:/app/migrations:ro
+      - runner_socket:/run/code-runner
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/api/v1/openapi.json', timeout=5)
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend.prod
+    ports: !override
+      - "80:80"
+      - "3000:80"
+    volumes: !reset []
+    environment: !reset []
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      backend:
+        condition: service_healthy

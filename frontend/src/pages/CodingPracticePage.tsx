@@ -4,8 +4,6 @@ import { ArrowLeft, BookOpen, CheckCircle2, Code2, Layers3, Search } from 'lucid
 import ProblemTree from '../components/coding/ProblemTree'
 import CodePlayground from '../components/coding/CodePlayground'
 import { codingApi, type CodingProblemResponse, type DomainNode } from '../api/coding'
-import TutorChat from '../components/notes/TutorChat'
-import type { NoteChapter, NoteSection } from '../components/notes/ds-notes'
 import './CodingPracticePage.css'
 
 export default function CodingPracticePage() {
@@ -63,24 +61,6 @@ export default function CodingPracticePage() {
     return { totalProblems, completedProblems, pointCount }
   }, [domains])
 
-  const tutorChapter: NoteChapter = {
-    id: 'curated-code-practice',
-    title: '数据结构代码题库',
-    icon: '</>',
-    sections: [],
-  }
-
-  const tutorSection: NoteSection | null = problem ? {
-    id: problem.id,
-    title: problem.title,
-    content: [
-      problem.content?.description,
-      problem.content?.input_format ? `输入：${problem.content.input_format}` : '',
-      problem.content?.output_format ? `输出：${problem.content.output_format}` : '',
-      problem.content?.constraints ? `约束：${problem.content.constraints}` : '',
-    ].filter(Boolean).join('\n\n'),
-  } : null
-
   if (selectedId) {
     return (
       <div className="coding-practice-workspace">
@@ -95,7 +75,6 @@ export default function CodingPracticePage() {
             onAction={() => navigate('/coding-practice')}
           />
         )}
-        <TutorChat chapter={tutorChapter} section={tutorSection} />
       </div>
     )
   }

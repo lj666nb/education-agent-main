@@ -196,7 +196,7 @@ export default function BankListPage() {
               const cardColor = colors[colorIdx]
               return (
                 <div key={bank.id} onClick={() => {
-                  if (bank.name.includes('代码')) { navigate('/coding-practice') }
+                  if (bank.tags?.includes('编程题')) { navigate('/coding-practice') }
                   else { navigate(`/banks/${bank.id}`) }
                 }}
                   className="bk-card bk-hover"
@@ -256,7 +256,7 @@ export default function BankListPage() {
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
               {banks.slice(0, Math.min(4, banks.length)).map((bank, i) => (
                 <div key={bank.id} onClick={() => {
-                  if (bank.name.includes('代码')) { navigate('/coding-practice') }
+                  if (bank.tags?.includes('编程题')) { navigate('/coding-practice') }
                   else { navigate(`/banks/${bank.id}`) }
                 }}
                   style={{

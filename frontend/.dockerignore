@@ -2,6 +2,7 @@ node_modules/
 .vite/
 .turbo/
 dist/
+public/monaco-editor/
 .git/
 .gitignore
 *.md

@@ -7,6 +7,7 @@ from typing import Optional
 from collections import defaultdict
 import json
 import logging
+import httpx
 
 from app.db.database import get_db
 from app.db.neo4j import get_neo4j, Neo4jConnection
@@ -16,8 +17,10 @@ from app.models.question_bank import (
 )
 from app.schemas.coding import (
     CodingTreeResponse, CodingProblemResponse, DomainNode, PointNode, ProblemSummary,
-    AnalyzeRequest, SubmitResultRequest, SubmitResultResponse,
+    AnalyzeRequest, ExplainRequest, ExplainResponse,
+    SubmitResultRequest, SubmitResultResponse,
     JudgeRequest, JudgeCaseResult, JudgeResponse, SubmissionHistoryItem,
+    SubmissionDetailResponse,
 )
 from app.services.code_analyzer import CodeAnalyzer
 from app.services.code_judge import execute_in_sandbox, normalize_output, trace_to_steps
@@ -501,6 +504,39 @@ async def list_coding_submissions(
     return result
 
 
+@router.get("/problems/{problem_id}/submissions/{submission_id}", response_model=SubmissionDetailResponse)
+async def get_coding_submission_detail(
+    problem_id: UUID,
+    submission_id: UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    """获取单次提交的详细记录（含完整代码）。"""
+    row = (
+        db.query(StudentAnswer)
+        .filter(
+            StudentAnswer.id == submission_id,
+            StudentAnswer.user_id == current_user.student_id,
+            StudentAnswer.question_id == problem_id,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="提交记录不存在")
+    content = row.answer_content if isinstance(row.answer_content, dict) else {}
+    return SubmissionDetailResponse(
+        id=str(row.id),
+        created_at=row.created_at,
+        language=content.get("language", "python"),
+        verdict=content.get("verdict", "accepted" if row.is_correct else "wrong_answer"),
+        is_correct=row.is_correct,
+        passed_cases=int(content.get("passed_cases", 0)),
+        total_cases=int(content.get("total_cases", 0)),
+        runtime=float(content.get("runtime", 0)),
+        code=content.get("code", ""),
+    )
+
+
 @router.get("/problems/{problem_id}/solution")
 async def reveal_coding_solution(
     problem_id: UUID,
@@ -527,6 +563,130 @@ async def reveal_coding_solution(
         "complexity": answer.get("complexity", ""),
         "standard_answer": answer.get("standard_answer", {}),
     }
+
+
+@router.post("/problems/{problem_id}/explain", response_model=ExplainResponse)
+async def explain_problem(
+    problem_id: UUID,
+    request: ExplainRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    """AI 解答：分析题目和代码，给出解题思路及 Python / C++ 参考实现。"""
+    question = db.query(Question).filter(
+        Question.id == problem_id,
+        Question.type == "programming",
+        Question.status == "published",
+    ).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="题目不存在")
+
+    content = question.content or {}
+    desc_parts = []
+    for key, label in [("description", "题目"), ("stem", ""), ("input_format", "输入"), ("output_format", "输出")]:
+        val = content.get(key, "")
+        if val:
+            prefix = f"{label}: " if label else ""
+            desc_parts.append(f"{prefix}{val}")
+    problem_desc = "\n".join(desc_parts) if desc_parts else str(content)
+
+    # 添加约束和样例
+    constraints = content.get("constraints", [])
+    if constraints:
+        problem_desc += "\n\n约束: " + "; ".join(constraints)
+    examples = content.get("examples", [])
+    if examples:
+        example_lines = []
+        for i, ex in enumerate(examples):
+            example_lines.append(f"样例{i+1}: 输入={ex.get('input','')}, 输出={ex.get('output','')}")
+        problem_desc += "\n\n" + "\n".join(example_lines)
+
+    # Resolve API creds
+    creds = _resolve_api_creds(db, str(current_user.student_id))
+    if not creds:
+        raise HTTPException(status_code=400, detail="AI 解答需要 API Key，请在设置中配置 DeepSeek 或 Qwen API")
+
+    explain_prompt = f"""你是一位数据结构算法教练。请根据以下编程题目和学生的当前代码，给出针对性的分析和引导。
+
+【题目描述】
+{problem_desc}
+
+【学生当前代码】
+```{request.language}
+{request.code or '（学生尚未编写代码）'}
+```
+
+【严格要求】
+1. 用中文分析学生当前代码的优缺点，指出具体问题所在
+2. 提供下一步的改进方向引导（如"建议你考虑使用双指针优化"、"注意处理数组越界"等），但**绝对不能给出完整代码**
+3. 如果学生代码为空，请引导他先理清输入输出和边界条件，再动手写
+4. **绝对禁止**提供任何可直接复制粘贴的完整代码实现
+5. 用如下格式输出：
+
+[讲解]
+（分析学生当前代码的问题、优点、改进方向）
+
+[引导]
+（具体的下一步行动建议，如：先处理什么情况、用什么数据结构、思考什么边界条件等，不能出现完整代码）"""
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {creds['api_key']}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": creds["model"],
+            "messages": [{"role": "user", "content": explain_prompt}],
+            "temperature": 0.3,
+            "max_tokens": 4096,
+        }
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            response = await client.post(
+                f"{creds['base_url']}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+        if response.status_code != 200:
+            logger.error(f"AI explain failed: {response.status_code} {response.text[:300]}")
+            raise HTTPException(status_code=502, detail=f"AI 服务调用失败：{response.status_code}")
+
+        result = response.json()
+        ai_text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        if not ai_text:
+            raise HTTPException(status_code=502, detail="AI 返回内容为空")
+
+        # Parse the AI response
+        import re
+        explanation = ""
+        guidance = ""
+
+        # Extract [讲解] section
+        explain_match = re.search(r'\[讲解\](.*?)(?=\[引导\]|$)', ai_text, re.DOTALL)
+        if explain_match:
+            explanation = explain_match.group(1).strip()
+
+        # Extract [引导] section
+        guidance_match = re.search(r'\[引导\](.*?)$', ai_text, re.DOTALL)
+        if guidance_match:
+            guidance = guidance_match.group(1).strip()
+
+        # Fallback: if no sections found, use whole response as explanation
+        if not explanation and not guidance:
+            explanation = ai_text.strip()
+
+        return ExplainResponse(
+            explanation=explanation,
+            guidance=guidance,
+            model=creds["model"],
+        )
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="AI 响应超时，请稍后重试")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"AI explain error: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"AI 服务异常：{str(e)}")
 
 
 @router.post("/submit-result", response_model=SubmitResultResponse, deprecated=True)

@@ -132,3 +132,5 @@ test_new_pages.spec.ts
 *.jpeg
 # But track seed data plot images
 !uploads/plots/*.png
+# Product assets referenced by the built-in data-structure notes
+!frontend/public/images/**/*.png

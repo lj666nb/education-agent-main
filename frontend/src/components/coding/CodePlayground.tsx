@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import {
   AlertTriangle,
   ArrowLeft,
   BookOpen,
+  Bot,
   Check,
   CheckCircle2,
   ChevronRight,
+  Clipboard,
   Clock3,
   Code2,
+  Copy,
   ExternalLink,
   FileText,
   History,
@@ -30,11 +32,13 @@ import type {
   AnalyzeStep,
   CodingProblemResponse,
   CodingSolutionResponse,
+  ExplainResponse,
   JudgeCaseResult,
   JudgeResponse,
   ProblemExample,
   ProblemHint,
   PublicTestCase,
+  SubmissionDetailResponse,
   SubmissionHistoryItem,
 } from '../../api/coding'
 import { codingApi } from '../../api/coding'
@@ -46,7 +50,7 @@ interface Props {
 }
 
 type LeftTab = 'description' | 'hints' | 'submissions' | 'solution'
-type ResultTab = 'results' | 'trace'
+type ResultTab = 'results' | 'trace' | 'explain'
 type MobilePane = 'problem' | 'code'
 type SaveState = 'saved' | 'saving' | 'unsaved'
 
@@ -85,7 +89,12 @@ function getTemplate(problem: CodingProblemResponse, language: string) {
   const template = problem.content.code_template
   if (typeof template === 'string') return template
   if (!template) return ''
-  return template[language] || template.python || Object.values(template)[0] || ''
+  if (template[language]) return template[language]
+  // Default C++ template for stdin/stdout problems
+  if (language === 'cpp') {
+    return '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    // TODO: 在此实现算法逻辑\n\n    return 0;\n}\n'
+  }
+  return template.python || Object.values(template)[0] || ''
 }
 
 function getSourceLabel(problem: CodingProblemResponse) {
@@ -165,11 +174,36 @@ export default function CodePlayground({ problem, onBack }: Props) {
   const [traceIndex, setTraceIndex] = useState(0)
   const [autoPlaying, setAutoPlaying] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Listen for browser fullscreen change (e.g. user presses Esc)
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }, [])
+  const [explainLoading, setExplainLoading] = useState(false)
+  const [explainResult, setExplainResult] = useState<ExplainResponse | null>(null)
+  const [explainError, setExplainError] = useState('')
+  const [submissionPage, setSubmissionPage] = useState(1)
+  const [submissionHasMore, setSubmissionHasMore] = useState(false)
   const autoPlayTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const supportedLanguages = useMemo(() => {
     const configured = problem?.content.supported_languages
-    return Array.isArray(configured) && configured.length > 0 ? configured : ['python']
+    const base = Array.isArray(configured) && configured.length > 0 ? configured : ['python']
+    // Always ensure C++ is available
+    if (!base.includes('cpp')) {
+      return [...base, 'cpp']
+    }
+    return base
   }, [problem])
 
   const examples = useMemo(() => problem ? getExamples(problem) : [], [problem])
@@ -185,12 +219,19 @@ export default function CodePlayground({ problem, onBack }: Props) {
     setAutoPlaying(false)
   }, [])
 
-  const loadSubmissions = useCallback(async (problemId: string) => {
+  const loadSubmissions = useCallback(async (problemId: string, page = 1) => {
     setSubmissionsLoading(true)
     setSubmissionsError('')
     try {
-      const response = await codingApi.getSubmissions(problemId)
-      setSubmissions(response.data)
+      const response = await codingApi.getSubmissions(problemId, page, 20)
+      const items = response.data || []
+      if (page === 1) {
+        setSubmissions(items)
+      } else {
+        setSubmissions(prev => [...prev, ...items])
+      }
+      setSubmissionPage(page)
+      setSubmissionHasMore(items.length === 20)
     } catch (error) {
       setSubmissionsError(apiErrorMessage(error, '提交记录加载失败，请稍后重试'))
     } finally {
@@ -220,6 +261,8 @@ export default function CodePlayground({ problem, onBack }: Props) {
     setSolution(null)
     setSolutionError('')
     setSubmissionsError('')
+    setExplainResult(null)
+    setExplainError('')
     setTraceIndex(0)
     void loadSubmissions(problem.id)
   }, [problem?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -293,6 +336,29 @@ export default function CodePlayground({ problem, onBack }: Props) {
     invalidateRun()
     setNotice('已恢复题目提供的 TODO 模板')
   }
+
+  const handleExplain = useCallback(async () => {
+    if (!problem || explainLoading) return
+    setExplainLoading(true)
+    setExplainError('')
+    setExplainResult(null)
+    setResultTab('explain')
+    setMobilePane('code')
+    try {
+      const response = await codingApi.explainProblem(problem.id, {
+        problem_id: problem.id,
+        code: editor.code,
+        language,
+      })
+      setExplainResult(response.data)
+      setNotice('AI 解答已生成')
+    } catch (error) {
+      setExplainError(apiErrorMessage(error, 'AI 解答失败，请稍后重试'))
+      setNotice('')
+    } finally {
+      setExplainLoading(false)
+    }
+  }, [editor.code, explainLoading, language, problem])
 
   const handleRun = useCallback(async () => {
     if (!problem || busyAction || !code.trim()) return
@@ -460,7 +526,9 @@ export default function CodePlayground({ problem, onBack }: Props) {
                 submissions={submissions}
                 loading={submissionsLoading}
                 error={submissionsError}
-                onRefresh={() => void loadSubmissions(problem.id)}
+                hasMore={submissionHasMore}
+                onLoadMore={() => void loadSubmissions(problem.id, submissionPage + 1)}
+                problemId={problem.id}
               />
             )}
 
@@ -503,11 +571,22 @@ export default function CodePlayground({ problem, onBack }: Props) {
               <button
                 className="oj-dark-icon-button"
                 type="button"
-                onClick={() => setIsFullscreen(value => !value)}
-                title={isFullscreen ? '退出全屏' : '全屏编辑'}
+                onClick={toggleFullscreen}
+                title={isFullscreen ? '退出全屏' : '全屏放大'}
                 data-testid="coding-fullscreen-toggle"
               >
                 {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              </button>
+              <button
+                className="oj-action-button oj-action-button--explain"
+                type="button"
+                onClick={() => void handleExplain()}
+                disabled={explainLoading}
+                data-testid="coding-explain-ai"
+                title="AI 解答"
+              >
+                {explainLoading ? <LoaderCircle className="oj-spin" size={15} /> : <Bot size={15} />}
+                <span>AI解答</span>
               </button>
               <button
                 className="oj-action-button oj-action-button--run"
@@ -548,13 +627,16 @@ export default function CodePlayground({ problem, onBack }: Props) {
                 <ChevronRight size={15} /> 真实执行轨迹
                 {traceSteps.length > 0 && <span>{traceSteps.length}</span>}
               </button>
+              <button type="button" className={resultTab === 'explain' ? 'is-active' : ''} onClick={() => setResultTab('explain')}>
+                <Bot size={15} /> AI解答
+              </button>
               <div className="oj-result-tabs__notice" title={notice}>{notice}</div>
             </div>
 
             <div className="oj-result-content">
               {resultTab === 'results' ? (
                 <JudgeResultPanel result={judgeResult} error={judgeError} busy={busyAction} publicCases={problem.public_cases} />
-              ) : (
+              ) : resultTab === 'trace' ? (
                 <TracePanel
                   steps={traceSteps}
                   currentIndex={traceIndex}
@@ -564,6 +646,13 @@ export default function CodePlayground({ problem, onBack }: Props) {
                   onNext={() => setTraceIndex(value => Math.min(traceSteps.length - 1, value + 1))}
                   onToggleAuto={() => autoPlaying ? stopAutoPlay() : setAutoPlaying(true)}
                 />
+              ) : (
+                <ExplainPanel
+                  loading={explainLoading}
+                  result={explainResult}
+                  error={explainError}
+                  onRetry={() => void handleExplain()}
+                />
               )}
             </div>
           </section>
@@ -572,7 +661,7 @@ export default function CodePlayground({ problem, onBack }: Props) {
     </main>
   )
 
-  return isFullscreen ? createPortal(workspace, document.body) : workspace
+  return workspace
 }
 
 function ProblemDescription({ problem, examples }: { problem: CodingProblemResponse; examples: ProblemExample[] }) {
@@ -699,45 +788,133 @@ function SubmissionsPanel({
   submissions,
   loading,
   error,
-  onRefresh,
+  hasMore,
+  onLoadMore,
+  problemId,
 }: {
   submissions: SubmissionHistoryItem[]
   loading: boolean
   error: string
-  onRefresh: () => void
+  hasMore: boolean
+  onLoadMore: () => void
+  problemId: string
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detail, setDetail] = useState<SubmissionDetailResponse | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleExpand = useCallback(async (item: SubmissionHistoryItem) => {
+    if (expandedId === item.id) {
+      setExpandedId(null)
+      setDetail(null)
+      return
+    }
+    setExpandedId(item.id)
+    setDetail(null)
+    if (item.code) {
+      // Code already available
+      setDetail(item as SubmissionDetailResponse)
+      return
+    }
+    setDetailLoading(true)
+    try {
+      const response = await codingApi.getSubmissionDetail(problemId, item.id)
+      setDetail(response.data)
+    } catch {
+      setDetail(null)
+    } finally {
+      setDetailLoading(false)
+    }
+  }, [expandedId, problemId])
+
+  const handleCopy = useCallback(async (code: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      // fallback
+    }
+  }, [])
+
   return (
     <article className="oj-panel-article">
-      <div className="oj-panel-heading oj-panel-heading--row">
+      <div className="oj-panel-heading">
         <div>
           <div className="oj-eyebrow">服务端判题记录</div>
           <h2>我的提交</h2>
+          <p>最新提交排在最前面，点击查看代码。</p>
         </div>
-        <button className="oj-outline-button oj-outline-button--small" type="button" onClick={onRefresh} disabled={loading}>
-          <RotateCcw className={loading ? 'oj-spin' : ''} size={14} /> 刷新
-        </button>
       </div>
       {loading && submissions.length === 0 ? (
         <EmptyState icon={<LoaderCircle className="oj-spin" size={26} />} title="正在加载提交记录" />
       ) : error && submissions.length === 0 ? (
-        <EmptyState icon={<AlertTriangle size={26} />} title={error} action="重新加载" onAction={onRefresh} />
+        <EmptyState icon={<AlertTriangle size={26} />} title={error} />
       ) : submissions.length === 0 ? (
         <EmptyState icon={<History size={26} />} title="还没有提交记录" detail="运行公开测试不会计为提交；准备好后再提交隐藏测试。" />
       ) : (
-        <div className="oj-submission-list">
-          {submissions.map(item => (
-            <div className="oj-submission-row" key={item.id}>
-              <div className={`oj-submission-status ${item.is_correct ? 'is-passed' : 'is-failed'}`}>
-                {item.is_correct ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-                <strong>{VERDICT_LABELS[item.verdict] || item.verdict}</strong>
+        <>
+          <div className="oj-submission-list">
+            {submissions.map(item => (
+              <div key={item.id}>
+                <button
+                  type="button"
+                  className={`oj-submission-row${expandedId === item.id ? ' is-expanded' : ''}`}
+                  onClick={() => handleExpand(item)}
+                >
+                  <div className={`oj-submission-status ${item.is_correct ? 'is-passed' : 'is-failed'}`}>
+                    {item.is_correct ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+                    <strong>{VERDICT_LABELS[item.verdict] || item.verdict}</strong>
+                  </div>
+                  <span>{item.passed_cases}/{item.total_cases} 用例</span>
+                  <span>{LANGUAGE_LABELS[item.language] || item.language}</span>
+                  <span>{formatRuntime(item.runtime)}</span>
+                  <time>{formatDate(item.created_at)}</time>
+                </button>
+                {expandedId === item.id && (
+                  <div className="oj-submission-detail">
+                    {detailLoading ? (
+                      <div className="oj-submission-detail__loading">
+                        <LoaderCircle className="oj-spin" size={16} /> 加载代码中…
+                      </div>
+                    ) : detail ? (
+                      <>
+                        <div className="oj-submission-detail__head">
+                          <span>{LANGUAGE_LABELS[detail.language] || detail.language} · 提交代码</span>
+                          <button
+                            type="button"
+                            className="oj-copy-button"
+                            onClick={(e) => { e.stopPropagation(); handleCopy(detail.code, detail.id) }}
+                          >
+                            {copiedId === detail.id ? <><Check size={13} /> 已复制</> : <><Clipboard size={13} /> 复制代码</>}
+                          </button>
+                        </div>
+                        <div className="oj-submission-detail__code">
+                          <CodeEditor code={detail.code} language={detail.language} readOnly height={Math.min(380, Math.max(180, (detail.code || '').split('\n').length * 22 + 40))} />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="oj-submission-detail__loading">无法加载该提交的代码</div>
+                    )}
+                  </div>
+                )}
               </div>
-              <span>{item.passed_cases}/{item.total_cases} 用例</span>
-              <span>{LANGUAGE_LABELS[item.language] || item.language}</span>
-              <span>{formatRuntime(item.runtime)}</span>
-              <time>{formatDate(item.created_at)}</time>
+            ))}
+          </div>
+          {hasMore && (
+            <div className="oj-submission-more">
+              <button
+                className="oj-outline-button"
+                type="button"
+                onClick={onLoadMore}
+                disabled={loading}
+              >
+                {loading ? <><LoaderCircle className="oj-spin" size={14} /> 加载中</> : '加载更多提交'}
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </article>
   )
@@ -945,6 +1122,85 @@ function ListCard({ title, items }: { title: string; items: string[] }) {
 
 function CodeValue({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
   return <div className={`oj-code-value${danger ? ' is-danger' : ''}`}><span>{label}</span><pre>{value}</pre></div>
+}
+
+function ExplainPanel({
+  loading,
+  result,
+  error,
+  onRetry,
+}: {
+  loading: boolean
+  result: ExplainResponse | null
+  error: string
+  onRetry: () => void
+}) {
+  if (loading) {
+    return (
+      <div className="oj-judge-loading">
+        <LoaderCircle className="oj-spin" size={24} />
+        <div><strong>AI 正在分析你的代码</strong><span>这可能需要几秒钟，请耐心等待。</span></div>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="oj-error-banner">
+        <AlertTriangle size={18} />
+        <div>
+          <strong>AI 解答失败</strong>
+          <span>{error}</span>
+          <button className="oj-outline-button oj-outline-button--small" type="button" onClick={onRetry} style={{ marginTop: 8 }}>
+            重新尝试
+          </button>
+        </div>
+      </div>
+    )
+  }
+  if (!result) {
+    return (
+      <div className="oj-result-placeholder">
+        <div className="oj-result-placeholder__copy">
+          <Bot size={22} />
+          <div>
+            <strong>点击"AI解答"按钮</strong>
+            <span>AI 将分析你的代码并给出针对性的改进方向和下一步引导，不会直接给出答案代码。</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="oj-explain-panel">
+      {/* Model info */}
+      <div className="oj-explain-lang-switch">
+        <span className="oj-explain-model">模型：{result.model}</span>
+      </div>
+
+      {/* Code analysis */}
+      {result.explanation && (
+        <div className="oj-explain-text">
+          <div className="oj-explain-section-title">
+            <Bot size={16} />
+            代码分析
+          </div>
+          {result.explanation}
+        </div>
+      )}
+
+      {/* Next-step guidance */}
+      {result.guidance && (
+        <div className="oj-explain-text oj-explain-guidance">
+          <div className="oj-explain-section-title">
+            <Lightbulb size={16} />
+            下一步引导
+          </div>
+          {result.guidance}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function EmptyState({

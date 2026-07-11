@@ -155,12 +155,29 @@ export interface SubmissionHistoryItem {
   passed_cases: number
   total_cases: number
   runtime: number
+  code?: string
+}
+
+export interface SubmissionDetailResponse extends SubmissionHistoryItem {
+  code: string
 }
 
 export interface CodingSolutionResponse {
   explanation: string
   complexity: string
   standard_answer: string | Record<string, string>
+}
+
+export interface ExplainRequest {
+  problem_id: string
+  code: string
+  language: string
+}
+
+export interface ExplainResponse {
+  explanation: string
+  guidance: string
+  model: string
 }
 
 export const codingApi = {
@@ -186,6 +203,12 @@ export const codingApi = {
       params: { page, page_size: pageSize },
     }),
 
+  getSubmissionDetail: (problemId: string, submissionId: string) =>
+    api.get<SubmissionDetailResponse>(`/coding/problems/${problemId}/submissions/${submissionId}`),
+
   getSolution: (id: string) =>
     api.get<CodingSolutionResponse>(`/coding/problems/${id}/solution`),
+
+  explainProblem: (id: string, data: ExplainRequest) =>
+    api.post<ExplainResponse>(`/coding/problems/${id}/explain`, data),
 }

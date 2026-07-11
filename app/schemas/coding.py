@@ -57,6 +57,32 @@ class AnalyzeRequest(BaseModel):
     language: str = Field(default="python", description="编程语言")
 
 
+# ── AI 解答 ──
+
+class ExplainRequest(BaseModel):
+    problem_id: str = Field(..., description="题目ID")
+    code: str = Field(default="", description="学生当前代码（可为空）")
+    language: str = Field(default="python", description="当前编程语言")
+
+
+class ExplainResponse(BaseModel):
+    explanation: str = Field(default="", description="AI 对你当前代码的分析")
+    guidance: str = Field(default="", description="AI 提供的下一步方向引导")
+    model: str = Field(default="", description="使用的模型")
+
+
+class SubmissionDetailResponse(BaseModel):
+    id: str
+    created_at: datetime
+    language: str
+    verdict: str
+    is_correct: bool
+    passed_cases: int
+    total_cases: int
+    runtime: float
+    code: str = Field(default="", description="提交时的完整代码")
+
+
 # ── 提交结果 ──
 
 class SubmitResultRequest(BaseModel):

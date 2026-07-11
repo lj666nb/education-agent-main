@@ -286,7 +286,7 @@ export default function BankDetailPage() {
   if (!bank) return null
 
   // 代码题库直接跳转到编程练习界面
-  if (bank.name.includes('代码')) {
+  if (bank.tags?.includes('编程题')) {
     navigate('/coding-practice', { replace: true })
     return null
   }

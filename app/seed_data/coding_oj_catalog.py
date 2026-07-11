@@ -68,8 +68,23 @@ def _problem(
             "constraints": constraints,
             "edge_cases": ["最小规模输入", "重复元素或重复边", "空结构或不可达情况（若题意允许）"],
             "interface": {"mode": "stdin", "language": "python", "entry": "solve"},
-            "supported_languages": ["python"],
-            "code_template": {"python": _clean(starter)},
+            "supported_languages": ["python", "cpp"],
+            "code_template": {
+                "python": _clean(starter),
+                "cpp": _clean("""#include <bits/stdc++.h>
+using namespace std;
+
+// TODO: 在此实现算法逻辑
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    // 请根据题目要求读取输入并输出结果
+
+    return 0;
+}"""),
+            },
             "hints": [
                 {"level": index + 1, "title": title_text, "content": content}
                 for index, (title_text, content) in enumerate(zip(
