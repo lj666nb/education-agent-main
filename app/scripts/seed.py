@@ -456,39 +456,60 @@ def _bank_exists(db: Session, name: str) -> bool:
 # ── 主入口 ──
 
 def seed_database():
-    """综合种子数据主入口 — 在 app 启动时自动执行（幂等）"""
-    db: Session = SessionLocal()
+    """综合种子数据主入口 — 在 app 启动时自动执行（幂等）
+
+    采用两阶段提交策略，确保关键数据（用户、学科、题库题目）不会因为
+    非关键步骤（演示资源、学习路径、讲义）的失败而回滚。
+    """
+    # ── Phase 1: 关键数据（用户 + 学科数据） ──────────────────────
+    # 使用独立事务，即使 Phase 2 失败，Phase 1 的更改也会保留。
+    db1: Session = SessionLocal()
+    phase1_ok = False
     try:
         # ====== 1. 创建测试用户和管理员 ======
-        _ensure_test_user(db)
-        _ensure_admin_user(db)
+        _ensure_test_user(db1)
+        _ensure_admin_user(db1)
 
-        # ====== 2. 注入学科数据（使用完整 Python 数据结构） ======
-        _seed_comprehensive_data(db)
+        # ====== 2. 注入学科数据（科目、章节、知识点、题库、题目） ======
+        _seed_comprehensive_data(db1)
 
-        # ====== 3. 注入代码案例 ======
-        _seed_code_cases(db)
-
-        # ====== 4. 注入演示资源（图文讲解/视频脚本/文档/思维导图） ======
-        _seed_demo_resources(db)
-
-        # ====== 5. 为测试用户创建演示学习路径（数据结构） ======
-        _seed_demo_learning_path(db)
-
-        # ====== 6. 为测试用户的知识点补全阅读讲义（无 LLM 时使用参考资料生成） ======
-        _seed_knowledge_point_lectures(db)
-        _seed_review_materials(db)
-
-        db.commit()
-        logger.info("🎉 所有种子数据加载完成")
-
+        db1.commit()
+        phase1_ok = True
+        logger.info("✅ 核心种子数据加载完成（用户 + 题库）")
     except Exception as e:
-        db.rollback()
-        logger.error(f"❌ 种子数据加载失败: {e}")
+        db1.rollback()
+        logger.error(f"❌ 核心种子数据加载失败: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        db.close()
+        db1.close()
+
+    # ── Phase 2: 辅助数据（资源 / 学习路径 / 讲义 / 复习材料） ──
+    # 这些步骤失败不应影响已提交的题库数据。
+    db2: Session = SessionLocal()
+    try:
+        # ====== 3. 注入代码案例 ======
+        _seed_code_cases(db2)
+
+        # ====== 4. 注入演示资源（图文讲解/视频脚本/文档/思维导图） ======
+        _seed_demo_resources(db2)
+
+        # ====== 5. 为测试用户创建演示学习路径（数据结构） ======
+        _seed_demo_learning_path(db2)
+
+        # ====== 6. 为测试用户的知识点补全阅读讲义 ======
+        _seed_knowledge_point_lectures(db2)
+        _seed_review_materials(db2)
+
+        db2.commit()
+        logger.info("🎉 所有种子数据加载完成")
+    except Exception as e:
+        db2.rollback()
+        logger.warning(f"⚠️ 辅助种子数据加载失败（不影响题库使用）: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        db2.close()
 
 
 def _ensure_test_user(db: Session):
@@ -1245,7 +1266,7 @@ def _seed_demo_learning_path(db: Session):
         if not ai_meta.get("is_seed"):
             ai_meta["is_seed"] = True
             existing.ai_metadata = ai_meta
-            db.commit()
+            db.flush()
             logger.info("📚 演示学习路径已存在，已更新 is_seed 标记")
         else:
             logger.info("📚 演示学习路径已存在，跳过创建")
