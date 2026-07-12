@@ -25,6 +25,7 @@ def apply_required_migrations(engine: Engine) -> None:
     migrations = [
         ("013_add_coding_judge", migration_root / "013_add_coding_judge.sql"),
         ("014_add_knowledge_point_lectures", migration_root / "014_add_knowledge_point_lectures.sql"),
+        ("015_add_citations_to_chat_messages", migration_root / "015_add_citations_to_chat_messages.sql"),
     ]
     with engine.begin() as connection:
         connection.exec_driver_sql(

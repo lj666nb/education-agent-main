@@ -25,6 +25,7 @@ type Props = {
   error?: string | null
   selectedDomain?: string | null
   weakMode?: boolean
+  subjectName?: string
   onDomainChange: (domain: string | null) => void
   onNodeClick: (node: PathNodeStatus) => void
   onNodeContext?: (event: MouseEvent, node: PathNodeStatus) => void
@@ -55,6 +56,7 @@ export default function LeetBookExploreMap({
   error,
   selectedDomain,
   weakMode,
+  subjectName,
   onDomainChange,
   onNodeClick,
   onNodeContext,
@@ -92,10 +94,12 @@ export default function LeetBookExploreMap({
               探索知识地图
             </div>
             <h2 style={{ margin: 0, color: INK, fontSize: 30, lineHeight: 1.2, fontWeight: 800 }}>
-              数据结构知识路径
+              {subjectName ? `${subjectName}知识路径` : '知识路径探索'}
             </h2>
             <p style={{ margin: '10px 0 0', color: MUTED, fontSize: 14, lineHeight: 1.8, maxWidth: 680 }}>
-              按章节推进，每个知识点都可以进入独立章节页查看讲义、练习、测评和复习资料。
+              {subjectName
+                ? `按章节推进${subjectName}学习，每个知识点都可以进入独立章节页查看讲义、练习、测评和复习资料。`
+                : '按章节推进，每个知识点都可以进入独立章节页查看讲义、练习、测评和复习资料。'}
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' }}>
               <button onClick={onToggleWeakMode} style={{
@@ -439,17 +443,17 @@ export default function LeetBookExploreMap({
               <span style={{ color: 'var(--app-brand)', font: '800 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace', letterSpacing: '.14em' }}>LEARNING RESOURCES</span>
               <h3 style={{ margin: '7px 0 5px', color: 'var(--app-text-heading)', fontSize: 23, letterSpacing: '-.02em' }}>推荐学习资源</h3>
               <p style={{ maxWidth: 720, margin: 0, color: 'var(--app-text-muted)', fontSize: 13, lineHeight: 1.7 }}>
-                以下资源来自成熟学习平台，可帮助加深对数据结构知识点的理解。
+                以下资源来自成熟学习平台，可帮助加深对{subjectName || '当前学科'}知识点的理解。
               </p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
               {[
                 { name: 'OI Wiki', note: '算法与数据结构原理详解', url: 'https://oi-wiki.org/ds/', tone: '#0891B2', bg: '#ECFEFF' },
-                { name: '中国大学 MOOC', note: '系统课程与章节讲解', url: 'https://www.icourse163.org/search.htm?search=数据结构', tone: '#2563EB', bg: '#EFF6FF' },
-                { name: 'LeetCode 中国', note: '数据结构专题练习', url: 'https://leetcode.cn/problemset/?search=数据结构', tone: '#EA580C', bg: '#FFF7ED' },
+                { name: '中国大学 MOOC', note: '系统课程与章节讲解', url: `https://www.icourse163.org/search.htm?search=${encodeURIComponent(subjectName || '')}`, tone: '#2563EB', bg: '#EFF6FF' },
+                { name: 'LeetCode 中国', note: '算法与编程专题练习', url: `https://leetcode.cn/problemset/?search=${encodeURIComponent(subjectName || '')}`, tone: '#EA580C', bg: '#FFF7ED' },
                 { name: 'VisuAlgo', note: '可视化交互学习数据结构', url: 'https://visualgo.net/zh', tone: '#7C3AED', bg: '#F5F3FF' },
                 { name: 'Hello 算法', note: '动画图解数据结构与算法', url: 'https://www.hello-algo.com/', tone: '#059669', bg: '#ECFDF5' },
-                { name: 'Bilibili 教程', note: '换个方式听讲解', url: 'https://search.bilibili.com/all?keyword=数据结构', tone: '#DB2777', bg: '#FDF2F8' },
+                { name: 'Bilibili 教程', note: '换个方式听讲解', url: `https://search.bilibili.com/all?keyword=${encodeURIComponent((subjectName || '') + ' 教程')}`, tone: '#DB2777', bg: '#FDF2F8' },
               ].map(resource => (
                 <a key={resource.name} href={resource.url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex',

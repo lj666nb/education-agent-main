@@ -554,6 +554,7 @@ export default function LearningPathPage() {
   const [favorites,setFavorites]=useState<Set<string>>(new Set())
   const [ctxNode,setCtxNode]=useState<PathNodeStatus|null>(null); const [ctxPos,setCtxPos]=useState({x:0,y:0})
   const [weakMode,setWeakMode]=useState(false); const [hlNode,setHlNode]=useState<string|null>(null); const [zoomLevel,setZoomLevel]=useState(1)
+  const [subjectName,setSubjectName]=useState<string>('')
   // ── New: Achievement & Milestone System ──
   const [milestones,setMilestones]=useState<{name:string;target:number;unlocked:boolean}[]>([])
   const [showMilestoneEditor,setShowMilestoneEditor]=useState(false)
@@ -569,7 +570,12 @@ export default function LearningPathPage() {
   const _url=(v:string,s?:string,p?:string)=>{const q=new URLSearchParams();q.set('view',v);if(s)q.set('state',s);if(p)q.set('point',p);window.history.replaceState(null,'','/path?'+q.toString())}
   const _pathStatus=(s:string):PathNodeStatus['status']=>s==='done'?'mastered':s==='active'?'learning':s==='reviewing'?'reviewing':s==='locked'?'locked':'not_started'
 
-  const _sel=async(s:string)=>{setSid(s);setLoad(true);setErr(null);try{const r=await pathApi.getPathState(s);const d=r.data.state;if(d){const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0});setPv('overview');_url('overview',s)}}catch(e:any){setErr(e?.response?.data?.detail||'加载失败')};setLoad(false)}
+  const _sel=async(s:string)=>{setSid(s);setLoad(true);setErr(null);try{const r=await pathApi.getPathState(s);const d=r.data.state;if(d){const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0});
+    // Look up subject name from loaded subjects list or path list
+    const pathListItem = pl.find(p => p.state_id === s);
+    const subjName = pathListItem?.subject_name || subjects.find((sub: any) => sub.id === d.subject_id)?.name || '';
+    setSubjectName(subjName);
+    setPv('overview');_url('overview',s)}}catch(e:any){setErr(e?.response?.data?.detail||'加载失败')};setLoad(false)}
 
   const _ref=useCallback(async()=>{if(!sid)return;try{const r=await pathApi.getPathState(sid);const d=r.data.state;if(!d)return;const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0})}catch(_){}},[sid])
 
@@ -659,6 +665,7 @@ export default function LearningPathPage() {
       error={err}
       selectedDomain={sdom}
       weakMode={weakMode}
+      subjectName={subjectName}
       onDomainChange={(domain)=>setSdom(domain)}
       onNodeClick={_nclick}
       onNodeContext={_handleNodeContext}

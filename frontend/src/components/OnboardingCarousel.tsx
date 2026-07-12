@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { animated, useSpring } from '@react-spring/web'
 import { MessageCircle, GitBranch, BookOpen, Zap, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useAuthStore } from '../store/auth'
 import './OnboardingCarousel.css'
@@ -101,13 +100,6 @@ export default function OnboardingCarousel() {
   const slidesRef = useRef<HTMLDivElement>(null)
   const hasDismissed = useRef(false)
 
-  /* ── Overlay entrance animation ── */
-  const overlaySpring = useSpring({
-    opacity: visible ? 1 : 0,
-    scale: visible ? 1 : 0.92,
-    config: { tension: 280, friction: 26 },
-  })
-
   /* ── Decide whether to show on mount ── */
   useEffect(() => {
     if (!userId) return
@@ -121,6 +113,7 @@ export default function OnboardingCarousel() {
     if (forceShow === 'true') {
       // Re-trigger from ProfilePage — show regardless of seen status
       sessionStorage.removeItem(forceKey)
+      hasDismissed.current = false
       setVisible(true)
       setCurrentSlide(0)
       return
@@ -134,6 +127,7 @@ export default function OnboardingCarousel() {
     }
 
     // First time — show carousel
+    hasDismissed.current = false
     setVisible(true)
   }, [userId, location.pathname])
 
@@ -184,18 +178,11 @@ export default function OnboardingCarousel() {
     return () => window.removeEventListener('keydown', onKey)
   }, [visible, currentSlide])
 
-  if (!visible) return null
-
   const isLast = currentSlide === SLIDES.length - 1
 
   return (
-    <animated.div
-      className="onboarding-overlay"
-      style={{
-        opacity: overlaySpring.opacity,
-        // @ts-ignore — animated.div supports transform interpolation
-        transform: overlaySpring.scale.to((s: number) => `scale(${s})`),
-      }}
+    <div
+      className={`onboarding-overlay${visible ? ' visible' : ''}`}
     >
       {/* Top-right button: skip (slides 0-2) or done (slide 3) */}
       {isLast ? (
@@ -270,6 +257,6 @@ export default function OnboardingCarousel() {
           <ChevronRight />
         </button>
       </div>
-    </animated.div>
+    </div>
   )
 }

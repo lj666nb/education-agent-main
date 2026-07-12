@@ -526,8 +526,15 @@ def _ensure_admin_user(db: Session):
 
 
 def _seed_data_structures_from_json(db: Session) -> bool:
-    """Load the curated data-structures seed file and replace the system seed bank."""
-    seed_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "seed_data", "data_structures_seed.json"))
+    """Load the curated data-structures seed file and replace the system seed bank.
+
+    Tries the comprehensive full seed first (data_structures_full_seed.json),
+    falling back to the base curated seed (data_structures_seed.json).
+    """
+    seed_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "seed_data"))
+    full_seed_path = os.path.join(seed_dir, "data_structures_full_seed.json")
+    base_seed_path = os.path.join(seed_dir, "data_structures_seed.json")
+    seed_path = full_seed_path if os.path.isfile(full_seed_path) else base_seed_path
     if not os.path.isfile(seed_path):
         logger.warning(f"数据结构种子文件不存在: {seed_path}")
         return False
@@ -536,7 +543,8 @@ def _seed_data_structures_from_json(db: Session) -> bool:
         seed = json.load(f)
 
     subject_data = seed["subject"]
-    bank_data = seed["bank"]
+    # Support both singular "bank" (legacy) and plural "banks" (full seed export)
+    bank_data = seed.get("bank") or (seed.get("banks", [{}])[0] if seed.get("banks") else {})
     domains_data = seed.get("domains", [])
     points_data = seed.get("knowledge_points", [])
     questions_data = seed.get("questions", [])
@@ -647,10 +655,12 @@ def _seed_data_structures_from_json(db: Session) -> bool:
     # Replace legacy generic programming rows with the curated OJ catalog. The
     # source JSON still carries objective questions; programming data lives in a
     # dedicated module so cases, scaffolds and hints remain reviewable.
+    # Skip this when using the full seed (which already contains all questions).
     from app.seed_data.coding_oj_catalog import build_curated_coding_questions, CODE_BANK_ID
-    point_id_by_name = {point.name: str(point.id) for point in point_by_seed_id.values()}
-    curated_coding_questions = build_curated_coding_questions(point_id_by_name)
-    questions_data = [item for item in questions_data if item.get("type") != "programming"] + curated_coding_questions
+    if seed_path == base_seed_path:
+        point_id_by_name = {point.name: str(point.id) for point in point_by_seed_id.values()}
+        curated_coding_questions = build_curated_coding_questions(point_id_by_name)
+        questions_data = [item for item in questions_data if item.get("type") != "programming"] + curated_coding_questions
 
     for item in banks_data:
         if item["id"] == CODE_BANK_ID:
@@ -712,7 +722,6 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             question.status = "archived"
 
     upserted = 0
-    published_by_bank: dict[UUID, int] = {}
     for question_data in questions_data:
         question_type = question_data.get("type", "single_choice")
         if question_type in {"short_answer", "essay"}:
@@ -770,8 +779,6 @@ def _seed_data_structures_from_json(db: Session) -> bool:
                 ))
 
         upserted += 1
-        if question.status == "published":
-            published_by_bank[bank_id] = published_by_bank.get(bank_id, 0) + 1
         try:
             _sync_question_to_neo4j(neo4j, question)
         except Exception as e:
@@ -780,7 +787,11 @@ def _seed_data_structures_from_json(db: Session) -> bool:
     for bank_id in desired_bank_ids:
         bank = db.query(QuestionBank).filter(QuestionBank.id == bank_id).first()
         if bank:
-            bank.total_questions = published_by_bank.get(bank_id, 0)
+            actual_count = db.query(Question).filter(
+                Question.bank_id == bank_id,
+                Question.status == "published"
+            ).count()
+            bank.total_questions = actual_count
     db.flush()
     logger.info(f"数据结构系统题库已同步：{len(banks_data)} 个题库，{len(domains_data)} 章，{len(points_data)} 个知识点，{upserted} 道题")
     return True
