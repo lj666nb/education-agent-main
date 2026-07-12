@@ -39,6 +39,10 @@ SEED_BANK_ID = UUID("2ce6ee7d-ed5a-42a1-8a26-6ad6856afd3e")
 SEED_BANK_NAME = "数据结构题库"
 SEED_SUBJECT_NAME = "数据结构"
 
+# All source markers used by seed-generated questions — used to identify
+# seed-owned questions during cleanup so user-created questions are never touched.
+_SEED_SOURCES = {"curated_seed", "oj_curated", "ai_objective", "dotcpp_exam", "totuma_coding", "manual"}
+
 # ── 章节与知识点定义 ──
 # 格式: [(章节名, 章节描述, [(知识点名, 难度1-5, 排序), ...]), ...]
 DOMAINS = [
@@ -697,29 +701,53 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             db.delete(obsolete)
     db.flush()
 
-    seed_questions_by_bank: dict[UUID, list[dict]] = {}
-    for question_data in questions_data:
-        question_type = question_data.get("type", "single_choice")
-        if question_type in {"short_answer", "essay"}:
-            continue
-        bank_id = UUID(question_data.get("bank_id") or banks_data[0]["id"])
-        if bank_id in desired_bank_ids:
-            seed_questions_by_bank.setdefault(bank_id, []).append(question_data)
+    # ── Seed version detection ──────────────────────────────────────
+    # Count how many valid (non-essay/short_answer) questions the seed file carries.
+    _desired_ids: set[str] = set()
+    for qd in questions_data:
+        qt = qd.get("type", "single_choice")
+        if qt not in {"short_answer", "essay"}:
+            _desired_ids.add(qd["id"])
+    _seed_question_count = len(_desired_ids)
 
-    existing_questions = db.query(Question).filter(Question.bank_id.in_(list(desired_bank_ids))).all()
-    existing_by_id = {str(question.id): question for question in existing_questions}
-    desired_ids = {
-        item["id"]
-        for item in questions_data
-        if item.get("type") not in {"short_answer", "essay"}
-    }
+    # Count how many seed-source questions currently live in the target banks.
+    _existing_seed_questions = db.query(Question).filter(
+        Question.bank_id.in_(list(desired_bank_ids)),
+        Question.source.in_(_SEED_SOURCES),
+        Question.status == "published",
+    ).all()
+    _existing_seed_count = len(_existing_seed_questions)
 
-    # Preserve StudentAnswer history: only archive questions that originated from
-    # the seed itself AND are no longer present in the current seed data.
-    # Manually imported or externally-sourced questions are left untouched.
-    for question in existing_questions:
-        if str(question.id) not in desired_ids and question.source == "curated_seed":
-            question.status = "archived"
+    _needs_full_reseed = _existing_seed_count > 0 and _existing_seed_count < _seed_question_count
+    _seed_shrunk = _existing_seed_count > _seed_question_count
+
+    if _needs_full_reseed or _seed_shrunk:
+        _verb = "增长" if _needs_full_reseed else "缩减"
+        logger.info(
+            "🔧 检测到种子数据版本变更（数据库 %d 道 → 种子文件 %d 道，%s），"
+            "正在同步…",
+            _existing_seed_count, _seed_question_count, _verb,
+        )
+
+    if _needs_full_reseed or _seed_shrunk:
+        # Archive ALL seed-source questions that are no longer in the current seed,
+        # regardless of their specific source tag.  Questions still present in the
+        # new seed will be updated in-place; truly obsolete ones are archived so
+        # historical StudentAnswer records remain valid.
+        _archived = 0
+        for q in _existing_seed_questions:
+            if str(q.id) not in _desired_ids:
+                q.status = "archived"
+                _archived += 1
+        if _archived:
+            logger.info("   📦 已归档 %d 道不再存在于种子数据中的题目", _archived)
+
+    # Build lookup for existing questions (including archived — they will be
+    # revived if they reappear in the seed).
+    existing_questions = db.query(Question).filter(
+        Question.bank_id.in_(list(desired_bank_ids))
+    ).all()
+    existing_by_id = {str(q.id): q for q in existing_questions}
 
     upserted = 0
     for question_data in questions_data:
@@ -745,6 +773,10 @@ def _seed_data_structures_from_json(db: Session) -> bool:
         if not question:
             question = Question(id=UUID(question_data["id"]))
             db.add(question)
+        elif question.status == "archived":
+            # Revive a question that was archived by a previous seed version but
+            # reappears in the current seed data.
+            question.status = "published"
 
         primary_point_id = question_data.get("primary_knowledge_point_id")
         question.bank_id = bank_id
@@ -793,7 +825,26 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             ).count()
             bank.total_questions = actual_count
     db.flush()
-    logger.info(f"数据结构系统题库已同步：{len(banks_data)} 个题库，{len(domains_data)} 章，{len(points_data)} 个知识点，{upserted} 道题")
+
+    # Summary: report what happened during this seed run.
+    _final_published = db.query(Question).filter(
+        Question.bank_id.in_(list(desired_bank_ids)),
+        Question.status == "published",
+    ).count()
+    if _needs_full_reseed:
+        _action = "重新导入"
+    elif _seed_shrunk:
+        _action = "缩减同步"
+    elif _existing_seed_count == 0:
+        _action = "初始化"
+    else:
+        _action = "同步"
+    logger.info(
+        "📚 数据结构系统题库已%s：%d 个题库，%d 章，%d 个知识点，"
+        "本次处理 %d 道题，当前共 %d 道已发布题目",
+        _action, len(banks_data), len(domains_data), len(points_data),
+        upserted, _final_published,
+    )
     return True
 
 def _seed_comprehensive_data(db: Session):
