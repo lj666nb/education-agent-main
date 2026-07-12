@@ -26,6 +26,7 @@ from app.models.path_state import LearningPathState
 from app.db.neo4j import get_neo4j, Neo4jConnection
 from app.services.path_planner import PathPlanner
 from app.services.multi_agent.llm import LLMHelper
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

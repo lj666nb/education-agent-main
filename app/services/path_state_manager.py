@@ -174,28 +174,39 @@ class PathStateManager:
         4. 将已掌握(>=80%)的节点标记为 done，未开始的按顺序推进
         5. 设置第一个未完成节点为 current_node
         """
-        # 删除旧路径（同一科目）
+        # 验证并转换 UUID（防止 500 错误）
+        try:
+            user_uuid = UUID(user_id)
+            subject_uuid = UUID(subject_id)
+        except (ValueError, TypeError, AttributeError) as e:
+            raise ValueError(f"参数格式错误：用户ID或学科ID不是有效的UUID。user_id={user_id[:20]}..., subject_id={subject_id[:20]}...")
+
+        # 验证学科存在
+        subject = self.db.query(Subject).filter(Subject.id == subject_uuid).first()
+        if not subject:
+            raise ValueError(f"学科不存在：{subject_id}")
+        subj_name = subject.name
+
+        # 删除旧路径（同一科目），但保留种子路径
         old_states = (
             self.db.query(LearningPathState)
             .filter(
-                LearningPathState.user_id == user_id,
-                LearningPathState.subject_id == subject_id,
+                LearningPathState.user_id == user_uuid,
+                LearningPathState.subject_id == subject_uuid,
                 LearningPathState.phase != "completed",
             )
             .all()
         )
         for old in old_states:
+            if old.ai_metadata and old.ai_metadata.get("is_seed"):
+                continue
             old.phase = "completed"
             old.updated_at = datetime.utcnow()
-
-        # 获取学科信息
-        subject = self.db.query(Subject).filter(Subject.id == subject_id).first()
-        subj_name = subject.name if subject else ""
 
         # 获取该学科下所有知识点（按层级排序）
         domains = (
             self.db.query(KnowledgeDomain)
-            .filter(KnowledgeDomain.subject_id == subject_id)
+            .filter(KnowledgeDomain.subject_id == subject_uuid)
             .order_by(KnowledgeDomain.sort_order)
             .all()
         )
@@ -203,7 +214,7 @@ class PathStateManager:
         # 获取用户所有知识点记录
         records = (
             self.db.query(KnowledgePointRecord)
-            .filter(KnowledgePointRecord.user_id == user_id)
+            .filter(KnowledgePointRecord.user_id == user_uuid)
             .all()
         )
         records_map = {str(r.point_id): r for r in records}
@@ -267,8 +278,8 @@ class PathStateManager:
 
         # 创建新状态
         state = LearningPathState(
-            user_id=UUID(user_id),
-            subject_id=UUID(subject_id),
+            user_id=user_uuid,
+            subject_id=subject_uuid,
             goal_type=goal_type or "",
             goal_description=goal_description or "",
             phase=initial_phase,
@@ -310,7 +321,7 @@ class PathStateManager:
                 {path_name, description, phases, daily_suggestion, strategy_notes,
                  generation_reason, nodes: [{id, name, domain_name, difficulty, mastery_score}]}
         """
-        # 1. 完成该用户同一 subject 的旧路径
+        # 1. 完成该用户同一 subject 的旧路径（但保留种子路径）
         old_states = (
             self.db.query(LearningPathState)
             .filter(
@@ -321,6 +332,9 @@ class PathStateManager:
             .all()
         )
         for old in old_states:
+            # 保留种子学习路径，不标记为完成
+            if old.ai_metadata and old.ai_metadata.get("is_seed"):
+                continue
             old.phase = "completed"
             old.updated_at = datetime.utcnow()
 

@@ -94,7 +94,10 @@ export default function KnowledgeLeetBookDetailPage() {
     if (!pointId) return
     try {
       const res = await questionBankApi.getKnowledgePointPracticeBank(pointId)
-      navigate(`/banks/${res.data.bank_id}/practice?point=${encodeURIComponent(pointId)}`)
+      const params = new URLSearchParams()
+      params.set('point', pointId)
+      if (stateId) params.set('state', stateId)
+      navigate(`/banks/${res.data.bank_id}/practice?${params.toString()}`)
     } catch (_) {
       navigate('/banks')
     }

@@ -282,6 +282,7 @@ export interface PathListItem {
   progress_pct: number
   total_days: number
   phases_count: number
+  is_seed: boolean
   created_at: string
   updated_at: string
 }

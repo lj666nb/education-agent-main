@@ -164,49 +164,28 @@ export default function ToolsMatrix({ onLoginClick }: ToolsMatrixProps) {
             <div
               key={tool.title}
               ref={(el) => { cardRefs.current[i] = el }}
+              className="tool-card"
               style={{
                 background: '#1E293B',
                 border: '1px solid #334155',
                 borderRadius: '20px',
                 padding: '36px 28px 32px',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                 opacity: 0,
                 transform: 'translateY(30px)',
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-8px)'
-                e.currentTarget.style.borderColor = `${tool.color}44`
-                e.currentTarget.style.boxShadow = `0 24px 48px -8px ${tool.color}22, 0 8px 20px rgba(0,0,0,0.2)`
-                e.currentTarget.style.background = '#263548'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.borderColor = '#334155'
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)'
-                e.currentTarget.style.background = '#1E293B'
-              }}
             >
-              {/* Icon — purple gradient glow on hover */}
+              {/* Icon */}
               <div className="feature-icon-wrap" style={{
                 width: '56px', height: '56px', borderRadius: '14px',
                 background: tool.bg,
                 color: tool.color,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: '22px',
-                transition: 'all 0.3s ease',
                 position: 'relative',
               }}>
-                {/* Glow behind icon */}
-                <div style={{
-                  position: 'absolute', inset: '-4px',
-                  borderRadius: '18px',
-                  background: `radial-gradient(circle, ${tool.color}22 0%, transparent 70%)`,
-                  opacity: 0,
-                  transition: 'opacity 0.3s ease',
-                }} className="icon-glow-bg" />
                 {tool.icon}
               </div>
 
@@ -219,7 +198,7 @@ export default function ToolsMatrix({ onLoginClick }: ToolsMatrixProps) {
                 {tool.title}
               </h3>
 
-              {/* Description — longer, more detailed */}
+              {/* Description */}
               <p style={{
                 fontSize: '0.875rem', color: '#94A3B8',
                 lineHeight: 1.8, marginBottom: '20px', flex: 1,
@@ -267,10 +246,22 @@ export default function ToolsMatrix({ onLoginClick }: ToolsMatrixProps) {
         </div>
       </div>
 
-      {/* Hover icon glow effect */}
+      {/* CSS hover — no JS, no layout thrashing */}
       <style>{`
-        .feature-icon-wrap:hover .icon-glow-bg { opacity: 1 !important; }
-        .feature-icon-wrap:hover { transform: scale(1.05); }
+        .tool-card {
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .tool-card:hover {
+          transform: translateY(-6px) !important;
+          border-color: rgba(129,140,248,0.27) !important;
+          box-shadow: 0 16px 40px -8px rgba(0,0,0,0.3) !important;
+        }
+        .feature-icon-wrap {
+          transition: transform 0.2s ease;
+        }
+        .tool-card:hover .feature-icon-wrap {
+          transform: scale(1.05);
+        }
       `}</style>
     </section>
   )

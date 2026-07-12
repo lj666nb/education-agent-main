@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class ApiSettingsCRUD:
-    PROVIDERS = ["deepseek", "qwen", "ocr", "websearch", "text_embedding", "tts", "unsplash"]
+    PROVIDERS = ["deepseek", "qwen", "bailian", "ocr", "tavily", "text_embedding", "tts", "unsplash"]
 
     # 每个 provider 的实际验证端点
     VALIDATION_CONFIG = {
@@ -27,6 +27,13 @@ class ApiSettingsCRUD:
             "auth_template": "Bearer {api_key}",
             "expected_status": [200],
         },
+        "bailian": {
+            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+            "method": "GET",
+            "auth_header": "Authorization",
+            "auth_template": "Bearer {api_key}",
+            "expected_status": [200],
+        },
         "ocr": {
             "url": "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id={api_key}&client_secret={secret_key}",
             "method": "POST",
@@ -35,21 +42,31 @@ class ApiSettingsCRUD:
             "expected_status": [200],
             "optional_secret": True,
         },
-        "websearch": {
-            "url": None,  # 暂不验证，仅检查格式
-            "format_check": lambda k: len(k) > 8,
+        "tavily": {
+            "url": "https://api.tavily.com/search",
+            "method": "POST",
+            "auth_header": None,
+            "auth_template": None,
+            "expected_status": [200],
+            "validate_body": {"api_key": "{api_key}", "query": "test", "max_results": 1},
         },
         "unsplash": {
             "url": None,
             "format_check": lambda k: len(k) > 8,
         },
         "text_embedding": {
-            "url": None,
-            "format_check": lambda k: len(k) > 8,
+            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+            "method": "GET",
+            "auth_header": "Authorization",
+            "auth_template": "Bearer {api_key}",
+            "expected_status": [200],
         },
         "tts": {
-            "url": None,
-            "format_check": lambda k: len(k) > 8,
+            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+            "method": "GET",
+            "auth_header": "Authorization",
+            "auth_template": "Bearer {api_key}",
+            "expected_status": [200],
         },
     }
 
@@ -111,7 +128,14 @@ class ApiSettingsCRUD:
                 if method == "GET":
                     resp = client.get(formatted_url, headers=headers)
                 else:
-                    resp = client.post(formatted_url, headers=headers)
+                    # POST: support JSON body with API key
+                    body = None
+                    validate_body = config.get("validate_body")
+                    if validate_body:
+                        import json
+                        body = json.dumps({k: v.format(api_key=api_key, secret_key=secret_key or "") for k, v in validate_body.items()})
+                        headers.setdefault("Content-Type", "application/json")
+                    resp = client.post(formatted_url, headers=headers, content=body)
 
                 expected = config.get("expected_status", [200])
                 is_valid = resp.status_code in expected
@@ -146,7 +170,7 @@ class ApiSettingsCRUD:
             existing.is_enabled = data.is_enabled
             db.commit()
             db.refresh(existing)
-            return existing
+            result = existing
         else:
             new_setting = ApiSettings(
                 user_id=user_id,
@@ -161,7 +185,27 @@ class ApiSettingsCRUD:
             db.add(new_setting)
             db.commit()
             db.refresh(new_setting)
-            return new_setting
+            result = new_setting
+
+        # 当保存 qwen 时，自动同步 text_embedding 和 tts（共享 DashScope API Key）
+        if provider == "qwen":
+            for cascade_provider in ["text_embedding", "tts"]:
+                cascade_existing = self.get_setting(db, user_id, cascade_provider)
+                if cascade_existing:
+                    cascade_existing.api_key = data.api_key
+                    cascade_existing.is_enabled = data.is_enabled
+                else:
+                    cascade_new = ApiSettings(
+                        user_id=user_id,
+                        provider=cascade_provider,
+                        api_key=data.api_key,
+                        is_enabled=data.is_enabled,
+                        is_system=False
+                    )
+                    db.add(cascade_new)
+            db.commit()
+
+        return result
 
     def delete_setting(self, db: Session, user_id: str, provider: str) -> bool:
         setting = self.get_setting(db, user_id, provider)

@@ -224,10 +224,8 @@ const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect,
 
               {/* Quick actions */}
               <div style={{ display:'flex', gap:4, flexShrink:0, flexWrap:'wrap' }} onClick={e=>e.stopPropagation()}>
-                <button onClick={()=>onSelect(p.state_id)} style={{ padding:'6px 12px', borderRadius:6, border:'none', background:BRAND, color:'#fff', fontSize:11, cursor:'pointer', fontWeight:600, fontFamily:'inherit' }}>继续学习</button>
-                <button onClick={()=>onSelect(p.state_id)} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid '+BL, background:'#fff', color:T2, fontSize:11, cursor:'pointer', fontFamily:'inherit' }} title="查看/编辑路径">✏️</button>
-                <button onClick={()=>{if(confirm('确定重置此路径的所有学习进度？此操作不可恢复。'))onReset(p.state_id)}} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid '+BL, background:'#fff', color:'#F59E0B', fontSize:11, cursor:'pointer', fontFamily:'inherit' }} title="重置进度">🔄</button>
-                <button onClick={()=>onDelete(p.state_id)} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid '+BL, background:'#fff', color:T3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }} title="删除">🗑</button>
+                <button onClick={()=>onReset(p.state_id)} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid '+BL, background:'#fff', color:'#F59E0B', fontSize:11, cursor:'pointer', fontFamily:'inherit' }} title="重置进度">🔄</button>
+                {!p.is_seed && <button onClick={()=>onDelete(p.state_id)} style={{ padding:'6px 8px', borderRadius:6, border:'1px solid '+BL, background:'#fff', color:T3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }} title="删除">🗑</button>}
               </div>
             </div>
 
@@ -593,7 +591,7 @@ export default function LearningPathPage() {
 
   const _ref=useCallback(async()=>{if(!sid)return;try{const r=await pathApi.getPathState(sid);const d=r.data.state;if(!d)return;const ns:PathNodeStatus[]=(d.node_order||[]).map((n:any)=>({point_id:n.node_id,point_name:n.name,domain_name:n.domain_name||'',domain_sort_order:0,sort_order:0,mastery_score:n.mastery_score||0,status:_pathStatus(n.status),is_difficult:false,needs_review:n.status==='reviewing'}));setNodes(ns);setSum({total:d.progress?.total||ns.length,mastered:d.progress?.completed||0,learning:ns.filter(n=>n.status==='learning').length,not_started:ns.filter(n=>n.status==='not_started'||n.status==='locked').length,reviewing:ns.filter(n=>n.status==='reviewing').length,difficult:0})}catch(_){}},[sid])
 
-  const _navigateToPractice=async(pointId:string)=>{try{const res=await questionBankApi.getKnowledgePointPracticeBank(pointId);nav(`/banks/${res.data.bank_id}/practice?point=${encodeURIComponent(pointId)}`)}catch(_){nav('/banks')}}
+  const _navigateToPractice=async(pointId:string)=>{try{const res=await questionBankApi.getKnowledgePointPracticeBank(pointId);const params=new URLSearchParams();params.set('point',pointId);if(sid)params.set('state',sid);nav(`/banks/${res.data.bank_id}/practice?${params.toString()}`)}catch(_){nav('/banks')}}
   const _nclick=async(n:PathNodeStatus)=>{nav(`/path/knowledge/${n.point_id}${sid?`?state=${encodeURIComponent(sid)}`:''}`)}
   const _showDetail=async(n:PathNodeStatus)=>{setPid(n.point_id);setPv('detail');_url('detail',sid||undefined,n.point_id);setDdl(true);try{const r=await pathApi.getKnowledgeDetail(n.point_id);setDd({...r.data,needs_review:n.needs_review})}catch(_){};setDdl(false)}
   const _navigateNode=(nodeId:string)=>{nav(`/path/knowledge/${nodeId}${sid?`?state=${encodeURIComponent(sid)}`:''}`)}
@@ -641,7 +639,7 @@ export default function LearningPathPage() {
     {/* Header */}
     <header style={{height:48,padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fff',borderBottom:'1px solid '+BL,flexShrink:0,zIndex:10}}>
       <div style={{display:'flex',alignItems:'center',gap:10}}>
-        <button onClick={()=>pv==='select'?nav('/home'):_goback()} style={{display:'flex',alignItems:'center',gap:4,background:'none',border:'none',cursor:'pointer',color:T2,fontSize:13,fontFamily:'inherit'}}><BackIcon/>{pv==='select'?'首页':'路径列表'}</button>
+        {pv!=='select' && <button onClick={_goback} style={{display:'flex',alignItems:'center',gap:4,background:'none',border:'none',cursor:'pointer',color:T2,fontSize:13,fontFamily:'inherit'}}><BackIcon/>路径列表</button>}
         <h1 style={{fontSize:15,fontWeight:700,margin:0,color:T1}}>{pv==='select'?'学习路径规划':pv==='create'?'创建路径':pv==='detail'?'知识点详情':'知识路径流程'}</h1>
       </div>
       <div style={{display:'flex',gap:8,alignItems:'center'}}>

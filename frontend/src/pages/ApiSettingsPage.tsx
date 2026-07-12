@@ -22,23 +22,22 @@ const PROVIDER_INFO: Record<string, {
   qwen: {
     name: '通义千问 (Qwen)',
     models: ['qwen3.5-plus', 'qwen3.6-plus'],
-    description: '阿里云通义千问模型 API（DashScope）',
+    description: '阿里云通义千问模型 API（DashScope），配置后自动共享给文本嵌入和语音合成',
+  },
+  bailian: {
+    name: '阿里云百炼',
+    models: ['qwen3.5-plus', 'qwen3.6-plus'],
+    description: '阿里云百炼平台 API（DashScope 兼容），支持 MCP 联网搜索',
   },
   text_embedding: {
     name: '文本嵌入 (Text Embedding)',
     models: TEXT_EMBEDDING_VERSIONS.map(v => v.label),
-    description: '阿里云文本嵌入模型 API（DashScope）',
+    description: '阿里云文本嵌入模型 API（DashScope），与通义千问共享 API Key',
   },
   ocr: {
     name: 'OCR',
     models: [],
     description: '文字识别 API',
-    is_service: true,
-  },
-  websearch: {
-    name: '网络检索',
-    models: [],
-    description: '网络搜索 API',
     is_service: true,
   },
   tts: {
@@ -52,14 +51,21 @@ const PROVIDER_INFO: Record<string, {
     description: 'Unsplash 高清图片搜索 API（Access Key）',
     is_service: true,
   },
+  tavily: {
+    name: 'Tavily 联网搜索',
+    models: [],
+    description: 'Tavily Search API — 专为 AI 设计的实时联网搜索，返回已清洗的网页内容',
+    is_service: true,
+  },
 }
 
 const SERVICE_ITEMS = [
   { id: 'deepseek', name: 'DeepSeek AI 对话', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
   { id: 'qwen', name: '通义千问 AI 对话', models: ['qwen3.5-plus', 'qwen3.6-plus'] },
+  { id: 'bailian', name: '阿里云百炼 AI 对话', models: ['qwen3.5-plus', 'qwen3.6-plus'] },
   { id: 'text_embedding', name: '文本嵌入 (Text Embedding)', models: TEXT_EMBEDDING_VERSIONS.map(v => v.label) },
   { id: 'ocr', name: 'OCR 文字识别', models: [] },
-  { id: 'websearch', name: '网络检索服务', models: [] },
+  { id: 'tavily', name: 'Tavily 联网搜索', models: [] },
   { id: 'tts', name: '语音合成 (TTS)', models: ['qwen-tts'] },
   { id: 'unsplash', name: 'Unsplash 图片搜索', models: [] },
 ]
@@ -87,6 +93,7 @@ export default function ApiSettingsPage() {
   const [, setModels] = useState<ModelInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState({ text: '', type: '' })
+  const [testResult, setTestResult] = useState<Record<string, { testing: boolean; result: 'success' | 'fail' | null; message: string }>>({})
   const [editingProvider, setEditingProvider] = useState<string | null>(null)
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [formData, setFormData] = useState({
@@ -153,6 +160,29 @@ export default function ApiSettingsPage() {
     }
   }
 
+  const handleTest = async (provider: string) => {
+    if (!formData.api_key.trim()) {
+      setMessage({ text: '请先输入 API Key', type: 'error' })
+      return
+    }
+    setTestResult(prev => ({ ...prev, [provider]: { testing: true, result: null, message: '正在验证...' } }))
+    try {
+      const res = await apiSettingsApi.validateSetting({
+        provider,
+        api_key: formData.api_key,
+        secret_key: formData.secret_key || undefined,
+      })
+      if (res.data.is_valid) {
+        setTestResult(prev => ({ ...prev, [provider]: { testing: false, result: 'success', message: res.data.message || 'API Key 有效' } }))
+      } else {
+        setTestResult(prev => ({ ...prev, [provider]: { testing: false, result: 'fail', message: res.data.message || 'API Key 无效，请检查' } }))
+      }
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || '验证请求失败'
+      setTestResult(prev => ({ ...prev, [provider]: { testing: false, result: 'fail', message: detail } }))
+    }
+  }
+
   const handleDelete = async (provider: string) => {
     if (!confirm(`确定要删除 ${PROVIDER_INFO[provider]?.name || provider} 的 API 配置吗？`)) {
       return
@@ -192,7 +222,13 @@ export default function ApiSettingsPage() {
   const isServiceAvailable = (serviceId: string): boolean | null => {
     const setting = settings.find(s => s.provider === serviceId)
     if (!setting) return null
-    return setting.is_configured && setting.is_enabled
+    if (setting.is_configured && setting.is_enabled) return true
+    // text_embedding 和 tts 共享 qwen 的 DashScope API Key
+    if ((serviceId === 'text_embedding' || serviceId === 'tts') && !setting.is_configured) {
+      const qwenSetting = settings.find(s => s.provider === 'qwen')
+      if (qwenSetting?.is_configured && qwenSetting?.is_enabled) return true
+    }
+    return false
   }
 
   if (isLoading) {
@@ -450,7 +486,30 @@ export default function ApiSettingsPage() {
                         启用此 API
                       </label>
                     </div>
+                    {/* 测试结果 */}
+                    {testResult[provider]?.result && (
+                      <div style={{
+                        padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                        background: testResult[provider].result === 'success' ? 'var(--success-bg)' : 'var(--danger-bg)',
+                        color: testResult[provider].result === 'success' ? 'var(--success)' : 'var(--danger)',
+                        fontSize: '0.8125rem', fontWeight: 500,
+                      }}>
+                        {testResult[provider].result === 'success' ? '✅ ' : '❌ '}
+                        {testResult[provider].message}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <button
+                        onClick={() => handleTest(provider)}
+                        disabled={testResult[provider]?.testing}
+                        className="btn btn-secondary"
+                        style={{
+                          background: testResult[provider]?.testing ? 'var(--gray-200)' : undefined,
+                          cursor: testResult[provider]?.testing ? 'wait' : 'pointer',
+                        }}
+                      >
+                        {testResult[provider]?.testing ? '测试中...' : '🧪 测试'}
+                      </button>
                       <button
                         onClick={() => handleSave(provider)}
                         className="btn btn-primary"

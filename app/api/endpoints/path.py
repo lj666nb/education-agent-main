@@ -1298,6 +1298,120 @@ async def confirm_path(
     )
 
 
+def _ensure_seed_path_for_user(db: Session, user_id: str) -> bool:
+    """为新用户自动创建数据结构种子学习路径（幂等）。
+
+    仅当用户没有「活跃的种子路径」且「数据结构」学科存在时才创建。
+    即使用户手动创建了其他路径，种子路径也会独立存在。
+    返回 True 表示创建了新路径。
+    """
+    from app.models.question_bank import Subject, KnowledgeDomain, KnowledgePoint
+    from datetime import datetime, timezone, timedelta
+
+    # 只检查是否已有活跃的种子路径（不检查用户的非种子路径）
+    existing = (
+        db.query(LearningPathState)
+        .filter(
+            LearningPathState.user_id == user_id,
+            LearningPathState.phase != "completed",
+            LearningPathState.ai_metadata['is_seed'].astext == 'true',
+        )
+        .first()
+    )
+    if existing:
+        return False
+
+    # 查找数据结构学科
+    subject = db.query(Subject).filter(Subject.name == "数据结构").first()
+    if not subject:
+        return False
+
+    # 获取所有知识点（按章节排序）
+    domains = (
+        db.query(KnowledgeDomain)
+        .filter(KnowledgeDomain.subject_id == subject.id)
+        .order_by(KnowledgeDomain.sort_order)
+        .all()
+    )
+    if not domains:
+        return False
+
+    CHINA_TZ = timezone(timedelta(hours=8))
+    now = datetime.now(CHINA_TZ)
+
+    node_order = []
+    for domain in domains:
+        points = (
+            db.query(KnowledgePoint)
+            .filter(KnowledgePoint.domain_id == domain.id)
+            .order_by(KnowledgePoint.sort_order)
+            .all()
+        )
+        for pt in points:
+            node_order.append({
+                "node_id": str(pt.id),
+                "name": pt.name,
+                "domain_name": domain.name,
+                "status": "pending",
+                "mastery_score": 0,
+                "sort_order": pt.sort_order,
+                "started_at": None,
+                "completed_at": None,
+            })
+
+    total_nodes = len(node_order)
+    if total_nodes == 0:
+        return False
+
+    # 设置第一个节点为 active
+    first_pending = node_order[0]
+    first_pending["status"] = "active"
+    current_node_id = None
+    current_node_name = None
+    try:
+        current_node_id = UUID(first_pending["node_id"])
+        current_node_name = first_pending["name"]
+    except (ValueError, KeyError):
+        pass
+
+    state = LearningPathState(
+        user_id=UUID(user_id),
+        subject_id=subject.id,
+        goal_type="学期提升",
+        goal_description="系统掌握数据结构课程全部核心知识点",
+        phase="diagnosis",
+        current_node_id=current_node_id,
+        current_node_name=current_node_name,
+        node_order=node_order,
+        total_nodes=total_nodes,
+        completed_nodes=0,
+        version=1,
+        ai_metadata={
+            "path_name": "数据结构系统学习路径",
+            "description": "按教材章节循序渐进，掌握数据结构核心知识",
+            "total_days": 45,
+            "phases": [
+                {"name": "基础入门", "description": "绪论 + 线性表 + 栈队列串", "days": 14, "point_count": min(total_nodes, 29)},
+                {"name": "树和图", "description": "数组矩阵 + 树 + 图", "days": 14, "point_count": max(0, min(total_nodes - 29, 32))},
+                {"name": "算法进阶", "description": "查找 + 排序", "days": 14, "point_count": max(0, total_nodes - 61)},
+                {"name": "综合复习", "description": "全面复习和刷题", "days": 3, "point_count": total_nodes},
+            ],
+            "strategy_notes": [
+                "按教材章节顺序循序渐进",
+                "树和图是数据结构核心难点，建议多画图理解",
+                "查找和排序算法需配合编程练习巩固",
+            ],
+            "daily_suggestion": "建议每天学习 2-3 个知识点，配合题库练习巩固",
+            "generation_reason": "系统自动创建的公共学习路径（所有用户共享）",
+            "is_seed": True,
+        },
+    )
+    db.add(state)
+    db.commit()
+    logger.info(f"🌱 为新用户 {user_id} 自动创建种子学习路径：数据结构（{total_nodes} 知识点）")
+    return True
+
+
 @router.get("/list")
 async def list_paths(
     current_user: CurrentUser = Depends(get_current_user),
@@ -1306,8 +1420,12 @@ async def list_paths(
     """获取用户所有活跃的学习路径列表（用于路径选择页）
 
     返回用户所有未完成的路径，按更新时间倒序排列。
+    如果用户没有任何路径，自动创建数据结构的种子学习路径（共享所有用户）。
     """
     user_id = str(current_user.student_id)
+
+    # 自动为新用户创建种子学习路径
+    _ensure_seed_path_for_user(db, user_id)
 
     states = (
         db.query(LearningPathState)
@@ -1346,6 +1464,7 @@ async def list_paths(
             "progress_pct": progress_pct,
             "total_days": ai_meta.get("total_days", 0),
             "phases_count": len(ai_meta.get("phases", [])),
+            "is_seed": bool(ai_meta.get("is_seed", False)),
             "created_at": state.created_at.isoformat() if state.created_at else "",
             "updated_at": state.updated_at.isoformat() if state.updated_at else "",
         })
@@ -1391,12 +1510,15 @@ async def init_learning_path(
         )
 
     manager = PathStateManager(db)
-    result = manager.init_path(
-        user_id=user_id,
-        subject_id=body.subject_id,
-        goal_type=body.goal_type,
-        goal_description=body.goal_description,
-    )
+    try:
+        result = manager.init_path(
+            user_id=user_id,
+            subject_id=body.subject_id,
+            goal_type=body.goal_type,
+            goal_description=body.goal_description,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # 记录到路径历史
     history = PathHistory(

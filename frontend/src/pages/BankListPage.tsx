@@ -109,9 +109,6 @@ export default function BankListPage() {
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span onClick={() => navigate('/')} style={{ color: t.brand, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <ArrowLeftIcon size={14} /> 返回首页
-            </span>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: t.textPrimary, margin: 0 }}>题库</h1>
             <span style={{ fontSize: 12, color: t.textMuted, background: t.isDark ? 'rgba(148,163,184,0.1)' : '#F1F5F9', padding: '2px 10px', borderRadius: 10 }}>
               {banks.length} 个题库

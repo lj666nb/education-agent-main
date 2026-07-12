@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import StarryBackground, { useStarryTheme } from './StarryBackground'
 import SidebarNav from './SidebarNav'
 import PageTransition from './PageTransition'
+import OnboardingCarousel from './OnboardingCarousel'
 
 export default function Layout() {
   const theme = useStarryTheme()
@@ -19,6 +20,7 @@ export default function Layout() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
       <StarryBackground theme={theme} />
+      <OnboardingCarousel />
 
       {/* 移动端遮罩 */}
       {isMobile && mobileSidebar && (

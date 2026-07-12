@@ -500,6 +500,17 @@ async def generate_resource(
             content = None
     else:
         content = await generator.generate_mindmap(req.knowledge_points)
+        # Wrap mindmap mermaid code in [MERMAID] tags for frontend visual rendering
+        if content:
+            content = content.strip()
+            # Strip ```mermaid ... ``` wrapper if LLM added it
+            if content.startswith("```mermaid"):
+                content = content[len("```mermaid"):].strip()
+            elif content.startswith("```"):
+                content = content[3:].strip()
+            if content.endswith("```"):
+                content = content[:-3].strip()
+            content = f"[MERMAID]\n{content}\n[/MERMAID]"
 
     if not content:
         raise HTTPException(

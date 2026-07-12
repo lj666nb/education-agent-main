@@ -52,6 +52,18 @@ export default function PracticePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
+  // Determine the return destination based on the point query parameter
+  const pointParam = searchParams.get('point')
+  const stateIdParam = searchParams.get('state')
+  const goBack = () => {
+    if (pointParam) {
+      const backUrl = `/path/knowledge/${encodeURIComponent(pointParam)}${stateIdParam ? `?state=${encodeURIComponent(stateIdParam)}` : ''}`
+      navigate(backUrl)
+    } else {
+      navigate(`/banks/${bankId}`)
+    }
+  }
+
   // ── common state ──
   const [phase, setPhase] = useState<Phase>('config')
   const [loading, setLoading] = useState(true)
@@ -809,7 +821,7 @@ export default function PracticePage() {
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
           {/* header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={() => navigate(`/banks/${bankId}`)}><ArrowLeftIcon size={14} /> 返回题库</span>
+            <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> {pointParam ? '返回知识点' : '返回题库'}</span>
             <span style={{ padding: '4px 16px', background: 'var(--app-brand-bg)', borderRadius: 14, fontSize: '12px', color: 'var(--app-brand)', fontWeight: 500 }}>{bankName}</span>
           </div>
 
@@ -1038,9 +1050,9 @@ export default function PracticePage() {
           {/* top bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 12px' }}>
             {reviewMode ? (
-              <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={() => navigate(`/banks/${bankId}/history/${sessionId}`)}><ArrowLeftIcon size={14} /> 返回</span>
+              <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> 返回</span>
             ) : answerMode === 'after' ? (
-              <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={() => navigate(`/banks/${bankId}`)}><ArrowLeftIcon size={14} /> 返回</span>
+              <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> 返回</span>
             ) : (
               <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={handleEndPractice}><ArrowLeftIcon size={14} /> 交卷</span>
             )}
@@ -1238,7 +1250,7 @@ export default function PracticePage() {
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-          <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={() => navigate(`/banks/${bankId}`)}><ArrowLeftIcon size={14} /> 返回题库</span>
+          <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> {pointParam ? '返回知识点' : '返回题库'}</span>
           <span style={{ padding: '4px 16px', background: 'var(--app-brand-bg)', borderRadius: 14, fontSize: '12px', color: 'var(--app-brand)', fontWeight: 500 }}>{bankName}</span>
         </div>
 
@@ -1283,12 +1295,12 @@ export default function PracticePage() {
                 练习错题
               </button>
             )}
-            <button onClick={() => navigate(`/banks/${bankId}`)}
+            <button onClick={goBack}
               style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-              返回题库
+              {pointParam ? '返回知识点' : '返回题库'}
             </button>
           </div>
-          {sessionId && (
+          {sessionId && !pointParam && (
             <div style={{ marginTop: '12px' }}>
               <button onClick={() => navigate(`/banks/${bankId}/history/${sessionId}`)}
                 style={{ padding: '8px 20px', background: '#EFF6FF', color: 'var(--app-brand)', border: 'none', borderRadius: 12, fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>

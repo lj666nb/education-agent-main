@@ -227,6 +227,17 @@ def get_text_embedding_api_key(db: Session, user_id: str) -> Optional[dict]:
             "api_key": setting.api_key,
             "model_version": setting.model_version
         }
+    # fallback: 文本嵌入与通义千问共享 DashScope API Key
+    qwen_setting = db.query(ApiSettings).filter(
+        ApiSettings.user_id == str(user_id),
+        ApiSettings.provider == "qwen",
+        ApiSettings.is_enabled == True
+    ).first()
+    if qwen_setting and qwen_setting.api_key:
+        return {
+            "api_key": qwen_setting.api_key,
+            "model_version": None
+        }
     return None
 
 

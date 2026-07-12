@@ -156,6 +156,7 @@ class SaveMessageRequest(BaseModel):
     role: str
     content: str
     reasoning_content: Optional[str] = None
+    citations: Optional[list] = None
 
 
 class SaveMessageResponse(BaseModel):
@@ -669,19 +670,45 @@ async def chat_completions(
                             msg_dict["content"] = msg_dict["content"] + file_info
                     break
 
+    web_citations = None
+    search_error = None
     if request.enable_websearch:
-        from app.core.web_search import enhance_query_with_websearch
-        for i, msg_dict in enumerate(messages_dict):
-            if msg_dict["role"] == "user":
-                original_content = msg_dict["content"]
-                enhanced_content = await enhance_query_with_websearch(
-                    original_content,
-                    request.enable_websearch,
-                    None
-                )
-                if enhanced_content != original_content:
-                    msg_dict["content"] = enhanced_content
+        from app.core.web_search import perform_search_and_build_context, CITATION_SYSTEM_PROMPT
+        user_query = ""
+        for msg in reversed(messages_dict):
+            if msg["role"] == "user":
+                user_query = msg["content"] if isinstance(msg["content"], str) else str(msg["content"])
                 break
+        if user_query:
+            try:
+                # 优先使用用户配置的 Tavily API Key
+                user_tavily_key = None
+                try:
+                    tavily_setting = api_settings_crud.get_setting_value(db, str(current_user.student_id), "tavily")
+                    if tavily_setting:
+                        user_tavily_key = tavily_setting.get("api_key")
+                except Exception:
+                    pass
+                citations, context = await perform_search_and_build_context(user_query, api_key=user_tavily_key)
+                if citations and context:
+                    web_citations = citations
+                    # 找到最后一个 user 消息的索引，在其前插入 system 消息
+                    user_idx = None
+                    for idx in range(len(messages_dict) - 1, -1, -1):
+                        if messages_dict[idx]["role"] == "user":
+                            user_idx = idx
+                            break
+                    if user_idx is not None:
+                        system_msg = {
+                            "role": "system",
+                            "content": CITATION_SYSTEM_PROMPT + "\n\n" + context,
+                        }
+                        messages_dict.insert(user_idx, system_msg)
+                elif citations is not None and not citations:
+                    search_error = "搜索未返回结果"
+            except Exception as e:
+                logger.warning(f"联网搜索异常: {e}")
+                search_error = str(e)
 
     if request.project_id:
         user_query = ""
@@ -777,6 +804,14 @@ async def chat_completions(
                         }
                         yield f"data: {json.dumps(irrelevant_event)}\n\n"
 
+                    # 2. 联网搜索状态事件
+                    if web_citations is not None:
+                        yield f"data: {json.dumps({'type': 'search_status', 'status': 'searching', 'message': '正在搜索...'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'search_status', 'status': 'done', 'count': len(web_citations), 'message': f'已搜索到 {len(web_citations)} 个网页'})}\n\n"
+                    elif search_error:
+                        yield f"data: {json.dumps({'type': 'search_status', 'status': 'searching', 'message': '正在搜索...'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'search_status', 'status': 'error', 'message': f'搜索暂时不可用: {search_error}'})}\n\n"
+
                     async with client.stream(
                         "POST",
                         f"{model_config['base_url']}/chat/completions",
@@ -812,9 +847,15 @@ async def chat_completions(
                                         except json.JSONDecodeError:
                                             continue
 
+                    # 4. 引用数据（流结束后发送）
+                    if web_citations:
+                        yield f"data: {json.dumps({'type': 'citations', 'citations': web_citations})}\n\n"
+
                     final_data = {'done': True, 'thinking_done': True}
                     if rag_sources:
                         final_data['sources'] = rag_sources
+                    if web_citations:
+                        final_data['citations'] = web_citations
 
                     yield f"data: {json.dumps(final_data)}\n\n"
 
@@ -850,7 +891,7 @@ async def chat_completions(
             chat_id = request.chat_id or f"chat_{current_user.student_id}_{datetime.now().timestamp()}"
             content = result["choices"][0]["message"]["content"]
 
-            return {
+            result_obj = {
                 "chat_id": chat_id,
                 "message": {
                     "role": "assistant",
@@ -858,6 +899,9 @@ async def chat_completions(
                 },
                 "created_at": _fmt_iso(datetime.now())
             }
+            if web_citations:
+                result_obj["citations"] = web_citations
+            return result_obj
 
     except HTTPException:
         raise
@@ -1004,6 +1048,7 @@ async def get_chat_messages(
                 "role": msg.role,
                 "content": msg.content,
                 "reasoning_content": msg.reasoning_content,
+                "citations": msg.citations,
                 "created_at": _fmt_iso(msg.created_at)
             }
             for msg in messages
@@ -1163,6 +1208,7 @@ async def save_message(
         role=request.role,
         content=content,
         reasoning_content=request.reasoning_content,
+        citations=request.citations if request.citations else None,
         model="",
         created_at=datetime.now()
     )

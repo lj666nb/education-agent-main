@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Uuid, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 import uuid
@@ -30,6 +31,7 @@ class ChatMessage(Base):
     role = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
     reasoning_content = Column(Text, nullable=True)
+    citations = Column(JSONB, nullable=True)
     model = Column(String(50), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
 

@@ -10,11 +10,19 @@ import { splitContentWithDiagrams } from '../utils/drawio'
 import { detectLanguage, LANGUAGE_NAMES } from '../utils/codeRunner'
 import DiagramImage from './DiagramImage'
 import MermaidRenderer from './MermaidRenderer'
+import CitationAwareMarkdown from './CitationAwareMarkdown'
 
 export interface RagSource {
   document_name: string
   content_snippet: string
   score: number
+}
+
+export interface Citation {
+  index: number
+  title: string
+  url: string
+  snippet: string
 }
 
 export interface Message {
@@ -23,6 +31,8 @@ export interface Message {
   content: string
   reasoning_content?: string
   sources?: RagSource[]
+  citations?: Citation[]
+  searchStatus?: string | null
   timestamp?: Date
   diagramXml?: string
 }
@@ -35,6 +45,7 @@ interface MessageListProps {
   onRollback?: (messageId: string) => void
   onEditDiagram?: (xml: string) => void
   onGenerateMindmap?: (messageId: string, content: string) => void
+  onFeatureCardClick?: (action: string) => void
 }
 
 function simpleMarkdown(text: string): string {
@@ -57,7 +68,7 @@ function simpleMarkdown(text: string): string {
   return html
 }
 
-export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap }: MessageListProps) {
+export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap, onFeatureCardClick }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const userScrolledAwayRef = useRef(false)
@@ -622,11 +633,13 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             { icon: BarChart3, title: '图表生成', desc: 'AI 自动绘制各类图表' },
             { icon: GitBranch, title: '思维导图', desc: '知识结构可视化' },
           ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="feature-card-hover" style={{
+            <div key={title} className="feature-card-hover"
+              onClick={() => onFeatureCardClick?.(title)}
+              style={{
               padding: '20px', borderRadius: '12px',
               backgroundColor: '#FFFFFF', border: '1px solid #F0F0F0',
               boxShadow: 'var(--chat-bubble-ai-shadow)',
-              textAlign: 'center',
+              textAlign: 'center', cursor: 'pointer',
             }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = 'var(--primary)'
@@ -747,10 +760,77 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
               </div>
             )}
 
+            {/* Web search status indicator */}
+            {message.role === 'assistant' && message.searchStatus === 'searching' && (
+              <div style={{
+                marginBottom: 'var(--space-3)',
+                padding: 'var(--space-2) var(--space-3)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'oklch(0.55 0.18 200 / 0.06)',
+                border: '1px solid oklch(0.55 0.18 200 / 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: '0.8125rem',
+                color: 'var(--primary)',
+              }}>
+                <span style={{
+                  display: 'inline-block',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  border: '2px solid var(--primary)',
+                  borderTopColor: 'transparent',
+                  animation: 'iconSpin 0.8s linear infinite',
+                }} />
+                正在搜索相关信息...
+              </div>
+            )}
+            {message.role === 'assistant' && message.searchStatus === 'done' && message.citations && message.citations.length > 0 && (
+              <div style={{
+                marginBottom: 'var(--space-3)',
+                padding: 'var(--space-2) var(--space-3)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'oklch(0.62 0.18 145 / 0.06)',
+                border: '1px solid oklch(0.62 0.18 145 / 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: '0.8125rem',
+                color: 'var(--success, #059669)',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                已搜索到 {message.citations.length} 个相关网页
+              </div>
+            )}
+            {message.role === 'assistant' && message.searchStatus === 'error' && (
+              <div style={{
+                marginBottom: 'var(--space-3)',
+                padding: 'var(--space-2) var(--space-3)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--warning-bg, #FEF3C7)',
+                border: '1px solid #F59E0B33',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: '0.8125rem',
+                color: '#B45309',
+              }}>
+                搜索暂时不可用，将基于现有知识回答
+              </div>
+            )}
+
             {/* Content segments (text, SVG, plot, diagram) */}
             {splitContentWithDiagrams(message.content).map((seg, segIdx) => {
               if (seg.type === 'text') {
-                return <div key={segIdx}>{renderMessageContent(seg.content, message.id)}</div>
+                return <div key={segIdx}>
+                  {message.citations && message.citations.length > 0
+                    ? <CitationAwareMarkdown content={seg.content} citations={message.citations} />
+                    : renderMessageContent(seg.content, message.id)
+                  }
+                </div>
               } else if (seg.type === 'svg') {
                 return (
                   <div key={segIdx} style={{
@@ -827,6 +907,107 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                         {source.content_snippet}...
                       </div>
                     </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* Web Search Citations — collapsed by default */}
+            {message.role === 'assistant' && message.citations && message.citations.length > 0 && (
+              <details style={{
+                marginTop: 'var(--space-4)',
+                paddingTop: 'var(--space-3)',
+                borderTop: '1px solid var(--gray-100)',
+                fontSize: '0.8125rem',
+              }}>
+                <summary style={{
+                  cursor: 'pointer',
+                  color: 'var(--gray-500)',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-1)',
+                  userSelect: 'none',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg>
+                  参考资料（{message.citations.length} 条）
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {message.citations.map((citation) => (
+                    <a
+                      key={citation.index}
+                      href={citation.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 'var(--space-2)',
+                        padding: 'var(--space-2)',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--gray-50)',
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        border: '1px solid transparent',
+                        transition: 'border-color 0.15s, background-color 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.backgroundColor = 'oklch(0.55 0.18 200 / 0.04)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'transparent'
+                        e.currentTarget.style.backgroundColor = 'var(--gray-50)'
+                      }}
+                    >
+                      <span style={{
+                        flexShrink: 0,
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--primary)',
+                        color: 'white',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        {citation.index}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 500,
+                          color: 'var(--gray-700)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {citation.title}
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--gray-400)', marginTop: '2px' }}>
+                          {(() => { try { return new URL(citation.url).hostname } catch { return citation.url } })()}
+                        </div>
+                        {citation.snippet && (
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--gray-500)',
+                            marginTop: '4px',
+                            lineHeight: 1.4,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}>
+                            {citation.snippet}
+                          </div>
+                        )}
+                      </div>
+                    </a>
                   ))}
                 </div>
               </details>

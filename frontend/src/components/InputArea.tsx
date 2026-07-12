@@ -34,6 +34,7 @@ interface InputAreaProps {
   onEnableAutoChartChange: (enabled: boolean) => void
   enableAutoMindmap: boolean
   onEnableAutoMindmapChange: (enabled: boolean) => void
+  fileUploadTrigger?: number
 }
 
 const SUGGESTIONS = [
@@ -91,6 +92,7 @@ export default function InputArea({
   onEnableAutoChartChange,
   enableAutoMindmap,
   onEnableAutoMindmapChange,
+  fileUploadTrigger,
 }: InputAreaProps) {
   const [input, setInput] = useState('')
   const [isOcrLoading, setIsOcrLoading] = useState(false)
@@ -116,6 +118,13 @@ export default function InputArea({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showFeaturePanel])
+
+  // Trigger file input from parent (feature card click)
+  useEffect(() => {
+    if (fileUploadTrigger && fileUploadTrigger > 0) {
+      fileInputRef.current?.click()
+    }
+  }, [fileUploadTrigger])
 
   const handleSend = () => {
     if (input.trim() && !isLoading) {
@@ -315,12 +324,12 @@ export default function InputArea({
 
   return (
     <div style={{
-      padding: '20px 24px 24px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: 'var(--space-4)',
+      display: 'flex', flexDirection: 'column', alignItems: 'stretch',
     }}>
       {/* Card container */}
       <div className="chat-input-card" style={{
-        width: '100%', maxWidth: 'var(--chat-input-max-width)',
+        width: '100%',
         backgroundColor: 'var(--chat-input-bg)',
         borderRadius: '16px',
         boxShadow: 'var(--chat-input-shadow)',
@@ -612,6 +621,12 @@ export default function InputArea({
           ) : (
             <TagButton icon={Globe} label="联网搜索" active={false} disabled />
           )}
+
+          {/* Auto chart toggle */}
+          <TagButton icon={BarChart3} label="图表生成" active={enableAutoChart} onClick={() => onEnableAutoChartChange(!enableAutoChart)} />
+
+          {/* Auto mindmap toggle */}
+          <TagButton icon={GitBranch} label="思维导图" active={enableAutoMindmap} onClick={() => onEnableAutoMindmapChange(!enableAutoMindmap)} />
 
         </div>
       </div>

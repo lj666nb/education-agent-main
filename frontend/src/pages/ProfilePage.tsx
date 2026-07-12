@@ -265,6 +265,42 @@ export default function ProfilePage() {
       </div>
 
       <div className="card" style={{ marginTop: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>功能引导</h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--app-text-secondary)', margin: '0 0 1rem' }}>
+          重新查看首次登录时的功能介绍，了解各个模块的使用方法
+        </p>
+        <button
+          onClick={() => {
+            let uid = useAuthStore.getState().user?.id
+            // Fallback: parse JWT directly (handles page reload where user not in store)
+            if (!uid) {
+              const token = localStorage.getItem('access_token')
+              if (token) {
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]))
+                  uid = payload?.sub
+                } catch {}
+              }
+            }
+            if (uid) {
+              sessionStorage.setItem(`onboarding_force_show_${uid}`, 'true')
+            }
+            navigate('/home')
+          }}
+          className="btn btn-secondary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          查看功能引导
+        </button>
+      </div>
+
+      <div className="card" style={{ marginTop: '1.5rem' }}>
         <h2 style={{ fontSize: '1.125rem', marginBottom: '1rem', color: 'var(--app-danger-dark)' }}>危险区域</h2>
         <button onClick={handleDeleteAccount} className="btn btn-danger">注销账户</button>
       </div>

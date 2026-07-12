@@ -14,12 +14,13 @@ from app.crud.api_settings import api_settings_crud
 
 router = APIRouter(prefix="/api-settings", tags=["API 设置"])
 
-SUPPORTED_PROVIDERS = ["deepseek", "qwen", "ocr", "websearch", "text_embedding", "tts", "unsplash"]
+SUPPORTED_PROVIDERS = ["deepseek", "qwen", "bailian", "ocr", "tavily", "text_embedding", "tts", "unsplash"]
 
 
 PROVIDER_MODEL_MAP = {
     "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
     "qwen": ["qwen3.5-plus", "qwen3.6-plus"],
+    "bailian": ["qwen3.5-plus", "qwen3.6-plus"],
 }
 
 

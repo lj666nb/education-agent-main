@@ -658,6 +658,19 @@ hr {
   color: var(--gray-500);
 }
 
+.dark .onboarding-overlay {
+  background: #0F172A;
+}
+.dark .onboarding-title {
+  color: #E2E8F0;
+}
+.dark .onboarding-desc {
+  color: #94A3B8;
+}
+.dark .onboarding-feature-item {
+  color: #CBD5E1;
+}
+
 .dark .landing-navbar.scrolled {
   background-color: rgba(15, 23, 42, 0.85);
 }

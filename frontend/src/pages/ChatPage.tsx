@@ -110,25 +110,6 @@ export default function ChatPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', background: '#FFFFFF' }}>
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          position: 'fixed',
-          top: '1rem',
-          left: '1rem',
-          padding: '0.5rem 1rem',
-          borderRadius: '0.375rem',
-          border: '1px solid #e5e7eb',
-          backgroundColor: '#ffffff',
-          color: 'var(--app-text-body)',
-          cursor: 'pointer',
-          fontSize: '0.875rem',
-          zIndex: 1000,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: 3 }}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> 首页
-      </button>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>AI 学习助手对话</h1>

@@ -61,7 +61,7 @@ export default function PracticeRecommendPopover({
   const handleGoToWrongReview = () => {
     sessionStorage.setItem(storageKey, '1')
     onClose()
-    navigate(`/banks/${bankId}/wrong-review`)
+    navigate(`/review`)
   }
 
   const handleGoToResource = () => {

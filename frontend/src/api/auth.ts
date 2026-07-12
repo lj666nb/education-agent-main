@@ -174,7 +174,7 @@ export const chatApi = {
   deleteSession: (chatId: string) =>
     api.delete(`/chat/sessions/${chatId}`),
 
-  saveMessage: (data: { chat_id: string; role: string; content: string; reasoning_content?: string }) =>
+  saveMessage: (data: { chat_id: string; role: string; content: string; reasoning_content?: string; citations?: Array<{index: number; title: string; url: string; snippet: string}> }) =>
     api.post('/chat/messages', data),
 
   ocrRecognize: (file: File) => {
@@ -299,6 +299,9 @@ export const apiSettingsApi = {
 
   getModels: () =>
     api.get<{ models: ModelInfo[] }>('/chat/models'),
+
+  validateSetting: (data: { provider: string; api_key: string; secret_key?: string }) =>
+    api.post<{ provider: string; is_valid: boolean; message: string }>('/api-settings/validate', data),
 }
 
 export interface StudyStats {

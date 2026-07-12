@@ -59,7 +59,7 @@ export default function ChapterCompletePopover({ domainId, domainName, wrongCoun
               </div>
             </>
           ) : (
-            <div onClick={() => { setDismissed(true); onClose(); navigate(`/banks/${bankId}/wrong-review`) }}
+            <div onClick={() => { setDismissed(true); onClose(); navigate(`/review`) }}
               style={{
                 padding: '14px 16px', borderRadius: 10,
                 background: '#FEF2F2', border: '1px solid #FECACA',

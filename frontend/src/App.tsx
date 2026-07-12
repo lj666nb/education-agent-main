@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useMemo, useEffect } from 'react'
 import { useAuthStore } from './store/auth'
+import { profileV2Api } from './api'
 import { ThemeProvider } from './store/theme'
 import Layout from './components/Layout'
 import ToastContainer from './components/shared/Toast'
@@ -27,7 +28,6 @@ const ExamPaperDetailPage = lazy(() => import('./pages/ExamPaperDetailPage'))
 const ApiSettingsPage = lazy(() => import('./pages/ApiSettingsPage'))
 const ResourceDetailPage = lazy(() => import('./pages/ResourceDetailPage'))
 const CloudDrivePage = lazy(() => import('./pages/CloudDrivePage'))
-const WrongAnswerPage = lazy(() => import('./pages/WrongAnswerPage'))
 const TestHistoryPage = lazy(() => import('./pages/TestHistoryPage'))
 const TestHistoryDetailPage = lazy(() => import('./pages/TestHistoryDetailPage'))
 const DailyStatsPage = lazy(() => import('./pages/DailyStatsPage'))
@@ -37,8 +37,6 @@ const LearningPathPage = lazy(() => import('./pages/LearningPathPage'))
 const PathHistoryPage = lazy(() => import('./pages/PathHistoryPage'))
 const KnowledgeLeetBookDetailPage = lazy(() => import('./pages/KnowledgeLeetBookDetailPage'))
 const ReviewCenterPage = lazy(() => import('./pages/ReviewCenterPage'))
-const ReviewWrongPage = lazy(() => import('./pages/ReviewWrongPage'))
-const KnowledgePointsPage = lazy(() => import('./pages/KnowledgePointsPage'))
 const KnowledgeGraphPage = lazy(() => import('./pages/KnowledgeGraphPage'))
 const CodingPracticePage = lazy(() => import('./pages/CodingPracticePage'))
 
@@ -84,9 +82,26 @@ function PageSkeleton() {
   )
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />
+function ProtectedRoute({ children, requireProfile = true }: { children: React.ReactNode; requireProfile?: boolean }) {
+  const { isAuthenticated, profileCompleted, setProfileCompleted } = useAuthStore()
+
+  // 检查画像 v2 是否存在
+  useEffect(() => {
+    if (isAuthenticated && profileCompleted === null) {
+      profileV2Api.getProfile()
+        .then(() => setProfileCompleted(true))
+        .catch(() => setProfileCompleted(false))
+    }
+  }, [isAuthenticated, profileCompleted, setProfileCompleted])
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  // 需要画像但未完成的 → 强制跳转画像初始化
+  if (requireProfile && profileCompleted === false) {
+    return <Navigate to="/profile/init" replace />
+  }
+
+  return <>{children}</>
 }
 
 function LazyRoute({ children }: { children: React.ReactNode }) {
@@ -136,14 +151,14 @@ function App() {
 
         {/* Business pages wrapped in Layout */}
         <Route path="/home" element={<Layout />}>
-          <Route index element={<LazyRoute><BusinessHome /></LazyRoute>} />
+          <Route index element={<ProtectedRoute><LazyRoute><BusinessHome /></LazyRoute></ProtectedRoute>} />
         </Route>
 
         {/* Legacy authenticated routes */}
         <Route element={<Layout />}>
           <Route path="chat" element={<ProtectedRoute><LazyRoute><ChatPage /></LazyRoute></ProtectedRoute>} />
           <Route path="chat/new" element={<ProtectedRoute><LazyRoute><ChatPlatform /></LazyRoute></ProtectedRoute>} />
-          <Route path="profile/init" element={<ProtectedRoute><LazyRoute><ProfileInitPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="profile/init" element={<ProtectedRoute requireProfile={false}><LazyRoute><ProfileInitPage /></LazyRoute></ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute><LazyRoute><ProfilePage /></LazyRoute></ProtectedRoute>} />
           <Route path="profile/dynamic" element={<ProtectedRoute><LazyRoute><DynamicProfilePage /></LazyRoute></ProtectedRoute>} />
           <Route path="profile/events" element={<ProtectedRoute><LazyRoute><BehaviorEventsPage /></LazyRoute></ProtectedRoute>} />
@@ -154,8 +169,6 @@ function App() {
           <Route path="banks/:bankId/history" element={<ProtectedRoute><LazyRoute><TestHistoryPage /></LazyRoute></ProtectedRoute>} />
           <Route path="banks/:bankId/history/:sessionId" element={<ProtectedRoute><LazyRoute><TestHistoryDetailPage /></LazyRoute></ProtectedRoute>} />
           <Route path="banks/:bankId/stats" element={<ProtectedRoute><LazyRoute><DailyStatsPage /></LazyRoute></ProtectedRoute>} />
-          <Route path="banks/:bankId/wrong-review" element={<ProtectedRoute><LazyRoute><ReviewWrongPage /></LazyRoute></ProtectedRoute>} />
-          <Route path="wrong-answers" element={<ProtectedRoute><LazyRoute><WrongAnswerPage /></LazyRoute></ProtectedRoute>} />
           <Route path="stats" element={<ProtectedRoute><LazyRoute><DailyStatsPage /></LazyRoute></ProtectedRoute>} />
           <Route path="admin" element={<ProtectedRoute><LazyRoute><AdminPage /></LazyRoute></ProtectedRoute>} />
           <Route path="settings/api" element={<ProtectedRoute><LazyRoute><ApiSettingsPage /></LazyRoute></ProtectedRoute>} />
@@ -163,7 +176,6 @@ function App() {
           <Route path="resources/:id" element={<ProtectedRoute><LazyRoute><ResourceDetailPage /></LazyRoute></ProtectedRoute>} />
           <Route path="review" element={<ProtectedRoute><LazyRoute><ReviewCenterPage /></LazyRoute></ProtectedRoute>} />
           <Route path="knowledge-graph" element={<ProtectedRoute><LazyRoute><KnowledgeGraphPage /></LazyRoute></ProtectedRoute>} />
-          <Route path="knowledge-points" element={<ProtectedRoute><LazyRoute><KnowledgePointsPage /></LazyRoute></ProtectedRoute>} />
           <Route path="cloud-drive" element={<ProtectedRoute><LazyRoute><CloudDrivePage /></LazyRoute></ProtectedRoute>} />
           <Route path="recommendations" element={<ProtectedRoute><LazyRoute><DataStructureNotesPage /></LazyRoute></ProtectedRoute>} />
           <Route path="path" element={<ProtectedRoute><LazyRoute><LearningPathPage /></LazyRoute></ProtectedRoute>} />

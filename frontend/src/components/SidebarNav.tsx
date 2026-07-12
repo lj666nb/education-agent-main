@@ -65,16 +65,6 @@ function IconReview({ size = 20 }: { size?: number }) {
   )
 }
 
-function IconKnowledgePoint({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 6v6l4 2"/>
-      <path d="M9 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5"/>
-    </svg>
-  )
-}
-
 function IconRecommend({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +172,6 @@ const topNavItems: NavItem[] = [
   { label: '学习画像', path: '/profile/dynamic', icon: <IconProfile /> },
   { label: '复习中心', path: '/review', icon: <IconReview /> },
   { label: '知识图谱', path: '/knowledge-graph', icon: <IconKnowledgeGraph /> },
-  { label: '知识点总览', path: '/knowledge-points', icon: <IconKnowledgePoint /> },
   { label: '学科笔记', path: '/recommendations', icon: <IconRecommend /> },
   { label: '学习路径', path: '/path', icon: <IconPath /> },
   { label: '学习分析', path: '/stats', icon: <IconStats /> },

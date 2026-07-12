@@ -6,15 +6,3 @@
 3. ResourceGenAgent — 并行生成 5 类多模态资源
 4. PathPushAgent — 学习路径规划、资源绑定、推送入库
 """
-
-from app.services.multi_agent.workflow import (
-    create_multi_agent_graph,
-    run_agent_workflow,
-    get_task_status,
-)
-
-__all__ = [
-    "create_multi_agent_graph",
-    "run_agent_workflow",
-    "get_task_status",
-]

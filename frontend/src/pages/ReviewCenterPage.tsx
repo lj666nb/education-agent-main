@@ -289,7 +289,7 @@ export default function ReviewCenterPage() {
             <div key={point.point_id}>
               <span><b>{point.point_name}</b><small>掌握度 {point.mastery_score}% · {point.review_label}</small></span>
               <div>
-                <button onClick={() => navigate(`/knowledge-points?pointId=${point.point_id}`)}>查看知识点</button>
+                <button onClick={() => navigate(`/path/knowledge/${point.point_id}`)}>查看知识点</button>
                 <button className="primary" disabled={completingId === point.point_id} onClick={() => completeReview(point)}>{completingId === point.point_id ? <Loader2 className="spin" size={15} /> : <Check size={15} />}完成复习</button>
               </div>
             </div>
@@ -297,7 +297,7 @@ export default function ReviewCenterPage() {
         </div>}
       </section>
 
-      <footer className="rc-footer"><span>需要重新同步？</span><button onClick={load}><RefreshCw size={14} />刷新错题档案</button><button onClick={() => navigate('/wrong-answers')}><Play size={14} />进入完整错题本</button></footer>
+      <footer className="rc-footer"><span>需要重新同步？</span><button onClick={load}><RefreshCw size={14} />刷新错题档案</button></footer>
     </main>
   )
 }

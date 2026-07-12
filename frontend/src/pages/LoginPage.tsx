@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { authApi, profileApi } from '../api'
+import { authApi, profileApi, profileV2Api } from '../api'
 import { useAuthStore } from '../store/auth'
 
 function ArrowLeftIcon() {
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { setUser } = useAuthStore()
+  const { setUser, setProfileCompleted } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,8 +35,22 @@ export default function LoginPage() {
 
       const profileRes = await profileApi.getProfile()
       setUser(profileRes.data)
+
+      // 检查学习画像 (v2) 是否存在
+      let redirectTo = '/home'
+      try {
+        await profileV2Api.getProfile()
+        setProfileCompleted(true)
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setProfileCompleted(false)
+          redirectTo = '/profile/init'
+        }
+        // 其他错误（网络、500等）维持默认跳转 /home
+      }
+
       setSuccess('登录成功！正在跳转...')
-      setTimeout(() => navigate('/home'), 1000)
+      setTimeout(() => navigate(redirectTo), 1000)
     } catch (err: any) {
       const status = err.response?.status
       const detail = err.response?.data?.detail

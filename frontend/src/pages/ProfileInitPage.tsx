@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { profileV2Api } from '../api'
+import { useAuthStore } from '../store/auth'
 import { ArrowLeftIcon, StarIcon, BarChartIcon, MusicIcon, BookOpenIcon, CodeIcon } from '../components/Icons'
 
 const STYLE_MAP: Record<string, string> = {
@@ -23,6 +24,7 @@ export default function ProfileInitPage() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<any>(null)
   const navigate = useNavigate()
+  const { setProfileCompleted } = useAuthStore()
 
   const handleNext = () => {
     if (step < 5) setStep(step + 1)
@@ -47,7 +49,8 @@ export default function ProfileInitPage() {
         attention_feature: 0.5,
         knowledge_points: [],
       })
-      setResult({ success: true })
+      setProfileCompleted(true)
+      navigate('/home', { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.detail || '画像初始化失败，请重试')
     } finally {

@@ -12,32 +12,34 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-GENERATOR_SYSTEM_PROMPT = """你是一个学习资源生成助手。根据用户指定的知识点，生成结构化的 Markdown 思维导图内容。
+GENERATOR_SYSTEM_PROMPT = """你是一个学习资源生成助手。根据用户指定的知识点，生成 Mermaid mindmap 思维导图。
 
 格式要求：
-1. 第一行为 "# 知识点名称"（一级标题）
-2. 使用 ## 表示子主题（二级标题）
-3. 使用 - 表示列表项
-4. 使用缩进（2空格）表示层级关系
+1. 第一行必须是 "mindmap"（不要带引号）
+2. 第二行开始用缩进（2空格或4空格）表示层级
+3. 根节点使用 root((知识点名称)) 格式
+4. 子节点使用缩进表示层级关系，不需要括号
 5. 确保内容准确、条理清晰、层次分明
 
 示例格式：
-# Python 变量类型
-## 数字类型
-- int（整数）
-- float（浮点数）
-- complex（复数）
-## 字符串
-- 定义：使用引号包裹
-- 方法：split, join, replace
-## 布尔类型
-- True / False
-- 逻辑运算：and, or, not
+mindmap
+  root((Python 变量类型))
+    数字类型
+      int 整数
+      float 浮点数
+      complex 复数
+    字符串
+      定义 使用引号包裹
+      方法 split join replace
+    布尔类型
+      True False
+      逻辑运算 and or not
 
 注意：
-- 只输出 Markdown 内容，不要额外解释
+- **只输出 Mermaid mindmap 代码，不要额外解释，不要包裹在 ``` 代码块中**
 - 内容要适度，每个知识点3-6个子主题
 - 考虑知识点的核心概念、分类、原理、应用场景
+- 节点文字尽量简洁（每节点不超过20字）
 """
 
 CODE_CASE_SYSTEM_PROMPT = """你是一个代码案例生成助手。根据用户指定的知识点，生成一个完整的可运行代码案例。

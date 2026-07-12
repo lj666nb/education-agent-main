@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
-import { profileV2Api, dashboardApi } from '../api'
+import { dashboardApi } from '../api'
 import { pathApi, type AgentRecommendation } from '../api/path'
 import { recommendApi, type Recommendation } from '../api/recommend'
 import { useTheme } from '../store/theme'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   CheckCircleIcon, EditIcon, BotIcon, ZapIcon, LightbulbIcon,
   AlertTriangleIcon, BookIcon, StarIcon,
@@ -12,6 +12,7 @@ import {
   MessageCircleIcon, ClockIcon, TrendingUpIcon,
   AwardIcon,
 } from '../components/Icons'
+import './HomePage.css'
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS — unified light/dark palette
@@ -21,29 +22,22 @@ function useTokens() {
   const isDark = theme === 'dark'
   return {
     isDark,
-    // Brand
     brand: '#1677E8',
     brandDark: '#0958D9',
     brandLight: isDark ? 'rgba(22,119,232,0.15)' : '#EFF6FF',
     brandGlow: isDark ? 'rgba(22,119,232,0.25)' : 'rgba(22,119,232,0.08)',
-    // Background
     bgPage: isDark ? '#0F172A' : '#F7FAFF',
     bgCard: isDark ? '#1E293B' : '#FFFFFF',
     bgCardAlt: isDark ? '#172033' : '#F8FAFE',
     bgGlass: isDark ? 'rgba(30,41,59,0.75)' : 'rgba(255,255,255,0.75)',
-    // Text
     textPrimary: isDark ? '#E2E8F0' : '#1E293B',
     textSecondary: isDark ? '#94A3B8' : '#64748B',
     textMuted: isDark ? '#64748B' : '#94A3B8',
-    // Border
     border: isDark ? '#334155' : '#E5EDF7',
     borderLight: isDark ? '#1E3348' : '#E8F0FB',
-    // Shadow
     shadowSm: isDark ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 4px rgba(0,0,0,0.04)',
     shadowMd: isDark ? '0 4px 16px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.06)',
     shadowLg: isDark ? '0 8px 32px rgba(0,0,0,0.5)' : '0 8px 32px rgba(0,0,0,0.08)',
-    shadowGlow: isDark ? '0 0 20px rgba(22,119,232,0.2)' : '0 0 20px rgba(22,119,232,0.1)',
-    // Card accent colors (TASK 2.5 — 4专属配色)
     cardBlue: isDark ? '#1E3A5F' : '#EFF6FF',
     cardTeal: isDark ? '#134E4A' : '#F0FDFA',
     cardPurple: isDark ? '#2D1B69' : '#F5F3FF',
@@ -52,7 +46,6 @@ function useTokens() {
     cardTealIcon: '#14B8A6',
     cardPurpleIcon: '#8B5CF6',
     cardOrangeIcon: '#F97316',
-    // Semantic
     dangerBg: isDark ? 'rgba(239,68,68,0.12)' : '#FEF2F2',
     dangerBorder: isDark ? 'rgba(239,68,68,0.25)' : '#FECACA',
     dangerText: isDark ? '#FCA5A5' : '#DC2626',
@@ -64,126 +57,18 @@ function useTokens() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   CountUp Animation Component (unchanged business logic)
-   ──────────────────────────────────────────────────────────── */
-function CountUp({ value, suffix = '' }: { value: number | string; suffix?: string }) {
-  const [display, setDisplay] = useState('0')
-  const ref = useRef<HTMLSpanElement>(null)
-  const done = useRef(false)
-
-  useEffect(() => {
-    const num = typeof value === 'number' ? value : (parseInt(String(value)) || 0)
-    if (num === 0 || value === '--' || value === '' || value === undefined || value === null) {
-      setDisplay(String(value ?? '0') + suffix)
-      return
-    }
-    const el = ref.current
-    if (!el) return
-    const ob = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || done.current) return
-      done.current = true
-      ob.disconnect()
-      let current = 0
-      const totalSteps = 40
-      const step = Math.max(1, Math.ceil(num / totalSteps))
-      let frame = 0
-      const animate = () => {
-        frame++
-        if (frame % 2 !== 0) { requestAnimationFrame(animate); return }
-        current += step
-        if (current >= num) { setDisplay(`${num}${suffix}`); return }
-        setDisplay(`${current}${suffix}`)
-        requestAnimationFrame(animate)
-      }
-      requestAnimationFrame(animate)
-    }, { threshold: 0.2 })
-    ob.observe(el)
-    return () => ob.disconnect()
-  }, [value, suffix])
-
-  return <span ref={ref} style={{ display: 'inline-block' }}>{display}</span>
-}
-
-/* ────────────────────────────────────────────────────────────
-   Mini SVG Charts — TASK 2.1 迷你可视化微型图表
-   ──────────────────────────────────────────────────────────── */
-function RingProgress({ percent, color, size = 40, strokeWidth = 4 }: { percent: number; color: string; size?: number; strokeWidth?: number }) {
-  const r = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * r
-  const offset = circumference - (percent / 100) * circumference
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor"
-        strokeWidth={strokeWidth} opacity={0.12} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color}
-        strokeWidth={strokeWidth} strokeLinecap="round"
-        strokeDasharray={circumference} strokeDashoffset={offset}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={{ transition: 'stroke-dashoffset 1s ease' }} />
-    </svg>
-  )
-}
-
-function MiniSparkLine({ data, color }: { data: number[]; color: string }) {
-  if (data.length < 2) return null
-  const w = 60, h = 24, pad = 2
-  const max = Math.max(...data, 1)
-  const points = data.map((v, i) =>
-    `${pad + (i / (data.length - 1)) * (w - pad * 2)},${h - pad - (v / max) * (h - pad * 2)}`
-  ).join(' ')
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ flexShrink: 0 }}>
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />
-      <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-        <stop offset="100%" stopColor={color} stopOpacity="0" />
-      </linearGradient>
-    </svg>
-  )
-}
-
-/* ────────────────────────────────────────────────────────────
-   Background Decor — enhanced with dark mode support
+   Simplified background — gradient only, no floating decor
    ──────────────────────────────────────────────────────────── */
 function HomeBackground({ isDark }: { isDark: boolean }) {
-  const c = isDark ? 'rgba(56,189,248,0.04)' : 'rgba(2,132,199,0.02)'
-  const c2 = isDark ? 'rgba(56,189,248,0.06)' : 'rgba(2,132,199,0.06)'
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
-      background: isDark
-        ? 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(56,189,248,0.08), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(139,92,246,0.05), transparent 60%), #0F172A'
-        : 'linear-gradient(165deg, #F0F9FF 0%, #E0F2FE 20%, #BAE6FD 40%, #E0F2FE 60%, #F0F9FF 80%, #EFF6FF 100%)',
-    }}>
-      {/* Floating decor elements */}
-      <div style={{
-        position: 'absolute', top: '8%', right: '12%', width: 48, height: 48,
-        borderRadius: 14, background: c2, transform: 'rotate(25deg)',
-        animation: 'hmFloat1 10s ease infinite',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '15%', left: '8%', width: 36, height: 36,
-        borderRadius: '50%', background: c, animation: 'hmFloat2 12s ease infinite 1s',
-      }} />
-      <div style={{
-        position: 'absolute', top: '35%', left: '4%', width: 56, height: 56,
-        borderRadius: 18, background: c, transform: 'rotate(-20deg)',
-        animation: 'hmFloat1 14s ease infinite 2s',
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '25%', right: '6%', width: 40, height: 40,
-        borderRadius: 10, background: c, transform: 'rotate(35deg)',
-        animation: 'hmFloat2 9s ease infinite 0.5s',
-      }} />
-      {/* Subtle grid pattern — TASK 5.2 */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: isDark
-          ? 'radial-gradient(circle, rgba(148,163,184,0.06) 1px, transparent 1px)'
-          : 'radial-gradient(circle, rgba(2,132,199,0.04) 1px, transparent 1px)',
-        backgroundSize: '32px 32px',
-      }} />
-    </div>
+    <div
+      className="hm-bg"
+      style={{
+        background: isDark
+          ? '#0F172A'
+          : 'linear-gradient(165deg, #F0F9FF 0%, #E0F2FE 20%, #BAE6FD 40%, #E0F2FE 60%, #F0F9FF 80%, #EFF6FF 100%)',
+      }}
+    />
   )
 }
 
@@ -206,24 +91,6 @@ function IconPractice({ size = 16, color = 'currentColor' }: { size?: number; co
   )
 }
 
-function IconTargetCrosshair({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
-  )
-}
-
-function IconPlayVideo({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="5 3 19 12 5 21 5 3" fill={color} stroke="none" />
-    </svg>
-  )
-}
-
 const initialStats = { total_study_days: 0, current_streak: 0, longest_streak: 0, today_questions: 0, today_minutes: 0, total_questions: 0, average_mastery: 0, total_minutes: 0 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -232,23 +99,14 @@ const initialStats = { total_study_days: 0, current_streak: 0, longest_streak: 0
 export default function HomePage() {
   const t = useTokens()
   const { isAuthenticated } = useAuthStore()
-  const [hasProfile, setHasProfile] = useState(false)
-  const [isChecking, setIsChecking] = useState(true)
   const [summary, setSummary] = useState<Record<string, number>>({})
   const [recommendations, setRecommendations] = useState<AgentRecommendation[]>([])
   const [personRecs, setPersonRecs] = useState<Recommendation[]>([])
   const [studyStats, setStudyStats] = useState(initialStats)
 
   useEffect(() => {
-    if (isAuthenticated) { checkProfile(); loadDashboard() }
-    else setIsChecking(false)
+    if (isAuthenticated) { loadDashboard() }
   }, [isAuthenticated])
-
-  const checkProfile = async () => {
-    try { await profileV2Api.getProfile(); setHasProfile(true) }
-    catch { setHasProfile(false) }
-    finally { setIsChecking(false) }
-  }
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -266,7 +124,6 @@ export default function HomePage() {
   const todayRecs = recommendations.filter(r => r.priority === 'high').slice(0, 4)
   const totalDifficult = summary.difficult || 0
 
-  // Simulated trend data (derived from real stats for visual enhancement)
   const totalQ = studyStats.total_questions || 0
   const totalDays = studyStats.total_study_days || 0
   const mastery = studyStats.average_mastery || 0
@@ -274,13 +131,29 @@ export default function HomePage() {
   const todayMin = studyStats.today_minutes || 0
   const accuracyRate: number | null = null
 
-  // Card config with trends (TASK 2.2)
+  // Simple ring progress SVG reused
+  function RingProgress({ percent, color, size = 40, strokeWidth = 4 }: { percent: number; color: string; size?: number; strokeWidth?: number }) {
+    const r = (size - strokeWidth) / 2
+    const circumference = 2 * Math.PI * r
+    const offset = circumference - (percent / 100) * circumference
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor"
+          strokeWidth={strokeWidth} opacity={0.12} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color}
+          strokeWidth={strokeWidth} strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: 'stroke-dashoffset 1s ease' }} />
+      </svg>
+    )
+  }
+
   const statCards = [
     {
       label: '已掌握进度', icon: <CheckCircleIcon size={18} color={t.cardBlueIcon} />,
       value: mastery, suffix: '%', color: t.cardBlueIcon,
-      bg: t.cardBlue, trend: null, trendUp: true,
-      ringPercent: mastery || 0,
+      bg: t.cardBlue, trend: null, trendUp: true, ringPercent: mastery || 0,
     },
     {
       label: '累计练习', icon: <EditIcon size={18} color={t.cardTealIcon} />,
@@ -310,85 +183,6 @@ export default function HomePage() {
       color: t.textPrimary,
       background: t.bgPage,
     }}>
-      {/* ─── Global Styles & Animations ─── */}
-      <style>{`
-        /* ── Keyframes ── */
-        @keyframes hmFloat1 {
-          0%, 100% { transform: translateY(0) rotate(25deg); opacity: 0.4; }
-          50% { transform: translateY(-20px) rotate(30deg); opacity: 0.7; }
-        }
-        @keyframes hmFloat2 {
-          0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
-          50% { transform: translateY(-15px) scale(1.05); opacity: 0.6; }
-        }
-        @keyframes hmFadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes hmFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes hmSlideInRight {
-          from { opacity: 0; transform: translateX(12px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes hmPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes hmShimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes hmRingFill {
-          from { stroke-dashoffset: var(--ring-circ); }
-          to { stroke-dashoffset: var(--ring-offset); }
-        }
-        /* Cards animation classes */
-        .hm-card { opacity: 0; animation: hmFadeUp 0.5s ease forwards; }
-        .hm-card:nth-child(1) { animation-delay: 0.05s; }
-        .hm-card:nth-child(2) { animation-delay: 0.12s; }
-        .hm-card:nth-child(3) { animation-delay: 0.19s; }
-        .hm-card:nth-child(4) { animation-delay: 0.26s; }
-        /* Hover effects */
-        .hm-hover-lift {
-          transition: transform 0.25s cubic-bezier(0.4,0,0.2,1),
-                      box-shadow 0.25s cubic-bezier(0.4,0,0.2,1),
-                      border-color 0.25s ease !important;
-        }
-        .hm-hover-lift:hover {
-          transform: translateY(-2px) !important;
-        }
-        .hm-qck-btn {
-          transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
-          cursor: pointer;
-        }
-        .hm-qck-btn:hover {
-          transform: translateY(-3px) !important;
-        }
-        .hm-qck-btn:active {
-          transform: scale(0.97) !important;
-        }
-        /* Nav active indicator — TASK 3.1 */
-        .hm-section-title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        /* Skeleton shimmer */
-        .hm-skeleton {
-          background: linear-gradient(90deg, ${t.isDark ? '#1E293B' : '#E5EDF7'} 25%, ${t.isDark ? '#334155' : '#F1F5F9'} 50%, ${t.isDark ? '#1E293B' : '#E5EDF7'} 75%);
-          background-size: 200% 100%;
-          animation: hmShimmer 2s ease infinite;
-          border-radius: 8px;
-        }
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${t.isDark ? '#334155' : '#CBD5E1'}; border-radius: 3px; }
-      `}</style>
-
       <HomeBackground isDark={t.isDark} />
 
       {isAuthenticated ? (
@@ -398,7 +192,7 @@ export default function HomePage() {
           padding: '0 28px 32px',
         }}>
           {/* ════════════════════════════════════════════════════════
-              SECTION ① — 4 Stat Cards (TASK 2: fully enhanced)
+              SECTION ① — 4 Stat Cards
               ════════════════════════════════════════════════════════ */}
           <section style={{
             marginTop: 16, marginBottom: 28,
@@ -406,7 +200,7 @@ export default function HomePage() {
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 16,
           }}>
-            {statCards.map((card, i) => (
+            {statCards.map((card) => (
               <div key={card.label} className="hm-card hm-hover-lift" style={{
                 background: t.bgCard,
                 borderRadius: 16,
@@ -435,9 +229,7 @@ export default function HomePage() {
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: 10,
                       background: card.bg,
@@ -445,23 +237,20 @@ export default function HomePage() {
                     }}>
                       {card.icon}
                     </div>
-                    <span style={{
-                      fontSize: '0.78rem', color: t.textSecondary, fontWeight: 500,
-                    }}>
+                    <span style={{ fontSize: '0.78rem', color: t.textSecondary, fontWeight: 500 }}>
                       {card.label}
                     </span>
                   </div>
-                  {/* Mini ring chart (TASK 2.1) */}
                   <RingProgress percent={card.ringPercent} color={card.color} size={40} strokeWidth={4} />
                 </div>
-                {/* Value + suffix */}
+                {/* Value + suffix — static number, no CountUp animation */}
                 <div style={{
                   fontSize: '1.8rem', fontWeight: 700, color: t.textPrimary,
                   lineHeight: 1.1, letterSpacing: '-0.02em',
                 }}>
-                  <CountUp value={card.value} suffix={card.suffix} />
+                  {typeof card.value === 'number' ? card.value : '0'}{card.suffix}
                 </div>
-                {/* Trend label (TASK 2.2) */}
+                {/* Trend label */}
                 {card.trend && (
                   <div style={{
                     fontSize: '0.7rem', color: card.trendUp ? '#10B981' : t.textMuted,
@@ -487,7 +276,7 @@ export default function HomePage() {
             alignItems: 'start',
           }}>
 
-            {/* ── LEFT COLUMN: Today's Learning Suggestions (TASK 3) ── */}
+            {/* ── LEFT COLUMN: Today's Learning Suggestions ── */}
             <div className="hm-card" style={{ animationDelay: '0.32s' }}>
               <div style={{
                 background: t.bgCard,
@@ -513,16 +302,10 @@ export default function HomePage() {
                       <BotIcon size={18} color={t.brand} />
                     </div>
                     <div>
-                      <h3 style={{
-                        fontSize: '1rem', fontWeight: 600, color: t.textPrimary,
-                        margin: 0,
-                      }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: t.textPrimary, margin: 0 }}>
                         今日学习建议
                       </h3>
-                      {/* TASK 3.1: 标题辅助信息 */}
-                      <span style={{
-                        fontSize: '0.7rem', color: t.textMuted,
-                      }}>
+                      <span style={{ fontSize: '0.7rem', color: t.textMuted }}>
                         优先级 · 剩余 {Math.max(0, 3 - todayRecs.length - personRecs.length)} 项待处理
                       </span>
                     </div>
@@ -574,7 +357,6 @@ export default function HomePage() {
                       background: t.brand, color: '#fff',
                       fontSize: '0.85rem', fontWeight: 500,
                       textDecoration: 'none',
-                      border: 'none', cursor: 'pointer',
                     }}>
                       开始练习
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -584,165 +366,123 @@ export default function HomePage() {
                     </Link>
                   </div>
                 ) : (
-                  <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-                      {/* TASK 3.2: Enhanced recommendation items */}
-                      {todayRecs.map((rec, i) => (
-                        <Link key={`agent-${i}`} to="/path" style={{
-                          textDecoration: 'none', color: 'inherit',
-                          padding: '16px 20px', borderRadius: 12,
-                          background: t.dangerBg,
-                          border: `1px solid ${t.dangerBorder}`,
-                          borderLeft: `4px solid #EF4444`,
-                          transition: 'all 0.2s ease', display: 'flex',
-                          alignItems: 'flex-start', gap: 14,
-                          position: 'relative', overflow: 'hidden',
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+                    {todayRecs.map((rec, i) => (
+                      <Link key={`agent-${i}`} to="/path" style={{
+                        textDecoration: 'none', color: 'inherit',
+                        padding: '16px 20px', borderRadius: 12,
+                        background: t.dangerBg,
+                        border: `1px solid ${t.dangerBorder}`,
+                        borderLeft: `4px solid #EF4444`,
+                        transition: 'all 0.2s ease', display: 'flex',
+                        alignItems: 'flex-start', gap: 14,
+                      }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateX(4px)'
+                          e.currentTarget.style.boxShadow = t.shadowMd
                         }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                            e.currentTarget.style.boxShadow = t.shadowMd
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = ''
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                        >
-                          {/* Status icon (TASK 3.2 ①) */}
-                          <div style={{
-                            width: 32, height: 32, borderRadius: 8,
-                            background: 'rgba(239,68,68,0.12)',
-                            display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', flexShrink: 0,
-                            marginTop: 1,
-                          }}>
-                            <AlertTriangleIcon size={14} color="#EF4444" />
-                          </div>
-                          {/* Content */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              fontSize: '0.85rem', fontWeight: 600, color: t.textPrimary,
-                              marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6,
-                            }}>
-                              {rec.title}
-                              <span style={{
-                                fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4,
-                                background: 'rgba(239,68,68,0.1)', color: '#EF4444',
-                                fontWeight: 500, whiteSpace: 'nowrap',
-                              }}>
-                                需重点攻克
-                              </span>
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem', color: t.textSecondary, lineHeight: 1.5,
-                              marginBottom: 8,
-                            }}>
-                              {rec.description}
-                            </div>
-                            {/* Progress bar (TASK 3.2 ②) */}
-                            <div style={{
-                              height: 4, borderRadius: 2, background: t.isDark ? '#334155' : '#F1F5F9',
-                              overflow: 'hidden', marginBottom: 8,
-                            }}>
-                              <div style={{
-                                height: '100%', width: '0%', borderRadius: 2,
-                                background: 'linear-gradient(90deg, #EF4444, #F97316)',
-                                transition: 'width 1.5s ease',
-                              }} ref={el => {
-                                if (el) setTimeout(() => { el.style.width = '0%' }, 100)
-                              }} />
-                            </div>
-                            {/* Quick action buttons (TASK 3.2 ③) */}
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{
-                                fontSize: '0.7rem', color: t.brand, cursor: 'pointer',
-                                padding: '3px 10px', borderRadius: 6,
-                                background: t.brandLight, fontWeight: 500,
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                              }}
-                                onClick={(e) => { e.preventDefault(); window.location.href = '/banks' }}
-                              >
-                                <IconPractice size={11} color={t.brand} /> 立即刷题
-                              </span>
-                              <span style={{
-                                fontSize: '0.7rem', color: t.textSecondary, cursor: 'pointer',
-                                padding: '3px 10px', borderRadius: 6,
-                                background: t.isDark ? '#334155' : '#F1F5F9', fontWeight: 500,
-                              }}
-                                onClick={(e) => { e.preventDefault(); window.location.href = '/knowledge-points' }}
-                              >
-                                查看知识点
-                              </span>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                      {/* Person recs (blue style) */}
-                      {personRecs.slice(0, 2).map((rec, i) => (
-                        <Link key={`person-${i}`} to="/path" style={{
-                          textDecoration: 'none', color: 'inherit',
-                          padding: '16px 20px', borderRadius: 12,
-                          background: t.brandLight,
-                          border: `1px solid ${t.isDark ? 'rgba(22,119,232,0.25)' : '#BFDBFE'}`,
-                          borderLeft: `4px solid ${t.brand}`,
-                          transition: 'all 0.2s ease', display: 'flex',
-                          alignItems: 'flex-start', gap: 14,
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = ''
+                          e.currentTarget.style.boxShadow = 'none'
                         }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                            e.currentTarget.style.boxShadow = t.shadowMd
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = ''
-                            e.currentTarget.style.boxShadow = 'none'
-                          }}
-                        >
+                      >
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: 'rgba(239,68,68,0.12)',
+                          display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', flexShrink: 0, marginTop: 1,
+                        }}>
+                          <AlertTriangleIcon size={14} color="#EF4444" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
-                            width: 32, height: 32, borderRadius: 8,
-                            background: t.isDark ? 'rgba(22,119,232,0.2)' : 'rgba(22,119,232,0.1)',
-                            display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', flexShrink: 0,
-                            marginTop: 1,
+                            fontSize: '0.85rem', fontWeight: 600, color: t.textPrimary,
+                            marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6,
                           }}>
-                            <TargetIcon size={14} color={t.brand} />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              fontSize: '0.85rem', fontWeight: 600, color: t.textPrimary,
-                              marginBottom: 4,
+                            {rec.title}
+                            <span style={{
+                              fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4,
+                              background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                              fontWeight: 500, whiteSpace: 'nowrap',
                             }}>
-                              {rec.title}
-                            </div>
-                            <div style={{
-                              fontSize: '0.75rem', color: t.textSecondary, lineHeight: 1.5,
-                              marginBottom: 8,
-                            }}>
-                              {rec.reason}
-                            </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <span style={{
-                                fontSize: '0.7rem', color: t.brand, cursor: 'pointer',
-                                padding: '3px 10px', borderRadius: 6,
-                                background: t.isDark ? 'rgba(22,119,232,0.2)' : '#DBEAFE',
-                                fontWeight: 500,
-                              }}
-                                onClick={(e) => { e.preventDefault(); window.location.href = '/path' }}
-                              >
-                                查看路径
-                              </span>
-                            </div>
+                              需重点攻克
+                            </span>
                           </div>
-                        </Link>
-                      ))}
-                    </div>
-
-                  </>
+                          <div style={{ fontSize: '0.75rem', color: t.textSecondary, lineHeight: 1.5, marginBottom: 8 }}>
+                            {rec.description}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.7rem', color: t.brand, cursor: 'pointer',
+                              padding: '3px 10px', borderRadius: 6,
+                              background: t.brandLight, fontWeight: 500,
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                            }}
+                              onClick={(e) => { e.preventDefault(); window.location.href = '/banks' }}
+                            >
+                              <IconPractice size={11} color={t.brand} /> 立即刷题
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    {personRecs.slice(0, 2).map((rec, i) => (
+                      <Link key={`person-${i}`} to="/path" style={{
+                        textDecoration: 'none', color: 'inherit',
+                        padding: '16px 20px', borderRadius: 12,
+                        background: t.brandLight,
+                        border: `1px solid ${t.isDark ? 'rgba(22,119,232,0.25)' : '#BFDBFE'}`,
+                        borderLeft: `4px solid ${t.brand}`,
+                        transition: 'all 0.2s ease', display: 'flex',
+                        alignItems: 'flex-start', gap: 14,
+                      }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateX(4px)'
+                          e.currentTarget.style.boxShadow = t.shadowMd
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = ''
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      >
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: t.isDark ? 'rgba(22,119,232,0.2)' : 'rgba(22,119,232,0.1)',
+                          display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', flexShrink: 0, marginTop: 1,
+                        }}>
+                          <TargetIcon size={14} color={t.brand} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: t.textPrimary, marginBottom: 4 }}>
+                            {rec.title}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: t.textSecondary, lineHeight: 1.5, marginBottom: 8 }}>
+                            {rec.reason}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <span style={{
+                              fontSize: '0.7rem', color: t.brand, cursor: 'pointer',
+                              padding: '3px 10px', borderRadius: 6,
+                              background: t.isDark ? 'rgba(22,119,232,0.2)' : '#DBEAFE',
+                              fontWeight: 500,
+                            }}
+                              onClick={(e) => { e.preventDefault(); window.location.href = '/path' }}
+                            >
+                              查看路径
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
 
             {/* ── RIGHT COLUMN ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* ── Quick Start 4-grid (TASK 4) ── */}
+              {/* ── Quick Start 4-grid ── */}
               <div className="hm-card" style={{ animationDelay: '0.4s' }}>
                 <div style={{
                   background: t.bgCard,
@@ -790,43 +530,28 @@ export default function HomePage() {
                           border: `1px solid ${action.borderColor}`,
                           position: 'relative', overflow: 'hidden',
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.boxShadow = t.shadowMd
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.boxShadow = 'none'
-                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.boxShadow = t.shadowMd }}
+                        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
                       >
-                        {/* Tag badge */}
                         <span style={{
                           position: 'absolute', top: 8, right: 8,
                           fontSize: '0.62rem', fontWeight: 600, color: '#fff',
                           background: action.tagColor, padding: '1px 7px', borderRadius: 6,
-                          letterSpacing: '0.01em',
                         }}>
                           {action.tag}
                         </span>
-                        {/* Icon */}
-                        <div style={{ marginBottom: 2 }}>
-                          {action.icon}
-                        </div>
-                        {/* Title */}
-                        <div style={{
-                          fontSize: '0.88rem', fontWeight: 600, color: t.textPrimary,
-                        }}>
+                        <div style={{ marginBottom: 2 }}>{action.icon}</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: t.textPrimary }}>
                           {action.label}
                         </div>
-                        {/* Description (TASK 4.1) */}
-                        <div style={{
-                          fontSize: '0.7rem', color: t.textMuted, lineHeight: 1.4,
-                        }}>
+                        <div style={{ fontSize: '0.7rem', color: t.textMuted, lineHeight: 1.4 }}>
                           {action.desc}
                         </div>
                       </Link>
                     ))}
                   </div>
 
-                  {/* TASK 4.2: Mini dashboard below the 4-grid */}
+                  {/* Mini dashboard */}
                   <div style={{
                     marginTop: 16, display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)', gap: 10,
@@ -847,10 +572,7 @@ export default function HomePage() {
                         }}>
                           {item.icon} {item.label}
                         </div>
-                        <div style={{
-                          fontSize: '1.1rem', fontWeight: 700, color: item.color,
-                          lineHeight: 1.2,
-                        }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: item.color, lineHeight: 1.2 }}>
                           {item.value}
                           <span style={{ fontSize: '0.65rem', fontWeight: 500, color: t.textMuted }}>
                             {item.unit}
@@ -862,7 +584,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* ── Learning Tips (TASK 5: enhanced yellow card) ── */}
+              {/* ── Learning Tips — content only, no decorative elements ── */}
               <div className="hm-card" style={{ animationDelay: '0.48s' }}>
                 <div style={{
                   borderRadius: 16, padding: '24px 22px 26px',
@@ -871,30 +593,7 @@ export default function HomePage() {
                   boxShadow: t.isDark
                     ? 'inset 0 2px 4px rgba(251,191,36,0.04), 0 1px 3px rgba(0,0,0,0.15)'
                     : 'inset 0 2px 4px rgba(251,191,36,0.06), 0 1px 3px rgba(0,0,0,0.03)',
-                  position: 'relative', overflow: 'hidden',
                 }}>
-                  {/* Decorative dots */}
-                  <div style={{
-                    position: 'absolute', left: '12%', top: 12, width: 6, height: 6,
-                    borderRadius: '50%', background: '#FCD34D', opacity: 0.4, pointerEvents: 'none',
-                    animation: 'hmFloat2 4s ease-in-out infinite',
-                  }} />
-                  <div style={{
-                    position: 'absolute', right: '18%', bottom: 12, width: 5, height: 5,
-                    borderRadius: '50%', background: '#F59E0B', opacity: 0.3, pointerEvents: 'none',
-                    animation: 'hmFloat1 5s ease-in-out infinite 1s',
-                  }} />
-                  {/* Fold corner */}
-                  <div style={{
-                    position: 'absolute', right: 0, top: 0,
-                    width: 0, height: 0,
-                    borderRight: '22px solid #FDE68A',
-                    borderTop: '22px solid #FDE68A',
-                    borderLeft: '22px solid transparent',
-                    borderBottom: '22px solid transparent',
-                    opacity: 0.35, pointerEvents: 'none',
-                  }} />
-
                   <h3 style={{
                     fontSize: '0.88rem', fontWeight: 600,
                     margin: '0 0 14px', color: t.warningText,
@@ -903,12 +602,8 @@ export default function HomePage() {
                     <LightbulbIcon size={15} color="#D97706" /> 学习小贴士
                   </h3>
 
-                  {/* TASK 5.1: split text with timeline icons */}
-                  <div style={{
-                    fontSize: '0.8rem', color: t.warningText, lineHeight: 1.9,
-                    opacity: 0.9,
-                  }}>
-                    {/* Ebbinghaus content with mini timeline */}
+                  <div style={{ fontSize: '0.8rem', color: t.warningText, lineHeight: 1.9, opacity: 0.9 }}>
+                    {/* Ebbinghaus content */}
                     <div style={{ marginBottom: 12 }}>
                       <div style={{
                         fontWeight: 600, marginBottom: 4, fontSize: '0.82rem',
@@ -919,41 +614,9 @@ export default function HomePage() {
                       <div style={{ paddingLeft: 4 }}>
                         学完新知识后，在 <strong style={{ color: t.isDark ? '#FBBF24' : '#B45309' }}>1天、2天、4天、7天</strong> 后分别复习一次，能有效提升长期记忆效果。
                       </div>
-                      {/* Mini timeline visual */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6, marginTop: 8,
-                        paddingLeft: 4,
-                      }}>
-                        {[
-                          { day: '1天', color: '#EF4444' },
-                          { day: '2天', color: '#F97316' },
-                          { day: '4天', color: '#F59E0B' },
-                          { day: '7天', color: '#10B981' },
-                        ].map((step, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: '50%',
-                              background: step.color + '20', border: `2px solid ${step.color}40`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '0.6rem', fontWeight: 700, color: step.color,
-                            }}>
-                              {i + 1}
-                            </div>
-                            <span style={{ fontSize: '0.65rem', color: t.warningText, opacity: 0.8 }}>
-                              {step.day}
-                            </span>
-                            {i < 3 && (
-                              <div style={{
-                                width: 16, height: 1,
-                                background: t.isDark ? '#78350F' : '#FDE68A',
-                              }} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
                     </div>
 
-                    {/* Weak knowledge reminder (TASK 5.2: red badge) */}
+                    {/* Weak knowledge reminder */}
                     {totalDifficult > 0 && (
                       <div style={{
                         marginTop: 12, padding: '10px 14px', borderRadius: 10,
@@ -980,52 +643,11 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* ── Profile Init (conditional) ── */}
-              {!isChecking && !hasProfile && (
-                <div className="hm-card" style={{ animationDelay: '0.56s' }}>
-                  <div style={{
-                    borderRadius: 16, padding: '22px 20px', textAlign: 'center',
-                    background: t.bgCard,
-                    border: `1px solid ${t.border}`,
-                    boxShadow: t.shadowSm,
-                  }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: t.brandLight, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', margin: '0 auto 12px',
-                    }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
-                    </div>
-                    <p style={{
-                      fontSize: '0.85rem', color: t.brand, margin: '0 0 16px', fontWeight: 500,
-                    }}>
-                      初始化你的学习画像，获得更精准的学习建议
-                    </p>
-                    <Link to="/profile/init" style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '10px 28px', borderRadius: 8,
-                      background: t.brand, color: '#fff',
-                      fontSize: '0.85rem', fontWeight: 500,
-                      textDecoration: 'none',
-                      transition: 'background 0.2s ease',
-                    }}>
-                      初始化画像
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
           {/* ════════════════════════════════════════════════════════
-              SECTION ③ — Learning Activity Timeline (TASK 6.1)
+              SECTION ③ — Learning Activity Timeline
               ════════════════════════════════════════════════════════ */}
           <section className="hm-card" style={{
             animationDelay: '0.6s', marginTop: 24,

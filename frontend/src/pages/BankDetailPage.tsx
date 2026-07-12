@@ -74,6 +74,10 @@ export default function BankDetailPage() {
   // 题目按知识点分组 { kp_uuid: QuestionItem[] }
   const [pointQuestions, setPointQuestions] = useState<Record<string, QuestionItem[]>>({})
   const [allQuestions, setAllQuestions] = useState<QuestionItem[]>([])
+  const PAGE_SIZE = 200
+  const [totalQuestionsCount, setTotalQuestionsCount] = useState(0)
+  const [questionsPage, setQuestionsPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   // 单题重生成
   const [regenQuestionId, setRegenQuestionId] = useState<string | null>(null)
@@ -149,9 +153,11 @@ export default function BankDetailPage() {
       }
       setDomainPoints(allKps)
 
-      // 加载所有题目
-      const qRes = await questionBankApi.listQuestions(bankId, { page_size: 500 })
+      // 加载题目（分页，仅已发布的题目）
+      const qRes = await questionBankApi.listQuestions(bankId, { page_size: PAGE_SIZE, page: 1, status: 'published' })
       setAllQuestions(qRes.data.questions)
+      setTotalQuestionsCount(qRes.data.total)
+      setQuestionsPage(1)
     } catch { navigate('/banks') }
     setLoading(false)
   }
@@ -280,7 +286,22 @@ export default function BankDetailPage() {
     } catch { alert('删除知识点失败') }
   }
 
-  const totalQuestions = allQuestions.length
+  const totalQuestions = totalQuestionsCount || allQuestions.length
+
+  // 加载更多题目
+  const handleLoadMore = async () => {
+    if (!bankId || loadingMore) return
+    const nextPage = questionsPage + 1
+    setLoadingMore(true)
+    try {
+      const qRes = await questionBankApi.listQuestions(bankId, { page_size: PAGE_SIZE, page: nextPage, status: 'published' })
+      setAllQuestions(prev => [...prev, ...qRes.data.questions])
+      setQuestionsPage(nextPage)
+    } catch { /* ignore */ }
+    setLoadingMore(false)
+  }
+
+  const hasMore = totalQuestionsCount > allQuestions.length
 
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--app-text-muted)' }}>加载中...</div>
   if (!bank) return null
@@ -334,10 +355,6 @@ export default function BankDetailPage() {
 
         {/* ── Navigation Cards ── */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <button onClick={() => navigate(`/wrong-answers?bank=${bankId}`)}
-            style={{ padding: '10px 20px', background: 'var(--app-bg-danger)', color: 'var(--app-danger)', border: 'none', borderRadius: 12, fontSize: '13px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <BookmarkIcon size={14} color="#EF4444" /> 错题本
-          </button>
           <button onClick={() => navigate(`/banks/${bankId}/history`)}
             style={{ padding: '10px 20px', background: '#EFF6FF', color: 'var(--app-brand)', border: 'none', borderRadius: 12, fontSize: '13px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <FileTextIcon size={14} color="#1E3A8A" /> 测试历史
@@ -572,6 +589,18 @@ export default function BankDetailPage() {
                   )}
                 </div>
               ))}
+              {/* 加载更多 */}
+              {hasMore && (
+                <div style={{ padding: '12px 20px', textAlign: 'center', borderTop: '1px solid #F9FAFB' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--app-text-muted)', marginRight: '8px' }}>
+                    已加载 {allQuestions.length} / {totalQuestionsCount} 道题
+                  </span>
+                  <button onClick={handleLoadMore} disabled={loadingMore}
+                    style={{ padding: '6px 20px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '13px', cursor: loadingMore ? 'wait' : 'pointer', fontWeight: 500 }}>
+                    {loadingMore ? '加载中...' : '加载更多'}
+                  </button>
+                </div>
+              )}
               {/* 添加章节（列表底部） */}
               <div style={{ padding: '12px 20px 12px 36px', borderTop: '1px solid #F9FAFB' }}>
                 {addingDomain ? (

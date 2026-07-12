@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authApi, profileApi } from '../../api'
+import { authApi, profileApi, profileV2Api } from '../../api'
 import { useAuthStore } from '../../store/auth'
 
 interface AuthModalProps {
@@ -20,7 +20,7 @@ function CloseIcon() {
 export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const navigate = useNavigate()
-  const { setUser } = useAuthStore()
+  const { setUser, setProfileCompleted } = useAuthStore()
 
   // Login form state
   const [loginUsername, setLoginUsername] = useState('')
@@ -50,10 +50,24 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
 
       const profileRes = await profileApi.getProfile()
       setUser(profileRes.data)
-      onClose()
-      const redirectTo = sessionStorage.getItem('loginRedirect')
+
+      // 检查学习画像 (v2) 是否存在
+      let redirectTo = sessionStorage.getItem('loginRedirect') || '/home'
       sessionStorage.removeItem('loginRedirect')
-      navigate(redirectTo || '/home')
+
+      try {
+        await profileV2Api.getProfile()
+        setProfileCompleted(true)
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setProfileCompleted(false)
+          redirectTo = '/profile/init'
+        }
+        // 其他错误维持原 redirectTo
+      }
+
+      onClose()
+      navigate(redirectTo)
     } catch (err: any) {
       const status = err.response?.status
       const detail = err.response?.data?.detail

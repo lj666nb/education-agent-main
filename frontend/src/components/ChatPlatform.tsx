@@ -191,6 +191,7 @@ export default function ChatPlatform() {
   const [enableAutoMindmap, setEnableAutoMindmap] = useState(false)
   const [showClearAllModal, setShowClearAllModal] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
+  const [fileUploadTrigger, setFileUploadTrigger] = useState(0)
 
   // Keep messagesRef in sync with messages
   
@@ -290,8 +291,18 @@ export default function ChatPlatform() {
       if (response.ok) {
         const data = await response.json()
         const settings = data.settings || []
-        const websearchSetting = settings.find((s: any) => s.provider === 'websearch')
-        setWebsearchAvailable(websearchSetting?.is_configured || false)
+        const tavilySetting = settings.find((s: any) => s.provider === 'tavily')
+        const bailianSetting = settings.find((s: any) => s.provider === 'bailian')
+        const qwenSetting = settings.find((s: any) => s.provider === 'qwen')
+        const deepseekSetting = settings.find((s: any) => s.provider === 'deepseek')
+        // Web search is available if: Tavily or any LLM with MCP web search is configured
+        setWebsearchAvailable(
+          tavilySetting?.is_configured ||
+          bailianSetting?.is_configured ||
+          qwenSetting?.is_configured ||
+          deepseekSetting?.is_configured ||
+          false
+        )
       }
     } catch (error) {
       console.error('加载API设置失败:', error)
@@ -524,6 +535,7 @@ export default function ChatPlatform() {
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let lastSources: Array<{document_name: string; content_snippet: string; score: number}> | null = null
+      let lastCitations: Array<{index: number; title: string; url: string; snippet: string}> | null = null
       let lastDetectedXml: string | null = null
       if (reader) {
         while (true) {
@@ -540,6 +552,21 @@ export default function ChatPlatform() {
                 // 意图检测事件：无关内容警告
                 if (parsed.type === 'irrelevant_content') {
                   setIrrelevantContentWarning(parsed.message)
+                  continue
+                }
+                // 联网搜索状态事件
+                if (parsed.type === 'search_status') {
+                  if (activeChatId) {
+                    storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, searchStatus: parsed.status }))
+                  }
+                  continue
+                }
+                // 引用数据事件
+                if (parsed.type === 'citations') {
+                  if (activeChatId && parsed.citations) {
+                    lastCitations = parsed.citations
+                    storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, citations: parsed.citations }))
+                  }
                   continue
                 }
                 if (parsed.thinking_done) {
@@ -575,6 +602,7 @@ export default function ChatPlatform() {
           const updates: Record<string, any> = {}
           if (fullContent) updates.content = fullContent
           if (lastSources?.length) updates.sources = lastSources
+          if (lastCitations?.length) updates.citations = lastCitations
           if (lastDetectedXml) updates.diagramXml = lastDetectedXml
           if (Object.keys(updates).length > 0) {
             storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, ...updates }))
@@ -584,7 +612,7 @@ export default function ChatPlatform() {
       if (fullContent) {
         let saveRes: any = null
         try {
-          saveRes = await chatApi.saveMessage({ chat_id: activeChatId, role: 'assistant', content: fullContent })
+          saveRes = await chatApi.saveMessage({ chat_id: activeChatId, role: 'assistant', content: fullContent, citations: lastCitations || undefined })
           // 后端 save_message 已将 [PLOT] 执行并替换为图片 URL，更新前端消息内容
           if (activeChatId && saveRes.data?.content && saveRes.data.content !== fullContent) {
             storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: saveRes.data.content, diagramXml: extractDrawioXml(saveRes.data.content) || undefined }))
@@ -804,6 +832,8 @@ export default function ChatPlatform() {
       if (response.data.messages) {
         storeSetMessagesForChat(chatId, response.data.messages.map((msg: any, index: number) => {
           const base: any = { id: `msg-${index}`, role: msg.role as 'user' | 'assistant', content: msg.content, timestamp: new Date(msg.created_at) }
+          if (msg.reasoning_content) base.reasoning_content = msg.reasoning_content
+          if (msg.citations) base.citations = msg.citations
           if (msg.role === 'assistant') {
             const xml = extractDrawioXml(msg.content)
             if (xml) base.diagramXml = xml
@@ -1016,14 +1046,41 @@ export default function ChatPlatform() {
         title: '对话思维导图',
         resource_type: 'mind_map',
       })
-      if (res.data?.id) {
+      if (res.data?.content && currentChatId) {
+        // Render mindmap inline as a new AI message in the chat
+        const mindmapMessage: Message = {
+          id: `mindmap-${Date.now()}`,
+          role: 'assistant',
+          content: res.data.content,
+          timestamp: new Date(),
+        }
+        storeAppendMessages(currentChatId, [mindmapMessage])
+        // Persist to backend
+        chatApi.saveMessage({ chat_id: currentChatId, role: 'assistant', content: res.data.content }).catch(() => {})
+      } else if (res.data?.id) {
         alert('✅ 思维导图已生成')
-        navigate(`/resources/${res.data.id}`)
       }
     } catch (e: any) {
       alert(e.response?.data?.detail || '生成失败')
     }
   }
+
+  const handleFeatureCardClick = useCallback((action: string) => {
+    switch (action) {
+      case '文件上传':
+        setFileUploadTrigger(n => n + 1)
+        break
+      case '代码运行':
+        navigate('/coding-practice')
+        break
+      case '图表生成':
+        setEnableAutoChart(!enableAutoChart)
+        break
+      case '思维导图':
+        setEnableAutoMindmap(!enableAutoMindmap)
+        break
+    }
+  }, [navigate, enableAutoChart, enableAutoMindmap])
 
   const headerBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '6px 12px', borderRadius: '8px', border: '1px solid',
@@ -1051,17 +1108,6 @@ export default function ChatPlatform() {
       }}>
         {/* Left */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate('/')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--gray-200)',
-              backgroundColor: 'white', color: 'var(--gray-500)',
-              fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'all 0.15s',
-            }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            首页
-          </button>
           <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.9375rem', color: '#1F2937' }}>
             AI 对话
           </span>
@@ -1201,6 +1247,7 @@ export default function ChatPlatform() {
               onRunCode={handleRunCode}
               onRollback={handleRollback}
               onGenerateMindmap={handleGenerateMindmap}
+              onFeatureCardClick={handleFeatureCardClick}
               onEditDiagram={(xml) => {
                 setActiveDiagramXml(xml)
                 if (!diagramOpen) setDiagramOpen(true)
@@ -1264,6 +1311,7 @@ export default function ChatPlatform() {
             onEnableAutoChartChange={setEnableAutoChart}
             enableAutoMindmap={enableAutoMindmap}
             onEnableAutoMindmapChange={setEnableAutoMindmap}
+            fileUploadTrigger={fileUploadTrigger}
           />
         </div>
       </div>

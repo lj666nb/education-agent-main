@@ -81,7 +81,12 @@ class Settings(BaseSettings):
     OCR_BAIDU_TOKEN_URL: str = "https://aip.baidubce.com/oauth/2.0/token"
     OCR_BAIDU_API_URL: str = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic"
 
-    # ── Web Search (DashScope MCP) ──
+    # ── Tavily Web Search (推荐，专为LLM设计) ──
+    TAVILY_API_KEY: str = ""
+    TAVILY_SEARCH_DEPTH: str = "basic"
+    TAVILY_MAX_RESULTS: int = 5
+
+    # ── Web Search (DashScope MCP, fallback) ──
     WEB_SEARCH_URL: str = "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp"
     WEB_SEARCH_MODEL: str = "deepseek-chat"
 

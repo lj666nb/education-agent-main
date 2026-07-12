@@ -704,10 +704,11 @@ def _seed_data_structures_from_json(db: Session) -> bool:
         if item.get("type") not in {"short_answer", "essay"}
     }
 
-    # Preserve StudentAnswer history: obsolete seed rows are archived, never
-    # deleted. Stable ids are updated in place.
+    # Preserve StudentAnswer history: only archive questions that originated from
+    # the seed itself AND are no longer present in the current seed data.
+    # Manually imported or externally-sourced questions are left untouched.
     for question in existing_questions:
-        if str(question.id) not in desired_ids:
+        if str(question.id) not in desired_ids and question.source == "curated_seed":
             question.status = "archived"
 
     upserted = 0
@@ -1177,7 +1178,15 @@ def _seed_demo_learning_path(db: Session):
         .first()
     )
     if existing:
-        logger.info("📚 演示学习路径已存在，跳过创建")
+        # 更新已有路径的 is_seed 标记（确保旧路径也会被识别为种子路径）
+        ai_meta = existing.ai_metadata or {}
+        if not ai_meta.get("is_seed"):
+            ai_meta["is_seed"] = True
+            existing.ai_metadata = ai_meta
+            db.commit()
+            logger.info("📚 演示学习路径已存在，已更新 is_seed 标记")
+        else:
+            logger.info("📚 演示学习路径已存在，跳过创建")
         return
 
     # 获取所有知识点（按章节排序）
@@ -1327,6 +1336,7 @@ def _seed_demo_learning_path(db: Session):
             ],
             "daily_suggestion": "建议每天学习 2-3 个知识点，配合题库练习巩固",
             "generation_reason": "种子演示数据 — 基于数据结构教材章节顺序编排",
+            "is_seed": True,
         },
     )
     db.add(state)
