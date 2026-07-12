@@ -779,14 +779,19 @@ def _seed_data_structures_from_json(db: Session) -> bool:
         if bank_id not in desired_bank_ids:
             continue
 
-        kp_ids = []
+        # Resolve knowledge-point references.  The seed JSON carries KP ids
+        # that match the seed data, but the actual database may use different
+        # UUIDs when the KP was matched by name (e.g. old seed vs new seed).
+        # Build a lookup that covers both seed ids and real DB ids.
         points_by_real_id = {str(item.id): item for item in point_by_seed_id.values()}
+
+        def _resolve_kp(seed_kp_id: str):
+            """Return the actual DB KnowledgePoint for a seed KP id, or None."""
+            return point_by_seed_id.get(seed_kp_id) or points_by_real_id.get(str(seed_kp_id))
+
+        kp_ids = []
         for seed_kp_id in question_data.get("knowledge_point_uuids", []):
-            # Objective questions reference ids from the JSON seed, while the
-            # curated OJ catalog is built after upsert and therefore carries
-            # the actual database ids. Support both without silently dropping
-            # the programming question's knowledge-point relationship.
-            point = point_by_seed_id.get(seed_kp_id) or points_by_real_id.get(str(seed_kp_id))
+            point = _resolve_kp(seed_kp_id)
             if point:
                 kp_ids.append(str(point.id))
 
@@ -799,7 +804,16 @@ def _seed_data_structures_from_json(db: Session) -> bool:
             # reappears in the current seed data.
             question.status = "published"
 
-        primary_point_id = question_data.get("primary_knowledge_point_id")
+        # Resolve primary_knowledge_point_id through the same lookup to avoid
+        # foreign-key violations when the seed UUID differs from the DB UUID.
+        primary_point_seed_id = question_data.get("primary_knowledge_point_id")
+        primary_point = _resolve_kp(primary_point_seed_id) if primary_point_seed_id else None
+        if primary_point_seed_id and not primary_point:
+            logger.warning(
+                "   ⚠️ 题目 %s 的主知识点 %s 在数据库中不存在，已跳过关联",
+                question_data["id"], primary_point_seed_id,
+            )
+
         question.bank_id = bank_id
         question.type = question_type
         question.difficulty = question_data.get("difficulty", "basic")
@@ -808,7 +822,7 @@ def _seed_data_structures_from_json(db: Session) -> bool:
         question.content = question_data.get("content", {})
         question.answer = question_data.get("answer", {})
         question.knowledge_point_uuids = kp_ids
-        question.primary_knowledge_point_id = UUID(primary_point_id) if primary_point_id else None
+        question.primary_knowledge_point_id = primary_point.id if primary_point else None
         question.tags = question_data.get("tags", [])
         question.ai_generated = question_data.get("ai_generated", False)
         question.source = question_data.get("source", "curated_seed")
