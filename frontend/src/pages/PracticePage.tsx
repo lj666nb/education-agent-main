@@ -101,6 +101,9 @@ export default function PracticePage() {
   const [showRecommend, setShowRecommend] = useState(false)
   const [wrongKps, setWrongKps] = useState<string[]>([])
 
+  // ── 知识点专项练习选择弹窗 ──
+  const [batchChoice, setBatchChoice] = useState(false)
+
   // ── 章节完成弹窗 ──
   const [domainComplete, setDomainComplete] = useState<{
     domainId: string; domainName: string; wrongCount: number; allDone: boolean
@@ -212,8 +215,10 @@ export default function PracticePage() {
     setLoading(false)
   }
 
-  // ── point 参数：加载知识点名称用于展示 ──
+  // ── point 参数：加载知识点名称和题目总数用于展示和进度跟踪 ──
   const [pointName, setPointName] = useState('')
+  const [totalPointQuestions, setTotalPointQuestions] = useState(0)
+  const [practicedPointQuestions, setPracticedPointQuestions] = useState(0)
   useEffect(() => {
     if (!bankId) return
     const pt = searchParams.get('point')
@@ -223,6 +228,8 @@ export default function PracticePage() {
         headers: { Authorization: `Bearer ${token}` }
       }).then(r => r.json()).then(d => {
         if (d.point_name) setPointName(d.point_name)
+        if (d.total_questions) setTotalPointQuestions(d.total_questions)
+        if (d.total_practiced !== undefined) setPracticedPointQuestions(d.total_practiced)
       }).catch(() => {})
     }
   }, [bankId])
@@ -232,9 +239,9 @@ export default function PracticePage() {
     if (!bankId || phase !== 'config' || loading || autoStartedRef.current) return
     const pt = searchParams.get('point')
     if (!pt) return
-    // 等 loading 结束后自动开始练习
+    // 等 loading 结束后自动开始练习（每次5题）
     autoStartedRef.current = true
-    handleStartPractice()
+    handleStartPractice({ questionCount: 5, onlyUnanswered: true })
   }, [phase, loading, bankId])
 
   // ── auto-start practice when `domain_ids` param is present (来自专项刷题) ──
@@ -353,18 +360,28 @@ export default function PracticePage() {
   }, [phase, timeLeft])
 
   // ── start practice ──
-  const handleStartPractice = async () => {
+  const handleStartPractice = async (overrideConfig?: {
+    questionCount?: number | null
+    onlyUnanswered?: boolean
+    onlyWrong?: boolean
+    forceUnanswered?: boolean
+  }) => {
     setLoading(true)
     setError('')
     try {
+      const pointParam = searchParams.get('point')
+      const knowledgePointUuids = pointParam ? [pointParam] : []
+      // 从知识点进入的专项练习：每次默认5题
+      const defaultCount = pointParam ? 5 : null
+      const useQuestionCount = overrideConfig?.questionCount ?? questionCount ?? defaultCount
+      const useOnlyUnanswered = overrideConfig?.onlyUnanswered ?? onlyUnanswered
+      const useOnlyWrong = overrideConfig?.onlyWrong ?? onlyWrong
       // 如果请求数量超过可用数量，自动调整为可用数量
-      let actualCount = questionCount
+      let actualCount = useQuestionCount
       if (actualCount && totalAvailable > 0 && actualCount > totalAvailable) {
         actualCount = totalAvailable
       }
 
-      const pointParam = searchParams.get('point')
-      const knowledgePointUuids = pointParam ? [pointParam] : []
       const domainIdsParam = searchParams.get('domain_ids')
       const domainIdsToUse = domainIdsParam ? domainIdsParam.split(',').filter(Boolean) : selectedDomainIds
       // 专项刷题不过滤题型，保证与章节目录显示的题目数量一致
@@ -375,8 +392,8 @@ export default function PracticePage() {
         question_types: typesToUse,
         domain_ids: domainIdsToUse,
         knowledge_point_uuids: knowledgePointUuids,
-        only_unanswered: onlyUnanswered,
-        only_wrong: onlyWrong,
+        only_unanswered: useOnlyUnanswered,
+        only_wrong: useOnlyWrong,
         only_error_prone: onlyErrorProne,
         answer_mode: answerMode,
       })
@@ -695,6 +712,27 @@ export default function PracticePage() {
     setReviewGradeLoading(false)
   }
 
+  // ── save current answer before navigating away (preserves selections when switching questions) ──
+  const saveCurrentAnswerState = () => {
+    if (!currentQ) return
+    // Don't save if answer was already submitted in 'during' mode
+    const alreadySaved = answers.find(a => a.questionId === currentQ.id)
+    if (alreadySaved && answerMode === 'during') return
+    const sel = questionCardRef.current?.getCurrentAnswer?.()
+    if (sel && sel.trim()) {
+      setAnswers(prev => {
+        const existing = prev.findIndex(a => a.questionId === currentQ.id)
+        const record: AnswerRecord = { questionId: currentQ.id, answerContent: sel, isCorrect: false, timeSpent: Math.round((Date.now() - questionStartTime) / 1000) }
+        if (existing >= 0) {
+          const updated = [...prev]
+          updated[existing] = record
+          return updated
+        }
+        return [...prev, record]
+      })
+    }
+  }
+
   // ── navigation ──
   const goNext = () => {
     if (currentQ) {
@@ -703,17 +741,7 @@ export default function PracticePage() {
         questionCardRef.current?.submitSilent?.(true)
       } else {
         // 测后看答案：保存当前选择，不提交后端
-        const sel = questionCardRef.current?.getCurrentAnswer?.()
-        if (sel) {
-          setAnswers(prev => {
-            const existing = prev.findIndex(a => a.questionId === currentQ.id)
-            const record: AnswerRecord = { questionId: currentQ.id, answerContent: sel, isCorrect: false, timeSpent: 0 }
-            const updated = existing >= 0 ? [...prev] : [...prev]
-            if (existing >= 0) updated[existing] = record
-            else updated.push(record)
-            return updated
-          })
-        }
+        saveCurrentAnswerState()
       }
     }
     if (currentIndex < questions.length - 1) {
@@ -722,19 +750,8 @@ export default function PracticePage() {
     }
   }
   const goPrev = () => {
-    if (answerMode === 'after' && currentQ) {
-      const sel = questionCardRef.current?.getCurrentAnswer?.()
-      if (sel) {
-        setAnswers(prev => {
-          const existing = prev.findIndex(a => a.questionId === currentQ.id)
-          const record: AnswerRecord = { questionId: currentQ.id, answerContent: sel, isCorrect: false, timeSpent: 0 }
-          const updated = existing >= 0 ? [...prev] : [...prev]
-          if (existing >= 0) updated[existing] = record
-          else updated.push(record)
-          return updated
-        })
-      }
-    }
+    // 保存当前答案（durating 和 after 模式都需要保存未提交的答案）
+    saveCurrentAnswerState()
     if (currentIndex > 0) {
       setCurrentIndex(i => i - 1)
       setQuestionStartTime(Date.now())
@@ -761,7 +778,56 @@ export default function PracticePage() {
     setAnswers([])
     setTimeLeft(null)
     setReviewMode(false)
+    autoStartedRef.current = false
     setPhase('config')
+  }
+
+  // ── batch practice choice handlers (知识点专项练习 3选1) ──
+  const refreshPointData = () => {
+    const pt = searchParams.get('point')
+    if (!pt) return
+    const token = localStorage.getItem('access_token')
+    fetch(`/api/v1/path/knowledge/${pt}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json()).then(d => {
+      if (d.total_questions) setTotalPointQuestions(d.total_questions)
+      if (d.total_practiced !== undefined) setPracticedPointQuestions(d.total_practiced)
+    }).catch(() => {})
+  }
+
+  const handleBatchContinueNew = () => {
+    setBatchChoice(false)
+    setShowRecommend(false)
+    setOnlyUnanswered(true)
+    setOnlyWrong(false)
+    setOnlyErrorProne(false)
+    setQuestions([])
+    setAnswers([])
+    setTimeLeft(null)
+    setReviewMode(false)
+    autoStartedRef.current = false
+    refreshPointData()
+    setPhase('config')
+  }
+
+  const handleBatchReviewWrong = () => {
+    setBatchChoice(false)
+    setShowRecommend(false)
+    setOnlyWrong(true)
+    setOnlyUnanswered(false)
+    setOnlyErrorProne(false)
+    setQuestions([])
+    setAnswers([])
+    setTimeLeft(null)
+    setReviewMode(false)
+    autoStartedRef.current = false
+    refreshPointData()
+    setPhase('config')
+  }
+
+  const handleBatchLearnNew = () => {
+    setBatchChoice(false)
+    goBack()
   }
 
   // ── toggle domain selection ──
@@ -1094,7 +1160,7 @@ export default function PracticePage() {
                   const isAns = !!ans
                   const isCurrent = i === currentIndex
                   return (
-                    <div key={q.id} onClick={() => { setCurrentIndex(i); setQuestionStartTime(Date.now()) }}
+                    <div key={q.id} onClick={() => { saveCurrentAnswerState(); setCurrentIndex(i); setQuestionStartTime(Date.now()) }}
                       style={{
                         minWidth: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1283,23 +1349,114 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* action buttons */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'center' }}>
-            <button onClick={() => handleRestart(false)}
-              style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-              重新练习
-            </button>
-            {wrongCount > 0 && (
-              <button onClick={() => handleRestart(true)}
-                style={{ padding: '10px 24px', background: 'var(--app-danger)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-                练习错题
+          {/* action buttons — 知识点专项练习显示3选1，普通练习显示原有按钮 */}
+          {pointParam ? (
+            <div style={{ marginTop: '20px' }}>
+              {/* Progress bar */}
+              {totalPointQuestions > 0 && (
+                <div style={{ marginBottom: '18px', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px', color: 'var(--app-text-secondary)' }}>
+                    <span>📊 专项练习进度</span>
+                    <span>{practicedPointQuestions + totalQs} / {totalPointQuestions} 题</span>
+                  </div>
+                  <div style={{ height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 4,
+                      background: `linear-gradient(90deg, var(--app-brand), #38BDF8)`,
+                      width: `${Math.min(100, Math.round((practicedPointQuestions + totalQs) / totalPointQuestions * 100))}%`,
+                      transition: 'width 0.5s',
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* 3-choice panel */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* (1) 继续新题 */}
+                <button
+                  onClick={handleBatchContinueNew}
+                  disabled={totalPointQuestions > 0 && practicedPointQuestions >= totalPointQuestions}
+                  style={{
+                    padding: '12px 20px', borderRadius: 12, border: 'none',
+                    background: totalPointQuestions > 0 && practicedPointQuestions >= totalPointQuestions
+                      ? '#F3F4F6' : 'var(--app-brand)',
+                    color: totalPointQuestions > 0 && practicedPointQuestions >= totalPointQuestions
+                      ? '#9CA3AF' : '#fff',
+                    fontSize: '14px', fontWeight: 600, cursor: totalPointQuestions > 0 && practicedPointQuestions >= totalPointQuestions
+                      ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                  }}>
+                    <span style={{ fontSize: '18px' }}>📝</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                        继续做该知识点的新题目
+                        {totalPointQuestions > 0 && practicedPointQuestions >= totalPointQuestions && '（题目已全部完成）'}
+                      </div>
+                      <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 400 }}>再练 5 道未做过的题</div>
+                    </div>
+                  </button>
+
+                {/* (2) 复习错题 */}
+                <button
+                  onClick={handleBatchReviewWrong}
+                  disabled={wrongCount === 0}
+                  style={{
+                    padding: '12px 20px', borderRadius: 12, border: 'none',
+                    background: wrongCount > 0 ? '#FEF2F2' : '#F3F4F6',
+                    color: wrongCount > 0 ? 'var(--app-danger)' : '#9CA3AF',
+                    fontSize: '14px', fontWeight: 600, cursor: wrongCount > 0 ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                  }}>
+                    <span style={{ fontSize: '18px' }}>🔄</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                        复习错题{!wrongCount && '（本轮无错题）'}
+                      </div>
+                      <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 400 }}>
+                        {wrongCount > 0 ? `练习该知识点所有错题` : '本轮全部正确，无需复习'}
+                      </div>
+                    </div>
+                  </button>
+
+                {/* (3) 学习新知识点 */}
+                <button
+                  onClick={handleBatchLearnNew}
+                  style={{
+                    padding: '12px 20px', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                    background: '#fff',
+                    color: 'var(--app-text-secondary)',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                  }}>
+                    <span style={{ fontSize: '18px' }}>📚</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px' }}>学习新的知识点</div>
+                      <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 400 }}>返回学习路径流程图</div>
+                    </div>
+                  </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'center' }}>
+              <button onClick={() => handleRestart(false)}
+                style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
+                重新练习
               </button>
-            )}
-            <button onClick={goBack}
-              style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-              {pointParam ? '返回知识点' : '返回题库'}
-            </button>
-          </div>
+              {wrongCount > 0 && (
+                <button onClick={() => handleRestart(true)}
+                  style={{ padding: '10px 24px', background: 'var(--app-danger)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
+                  练习错题
+                </button>
+              )}
+              <button onClick={goBack}
+                style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
+                {pointParam ? '返回知识点' : '返回题库'}
+              </button>
+            </div>
+          )}
           {sessionId && !pointParam && (
             <div style={{ marginTop: '12px' }}>
               <button onClick={() => navigate(`/banks/${bankId}/history/${sessionId}`)}

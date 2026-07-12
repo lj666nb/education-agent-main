@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { pathApi, type KnowledgePointRecordResponse, type NodeOrderItem } from '../api/path'
 import { questionBankApi } from '../api/questionBank'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import { ArrowRightIcon, BarChartIcon, BookOpenIcon, CodeIcon, FileTextIcon } from '../components/Icons'
+import { ArrowRightIcon, BookOpenIcon, CodeIcon, FileTextIcon } from '../components/Icons'
 
 const BRAND = '#1677E8'
 const INK = '#1F2937'
@@ -253,7 +253,6 @@ export default function KnowledgeLeetBookDetailPage() {
                   accent="#6D5BD0"
                 />
               )}
-              <TaskCard icon={<BarChartIcon size={18} />} title="掌握度测评" desc="用测评结果驱动动态路径重排" action="进入测评" onClick={() => navigate(`/path?view=detail&point=${pointId}${stateId ? `&state=${encodeURIComponent(stateId)}` : ''}`)} />
             </div>
           </section>
 

@@ -596,11 +596,15 @@ export default function ChatPlatform() {
             }
           }
         }
-        // Restore full content (with [DRAWIO] markers) from accumulated fullContent,
-        // so splitContentWithDiagrams in MessageList can properly extract and render diagrams.
+        // After streaming, temporarily hide [DRAWIO]/[PLOT] blocks while backend processes them.
+        // This replaces diagram markers with placeholder text, so users see "思维导图生成中..."
+        // instead of raw XML code during the brief window between stream-end and saveMessage.
+        const tempContent = fullContent
+          .replace(/\[DRAWIO\][\s\S]*?\[\/DRAWIO\]/g, '\n\n> 🧠 **思维导图生成中，请稍候...**\n> 图表正在由后端渲染为 PNG 图片，完成后将自动展示\n\n')
+          .replace(/\[PLOT\][\s\S]*?\[\/PLOT\]/g, '\n\n> 📊 **图表生成中，请稍候...**\n> 图表正在由后端渲染为 PNG 图片，完成后将自动展示\n\n')
         if (activeChatId) {
           const updates: Record<string, any> = {}
-          if (fullContent) updates.content = fullContent
+          if (tempContent) updates.content = tempContent
           if (lastSources?.length) updates.sources = lastSources
           if (lastCitations?.length) updates.citations = lastCitations
           if (lastDetectedXml) updates.diagramXml = lastDetectedXml
@@ -613,8 +617,12 @@ export default function ChatPlatform() {
         let saveRes: any = null
         try {
           saveRes = await chatApi.saveMessage({ chat_id: activeChatId, role: 'assistant', content: fullContent, citations: lastCitations || undefined })
-          // 后端 save_message 已将 [PLOT] 执行并替换为图片 URL，更新前端消息内容
+          // 后端 save_message 已将 [PLOT]/[DRAWIO] 执行并替换为图片 URL，更新前端消息内容
           if (activeChatId && saveRes.data?.content && saveRes.data.content !== fullContent) {
+            storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: saveRes.data.content, diagramXml: extractDrawioXml(saveRes.data.content) || undefined }))
+          }
+          // 如果后端没有修改内容（可能保留了原始 [DRAWIO] 标记），也更新为经过处理的版本
+          else if (activeChatId && saveRes.data?.content) {
             storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: saveRes.data.content, diagramXml: extractDrawioXml(saveRes.data.content) || undefined }))
           }
         }

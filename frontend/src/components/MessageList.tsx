@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { RefreshCw, Volume2, Copy, Brain, Download, ChevronDown, FileText, FileUp, Play, BarChart3, GitBranch, Link } from 'lucide-react'
+import { RefreshCw, Volume2, Copy, Brain, Download, ChevronDown, FileText, FileUp, Play, BarChart3, GitBranch, Link, Maximize2, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -199,6 +199,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportBtnRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState<'pdf' | 'word' | null>(null)
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null)
+  const [imageZoomLevel, setImageZoomLevel] = useState(1)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -468,13 +470,20 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             return <h3 style={{ fontSize: '1.125rem', margin: '1rem 0', fontWeight: 600 }}>{children}</h3>
           },
           blockquote({ children }) {
+            // Check if this is a "生成中" placeholder blockquote
+            const text = Array.isArray(children) ? children.join('') : String(children ?? '')
+            const isGenerating = text.includes('生成中')
             return (
               <blockquote
                 style={{
-                  borderLeft: '4px solid var(--primary)',
                   paddingLeft: '1rem',
                   margin: '1rem 0',
-                  color: 'var(--gray-500)',
+                  padding: isGenerating ? '0.75rem 1rem' : undefined,
+                  color: isGenerating ? 'var(--gray-700)' : 'var(--gray-600)',
+                  backgroundColor: isGenerating ? '#EFF6FF' : 'var(--gray-50)',
+                  borderRadius: isGenerating ? '8px' : undefined,
+                  border: isGenerating ? '1px solid #BFDBFE' : undefined,
+                  borderLeft: `4px solid ${isGenerating ? 'var(--primary)' : 'var(--gray-300)'}`,
                 }}
               >
                 {children}
@@ -509,8 +518,11 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
             return <td style={{ border: '1px solid var(--gray-300)', padding: '0.5rem', ...style }}>{children}</td>
           },
           img({ src, alt }) {
-            // Check if this is a pre-rendered draw.io image
+            // Check if this is a pre-rendered draw.io / plot image
+            const isGeneratedImage = src?.match(/\/(api\/v1\/chat\/(drawio|plots)\/.+\.(png|jpg|jpeg))/i)
             const drawioMatch = src?.match(/\/api\/v1\/chat\/drawio\/drawio_(\w+)\.png/)
+            const isZoomable = isGeneratedImage || drawioMatch
+
             if (drawioMatch && onEditDiagram) {
               const drawioId = drawioMatch[1]
               return (
@@ -518,54 +530,81 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   <img
                     src={src}
                     alt={alt || '图表'}
-                    style={{ maxWidth: '100%', borderRadius: 8, display: 'block' }}
+                    style={{ maxWidth: '100%', borderRadius: 8, display: 'block', cursor: 'pointer' }}
                     loading="lazy"
+                    onClick={() => { setZoomedImage(src!); setImageZoomLevel(1) }}
                     onError={(e) => {
                       const target = e.currentTarget
                       target.style.display = 'none'
                       const placeholder = document.createElement('div')
                       placeholder.style.cssText = 'padding:1rem;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;color:#991B1B;font-size:0.875rem;text-align:center'
-                      placeholder.textContent = '⚠️ 图片加载失败'
+                      placeholder.textContent = '⚠️ 思维导图加载失败'
                       target.parentNode?.insertBefore(placeholder, target)
                     }}
                   />
-                  <button
-                    onClick={async () => {
-                      try {
-                        const token = localStorage.getItem('access_token')
-                        const resp = await fetch(`/api/v1/chat/drawio/${drawioId}/xml`, {
-                          headers: { Authorization: `Bearer ${token}` },
-                        })
-                        if (resp.ok) {
-                          const xml = await resp.text()
-                          onEditDiagram?.(xml)
-                        }
-                      } catch { /* ignore */ }
-                    }}
-                    title="在编辑器中打开"
-                    style={{
-                      position: 'absolute', top: '8px', right: '8px',
-                      opacity: 0, transition: 'opacity 0.15s',
-                      padding: '4px 10px', fontSize: '0.7rem',
-                      border: '1px solid var(--gray-200)', borderRadius: '6px',
-                      backgroundColor: 'white', color: 'var(--gray-600)',
-                      cursor: 'pointer', fontWeight: 500,
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'var(--primary)'
-                      e.currentTarget.style.color = 'var(--primary)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = 'var(--gray-200)'
-                      e.currentTarget.style.color = 'var(--gray-600)'
-                    }}
-                    onMouseDown={e => e.stopPropagation()}
-                  >
-                    ✏️ 编辑
-                  </button>
+                  <div style={{
+                    position: 'absolute', top: '8px', right: '8px',
+                    display: 'flex', gap: '4px', opacity: 0, transition: 'opacity 0.15s',
+                    zIndex: 2,
+                  }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setZoomedImage(src!); setImageZoomLevel(1) }}
+                      title="放大查看"
+                      style={{
+                        padding: '4px 10px', fontSize: '0.7rem',
+                        border: '1px solid var(--gray-200)', borderRadius: '6px',
+                        backgroundColor: 'white', color: 'var(--gray-600)',
+                        cursor: 'pointer', fontWeight: 500,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                        display: 'flex', alignItems: 'center', gap: '3px',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.color = 'var(--primary)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = 'var(--gray-200)'
+                        e.currentTarget.style.color = 'var(--gray-600)'
+                      }}
+                    >
+                      <Maximize2 size={12} /> 放大
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        try {
+                          const token = localStorage.getItem('access_token')
+                          const resp = await fetch(`/api/v1/chat/drawio/${drawioId}/xml`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                          })
+                          if (resp.ok) {
+                            const xml = await resp.text()
+                            onEditDiagram?.(xml)
+                          }
+                        } catch { /* ignore */ }
+                      }}
+                      title="在编辑器中打开"
+                      style={{
+                        padding: '4px 10px', fontSize: '0.7rem',
+                        border: '1px solid var(--gray-200)', borderRadius: '6px',
+                        backgroundColor: 'white', color: 'var(--gray-600)',
+                        cursor: 'pointer', fontWeight: 500,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.color = 'var(--primary)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = 'var(--gray-200)'
+                        e.currentTarget.style.color = 'var(--gray-600)'
+                      }}
+                    >
+                      ✏️ 编辑
+                    </button>
+                  </div>
                   <style>{`
-                    div:has(> img[src*="/api/v1/chat/drawio/"]):hover button {
+                    div:has(> img[src*="/api/v1/chat/drawio/"]):hover > div {
                       opacity: 1 !important;
                     }
                   `}</style>
@@ -576,8 +615,9 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
               <img
                 src={src}
                 alt={alt || '图片'}
-                style={{ maxWidth: '100%', borderRadius: 8, margin: '0.5rem 0' }}
+                style={{ maxWidth: '100%', borderRadius: 8, margin: '0.5rem 0', cursor: isZoomable ? 'pointer' : 'default' }}
                 loading="lazy"
+                onClick={() => { if (isZoomable) { setZoomedImage(src!); setImageZoomLevel(1) } }}
                 onError={(e) => {
                   // 图片加载失败时显示占位提示
                   const target = e.currentTarget
@@ -849,7 +889,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                 return (
                   <div key={segIdx} style={{
                     margin: '0.75rem 0',
-                    padding: '0.75rem',
+                    padding: isLoading ? '1.5rem' : '0.75rem',
                     backgroundColor: 'white',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--gray-100)',
@@ -857,19 +897,22 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   }}>
                     {isLoading ? (
                       <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        gap: 'var(--space-2)', padding: '1rem 0',
-                        color: 'var(--gray-400)', fontSize: '0.875rem',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: '10px', padding: '0.5rem 0',
+                        color: 'var(--gray-400)',
                       }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite', color: 'var(--primary)' }}>
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" opacity="0.3"/>
                           <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
                         </svg>
-                        <span>正在生成图表...</span>
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--gray-600)' }}>📊 图表生成中...</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '4px' }}>AI 正在绘制图表，流式完成后将自动渲染</div>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ padding: '1rem', color: 'var(--gray-500)', fontSize: '0.8125rem' }}>
-                        📊 图表将由后端生成，请刷新页面查看
+                        📊 图表将由后端生成，请稍候...
                       </div>
                     )}
                   </div>
@@ -1093,6 +1136,111 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
       )}
 
       <div ref={messagesEndRef} />
+
+      {/* Fullscreen image zoom modal */}
+      {zoomedImage && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) { setZoomedImage(null); setImageZoomLevel(1) } }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            width: '95vw', height: '92vh',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 20px',
+              borderBottom: '1px solid var(--gray-100)',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--gray-700)' }}>
+                🖼️ 图片查看
+              </span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setImageZoomLevel(z => Math.max(0.25, z - 0.25))}
+                  title="缩小"
+                  style={{
+                    padding: '4px 10px', fontSize: '0.75rem',
+                    border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    backgroundColor: 'white', color: 'var(--gray-600)',
+                    cursor: 'pointer', fontWeight: 600,
+                  }}
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', minWidth: '40px', textAlign: 'center' }}>
+                  {Math.round(imageZoomLevel * 100)}%
+                </span>
+                <button
+                  onClick={() => setImageZoomLevel(z => Math.min(4, z + 0.25))}
+                  title="放大"
+                  style={{
+                    padding: '4px 10px', fontSize: '0.75rem',
+                    border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    backgroundColor: 'white', color: 'var(--gray-600)',
+                    cursor: 'pointer', fontWeight: 600,
+                  }}
+                >
+                  <ZoomIn size={14} />
+                </button>
+                <button
+                  onClick={() => setImageZoomLevel(1)}
+                  title="重置缩放"
+                  style={{
+                    padding: '4px 10px', fontSize: '0.7rem',
+                    border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    backgroundColor: 'white', color: 'var(--gray-500)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px',
+                  }}
+                >
+                  <RotateCcw size={12} /> 重置
+                </button>
+                <button
+                  onClick={() => { setZoomedImage(null); setImageZoomLevel(1) }}
+                  title="关闭"
+                  style={{
+                    padding: '4px 10px', fontSize: '0.75rem',
+                    border: '1px solid var(--gray-200)', borderRadius: '6px',
+                    backgroundColor: 'white', color: 'var(--gray-600)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                  }}
+                >
+                  <X size={14} /> 关闭
+                </button>
+              </div>
+            </div>
+            {/* Modal body */}
+            <div style={{
+              flex: 1, overflow: 'auto',
+              padding: '16px',
+              display: 'flex', justifyContent: 'center',
+              alignItems: 'flex-start',
+            }}>
+              <img
+                src={zoomedImage}
+                alt="Full size"
+                style={{
+                  transform: `scale(${imageZoomLevel})`,
+                  transformOrigin: 'top center',
+                  transition: 'transform 0.15s ease',
+                  maxWidth: '100%',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Export button - only when there are messages */}
       {messages.length > 0 && !isLoading && (

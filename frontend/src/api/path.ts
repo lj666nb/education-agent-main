@@ -388,47 +388,9 @@ export const pathApi = {
   generateReviewMaterial: (pointId: string) =>
     api.post<{ success: boolean; content: string; source_mode?: string; message?: string }>(`/path/knowledge/${pointId}/review-material`),
 
-  /** 获取掌握度测评题目 */
-  assess: (pointId: string) =>
-    api.post<AssessStartResponse>(`/path/knowledge/${pointId}/assess`),
-
-  /** 提交掌握度测评答案 */
-  submitAssess: (pointId: string, answers: AssessAnswer[]) =>
-    api.post<AssessSubmitResponse>(`/path/knowledge/${pointId}/assess/submit`, { answers }),
-
   /** 批量生成知识点阅读讲义（point_ids 为空则自动发现全部空讲义） */
   batchGenerateReviewMaterials: (pointIds?: string[]) =>
     api.post<BatchReviewResponse>('/path/knowledge/batch-review-materials', { point_ids: pointIds || [] }),
-}
-
-export interface AssessQuestion {
-  question_id: string
-  type: string
-  stem: string
-  options: string[]
-  correct_answer: string
-  explanation: string
-}
-
-export interface AssessStartResponse {
-  bank_id: string
-  point_name: string
-  questions: AssessQuestion[]
-  total: number
-}
-
-export interface AssessAnswer {
-  question_id: string
-  user_choice: string
-}
-
-export interface AssessSubmitResponse {
-  success: boolean
-  correct: number
-  total: number
-  score: number
-  path_replanned?: boolean
-  path_changed_count?: number
 }
 
 export interface BatchReviewItem {

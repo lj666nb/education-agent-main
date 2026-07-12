@@ -79,7 +79,10 @@ export function hasDrawioContent(content: string): boolean {
 export function stripDiagramDuringStreaming(content: string): string {
   const markerMatch = content.match(/\[(DRAWIO|SVG|PLOT|MERMAID)\]/)
   if (markerMatch) {
-    return content.substring(0, markerMatch.index!).trimEnd() + '\n\n*🤖 AI 正在生成图表中...*'
+    // 根据图表类型给出不同的占位提示
+    const type = markerMatch[1]
+    const label = type === 'DRAWIO' ? '🧠 思维导图生成中...' : type === 'PLOT' ? '📊 图表生成中...' : type === 'SVG' ? '🎨 图形生成中...' : '📐 图表生成中...'
+    return content.substring(0, markerMatch.index!).trimEnd() + `\n\n> **${label}**\n> AI 正在为您生成可视化内容，流式传输完成后将自动渲染，请稍候...\n\n`
   }
   return content
 }

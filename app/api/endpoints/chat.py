@@ -11,6 +11,7 @@ import json
 import asyncio
 import logging
 import re
+import uuid
 from sqlalchemy.orm import Session, joinedload
 from app.api.dependencies import CurrentUser, get_current_user
 from app.db.database import get_db
@@ -1140,11 +1141,7 @@ async def save_message(
 
     # ═══ 处理 [PLOT] 代码块：执行 → 保存 PNG → 替换为图片 URL ═══
     if request.role == "assistant" and "[PLOT]" in content:
-        import re
-        import uuid
-        import os
-
-        def _process_plot_block(match: re.Match) -> str:
+        def _process_plot_block(match):
             """执行 [PLOT] 代码，返回 markdown 图片语法"""
             code = match.group(1).strip()
             code = re.sub(r'^```[a-zA-Z]*\n?', '', code)
@@ -1182,7 +1179,7 @@ async def save_message(
 
     # ═══ 处理 [DRAWIO] 代码块：尝试渲染为 PNG → 替换为图片 URL ═══
     if request.role == "assistant" and "[DRAWIO]" in content:
-        def _process_drawio_block(match: re.Match) -> str:
+        def _process_drawio_block(match):
             xml = match.group(1).strip()
             xml = re.sub(r'^```[a-zA-Z]*\n?', '', xml)
             xml = re.sub(r'\n?```$', '', xml)
@@ -1491,6 +1488,17 @@ async def serve_drawio_image(filename: str):
     if not os.path.isfile(filepath):
         raise HTTPException(status_code=404, detail="图表文件不存在")
     return FileResponse(filepath, media_type="image/png")
+
+
+@router.get("/drawio/{drawio_id}/xml")
+async def serve_drawio_xml(drawio_id: str):
+    """提供保存的 draw.io 原始 XML 文件（用于编辑器打开）"""
+    # drawio_id is e.g. "drawio_abc123" from filename "drawio_abc123.png"
+    clean_id = drawio_id.replace("drawio_", "")
+    filepath = os.path.join("uploads", "drawio", f"drawio_{clean_id}.xml")
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="XML 文件不存在")
+    return FileResponse(filepath, media_type="application/xml")
 
 
 # ═══ 预测下次提问 ═══

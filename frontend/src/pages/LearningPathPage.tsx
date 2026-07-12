@@ -259,18 +259,12 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
   pointId: string; detailData: any; detailLoading: boolean; nodes: PathNodeStatus[]
   onBack: () => void; onPractice: (id: string) => void; onNavigateNode: (id: string) => void
 }) {
-  const [activeTab, setActiveTab] = useState<'learn'|'practice'|'assess'|'review'|'wrong'|'chat'|'timeline'>('learn')
+  const [activeTab, setActiveTab] = useState<'learn'|'practice'|'review'|'wrong'|'chat'|'timeline'>('learn')
   const [videoInput, setVideoInput] = useState(detailData?.video_url||'')
   const [videoSaving, setVideoSaving] = useState(false)
   const [reviewExpanded, setReviewExpanded] = useState(false)
   const [reviewGenerating, setReviewGenerating] = useState(false)
   const [reviewContent, setReviewContent] = useState<string|null>(detailData?.review_material||null)
-  const [assessMode, setAssessMode] = useState(false)
-  const [assessLoading, setAssessLoading] = useState(false)
-  const [assessQuestions, setAssessQuestions] = useState<any[]>([])
-  const [assessAnswers, setAssessAnswers] = useState<Record<string,string>>({})
-  const [assessResult, setAssessResult] = useState<any>(null)
-  const [assessError, setAssessError] = useState<string|null>(null)
   const [studyDuration, setStudyDuration] = useState(0)
   const [studyActive, setStudyActive] = useState(false)
 
@@ -282,15 +276,12 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
 
   const sv=async()=>{if(!videoInput.trim())return;setVideoSaving(true);try{await pathApi.updateVideoUrl(pointId,videoInput.trim())}catch(_){};setVideoSaving(false)}
   const gr=async()=>{setReviewGenerating(true);try{const r=await pathApi.generateReviewMaterial(pointId);setReviewContent(r.data.content);setReviewExpanded(true)}catch(_){};setReviewGenerating(false)}
-  const sa=async()=>{setAssessLoading(true);setAssessMode(true);setAssessResult(null);setAssessAnswers({});setAssessError(null);try{const r=await pathApi.assess(pointId);setAssessQuestions(r.data.questions)}catch(e:any){setAssessError(e?.response?.data?.detail||'加载失败');setAssessMode(false)};setAssessLoading(false)}
-  const sm=async()=>{const a=Object.entries(assessAnswers).map(([qid,c])=>({question_id:qid,user_choice:c}));if(!a.length)return;setAssessLoading(true);try{const r=await pathApi.submitAssess(pointId,a);setAssessResult(r.data)}catch(_){};setAssessLoading(false)}
-  const all=assessQuestions.length>0&&assessQuestions.every((q:any)=>assessAnswers[q.question_id])
 
   const curIdx=nodes.findIndex(n=>n.point_id===pointId)
   const prevNode=curIdx>0?nodes[curIdx-1]:null
   const nextNode=curIdx<nodes.length-1?nodes[curIdx+1]:null
 
-  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'assess',l:'🔬 掌握度测评'},{k:'review',l:'📖 阅读讲义'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}] as const
+  const tabs=[{k:'learn',l:'📺 学习资料'},{k:'practice',l:'📝 专项练习'},{k:'review',l:'📖 阅读讲义'},{k:'wrong',l:'❌ 错题复盘'},{k:'chat',l:'🤖 AI答疑'},{k:'timeline',l:'📅 学习记录'}] as const
 
   if(detailLoading)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>加载中...</div>
   if(!detailData)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>暂无数据</div>
@@ -387,6 +378,16 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
               <div><h3 style={{fontSize:14,fontWeight:600,margin:'0 0 2px',color:T1}}>📝 专项练习</h3><p style={{fontSize:12,color:T3,margin:0}}>{detailData.total_practiced>0?`已练习${detailData.total_practiced}题·正确${detailData.total_correct}题`:'暂无练习记录'}</p></div>
               <button onClick={()=>onPractice(pointId)} style={{padding:'8px 18px',borderRadius:8,border:'none',background:BRAND,color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>✏️ 开始练习 →</button>
             </div>
+            {/* 专项练习进度条 */}
+            {(detailData.total_questions||0) > 0 && <div style={{marginBottom:12,padding:'12px',borderRadius:8,background:BG_PAGE}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:11,color:T2}}>
+                <span>📊 专项练习进度</span>
+                <span>{detailData.total_practiced||0} / {detailData.total_questions||0} 题{detailData.total_practiced>=detailData.total_questions?' ✅ 全部完成':''}</span>
+              </div>
+              <div style={{height:8,background:'#F3F4F6',borderRadius:4,overflow:'hidden'}}>
+                <div style={{height:'100%',borderRadius:4,transition:'width 0.6s',background:detailData.total_practiced>=detailData.total_questions?'#10B981':`linear-gradient(90deg,${BRAND},#38BDF8)`,width:Math.min(100,Math.round((detailData.total_practiced||0)/Math.max(1,detailData.total_questions||1)*100))+'%'}}/>
+              </div>
+            </div>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
               {['选择题','填空题','编程题','算法大题'].map((t,i)=><label key={i} style={{display:'flex',alignItems:'center',gap:4,padding:'6px 12px',borderRadius:6,border:'1px solid '+BL,fontSize:11,color:T2,cursor:'pointer',fontFamily:'inherit'}}><input type="checkbox" defaultChecked style={{accentColor:BRAND}}/>{t}</label>)}
             </div>
@@ -400,25 +401,6 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
                 </div>)}
               </div>
             </div>}
-          </div>}
-
-          {/* Assess Tab */}
-          {activeTab==='assess'&&<div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:assessMode?10:0}}>
-              <div><h3 style={{fontSize:14,fontWeight:600,margin:0,color:T1}}>🔬 掌握度测评</h3>{!assessMode&&<p style={{fontSize:12,color:T3,margin:'2px 0 0'}}>{assessResult?`上次:${assessResult.correct}/${assessResult.total}(${assessResult.score}分)`:''}</p>}</div>
-              {!assessMode&&<div style={{display:'flex',gap:6}}>
-                {['入门','进阶','期末'].map((l,i)=><button key={i} onClick={sa} disabled={assessLoading} style={{padding:'6px 12px',borderRadius:6,border:'none',background:['#10B981','#F59E0B','#EF4444'][i],color:'#fff',fontSize:11,cursor:'pointer',fontWeight:600,fontFamily:'inherit'}}>{l}测评</button>)}
-              </div>}
-            </div>
-            {assessError&&<div style={{fontSize:12,color:'#DC2626',padding:'6px 10px',background:'#FEF2F2',borderRadius:6}}>⚠️ {assessError}</div>}
-            {assessMode&&!assessLoading&&assessQuestions.length>0&&!assessResult&&<div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {assessQuestions.map((q:any,qi:number)=><div key={q.question_id} style={{padding:10,borderRadius:8,background:BG_PAGE,border:'1px solid #E5E7EB'}}>
-                <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>{qi+1}. {q.stem}</div>
-                {q.options.map((opt:any,oi:number)=>{const label=typeof opt==='object'&&opt.key?opt.key:String.fromCharCode(65+oi);const txt=typeof opt==='object'?(opt.text||opt.label||String(opt)):String(opt);const sel=assessAnswers[q.question_id]===label;return<label key={oi} onClick={()=>setAssessAnswers(p=>({...p,[q.question_id]:label}))} style={{display:'flex',alignItems:'center',gap:5,padding:'3px 6px',borderRadius:5,cursor:'pointer',fontSize:11,background:sel?'#EDE9FE':'#fff',border:'1px solid '+(sel?'#7C3AED':'#E5E7EB'),marginBottom:2}}><input type="radio" name={q.question_id} checked={sel} readOnly style={{accentColor:'#7C3AED'}}/>{label}. {txt}</label>})}
-              </div>)}
-              <button onClick={sm} disabled={!all} style={{padding:'8px',borderRadius:8,border:'none',background:all?'#7C3AED':'#D1D5DB',color:'#fff',fontSize:12,fontWeight:600,cursor:all?'pointer':'not-allowed',fontFamily:'inherit'}}>{all?`✅ 提交测评(${assessQuestions.length}题)`:`请回答全部${assessQuestions.length}题`}</button>
-            </div>}
-            {assessMode&&assessResult&&<div style={{textAlign:'center',padding:8}}><div style={{display:'inline-flex',alignItems:'center',gap:10,padding:'10px 18px',borderRadius:10,background:assessResult.score>=80?'#F0FDF4':'#FEF3C7',border:'1px solid #E5E7EB',marginBottom:8}}><span style={{fontSize:24}}>{assessResult.score>=80?'🎉':'💪'}</span><div style={{textAlign:'left'}}><div style={{fontWeight:700}}>正确{assessResult.correct}/{assessResult.total}({assessResult.score}分)</div><div style={{fontSize:11,color:T3}}>{assessResult.score>=80?'掌握得很好！':'需要多练习'}</div></div></div><div style={{display:'flex',gap:6,justifyContent:'center'}}><button onClick={()=>{setAssessMode(false);setAssessResult(null);setAssessAnswers({})}} style={{padding:'5px 14px',borderRadius:6,border:'1px solid #D1D5DB',background:'#fff',color:T2,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>关闭</button><button onClick={sa} style={{padding:'5px 14px',borderRadius:6,border:'none',background:'#7C3AED',color:'#fff',fontSize:11,cursor:'pointer',fontWeight:600,fontFamily:'inherit'}}>🔄 再做一次</button></div></div>}
           </div>}
 
           {/* Review Tab */}
@@ -476,7 +458,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
               {[
                 {t:detailData.last_practice_at?'最近练习':'尚无练习',d:detailData.last_practice_at?new Date(detailData.last_practice_at).toLocaleDateString('zh-CN'):'开始你的第一次练习',c:'#10B981'},
                 {t:'阅读讲义',d:detailData.review_material?'已生成阅读讲义':'点击阅读讲义 Tab 生成',c:'#6366F1'},
-                {t:'测评记录',d:assessResult?`得分${assessResult.score}分`:'尚未测评',c:'#7C3AED'},
+                {t:'练习记录',d:detailData.last_practice_at?`已练习${detailData.total_practiced||0}题`:'尚未练习',c:'#7C3AED'},
                 {t:'学习次数',d:`已学习${detailData.study_count||0}次`,'c':BRAND},
               ].map((e,i)=>(
                 <div key={i} style={{marginBottom:16,position:'relative'}}>
