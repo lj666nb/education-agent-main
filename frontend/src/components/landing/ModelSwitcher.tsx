@@ -9,7 +9,12 @@ const models = [
     id: 'edu-base',
     name: 'Edu-Base 通用教学模型',
     desc: '覆盖K12到高等教育全学科知识，擅长概念讲解、知识点梳理与作业辅导',
-    icon: '🎓',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+      </svg>
+    ),
     color: '#818CF8',
     features: ['全学科覆盖', '概念精准讲解', '作业智能批改'],
     scenario: '适合日常学习辅导与知识巩固',
@@ -18,7 +23,11 @@ const models = [
     id: 'edu-research',
     name: 'Edu-Research 科研增强模型',
     desc: '专为学术研究设计，擅长论文分析、实验设计指导、文献综述与研究方法论',
-    icon: '🔬',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
+      </svg>
+    ),
     color: '#6EE7B7',
     features: ['论文分析', '实验设计', '文献综述'],
     scenario: '适合研究生、科研人员的学术研究',
@@ -27,7 +36,13 @@ const models = [
     id: 'edu-code',
     name: 'Edu-Code 编程实训模型',
     desc: '专注编程教育，支持代码生成、Debug调试、算法讲解与项目实战辅导',
-    icon: '💻',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+        <line x1="12" y1="2" x2="12" y2="22" />
+      </svg>
+    ),
     color: '#FCD34D',
     features: ['代码生成', 'Debug调试', '项目实战'],
     scenario: '适合计算机编程学习与技术面试准备',

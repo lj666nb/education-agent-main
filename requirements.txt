@@ -21,6 +21,7 @@ PyMuPDF
 python-pptx
 python-docx
 fpdf2
+fonttools
 dashscope
 requests
 neo4j

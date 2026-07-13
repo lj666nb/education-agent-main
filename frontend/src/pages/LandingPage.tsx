@@ -44,13 +44,30 @@ export default function LandingPage() {
   if (isAuthenticated) return null
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      height: '100vh',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      background: '#0F172A',
-    }}>
+    <>
+      <style>{`
+        /* Skip rendering for off-screen sections — massive scroll perf boost */
+        .landing-page > section,
+        .landing-page > .section-wrap {
+          content-visibility: auto;
+          contain-intrinsic-size: 500px;
+        }
+        /* Hero must render immediately (above the fold) */
+        .landing-page > #hero {
+          content-visibility: visible;
+          contain-intrinsic-size: none;
+        }
+      `}</style>
+      <div className="landing-page" style={{
+        minHeight: '100vh',
+        height: '100vh',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        background: '#0F172A',
+        WebkitOverflowScrolling: 'touch',
+        transform: 'translateZ(0)',
+        willChange: 'transform',
+      }}>
       {/* Navbar (fixed, not scrolled with content) */}
       <Navbar onLoginClick={openLogin} onRegisterClick={openRegister} />
 
@@ -80,8 +97,6 @@ export default function LandingPage() {
       <section style={{
         padding: '80px 32px',
         background: 'linear-gradient(135deg, #4f46e5 0%, #6366F1 30%, #8B5CF6 60%, #A78BFA 100%)',
-        backgroundSize: '300% 300%',
-        animation: 'gradientFlow 6s ease infinite',
         position: 'relative',
         overflow: 'hidden',
         textAlign: 'center',
@@ -190,5 +205,6 @@ export default function LandingPage() {
         />
       )}
     </div>
+    </>
   )
 }

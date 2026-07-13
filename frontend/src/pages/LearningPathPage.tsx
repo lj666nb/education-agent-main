@@ -4,6 +4,7 @@ import { pathApi, type PathNodeStatus, type PathListItem } from '../api/path'
 import { questionBankApi } from '../api/questionBank'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import LeetBookExploreMap from '../components/path/LeetBookExploreMap'
+import { useTheme } from '../store/theme'
 
 const BRAND = '#1677E8', T1 = '#2C3A52', T2 = '#64748B', T3 = '#94A3B8', BL = '#E5EDF7'
 const BG_PAGE = 'var(--app-bg-page)'
@@ -23,16 +24,45 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
   nodes: PathNodeStatus[]; groups: { domain: string; nodes: PathNodeStatus[] }[]; onNodeClick: (n: PathNodeStatus) => void
   onNodeContext?: (e: React.MouseEvent, n: PathNodeStatus) => void; weakMode?: boolean; highlightNode?: string | null; zoomLevel?: number
 }) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
   const mx = Math.max(1, ...groups.map(g => g.nodes.length))
   const w = 100 + mx * (N_W + GX) + PD * 2, h = groups.length * (N_H + GY) + PD * 2
   const statusColor = (n: PathNodeStatus) => {
-    if (weakMode && (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50) return { bg:'#FEE2E2', bd:'#EF4444', tx:'#991B1B', ba:'#EF4444', label:'薄弱' }
-    if (n.needs_review) return { bg:'#FFFBEB', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'待复习' }
-    if (n.status === 'mastered') return { bg:'#D1FAE5', bd:'#6EE7B7', tx:'#166534', ba:'#10B981', label:'已掌握' }
-    if (n.status === 'reviewing') return { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'回退复习' }
-    if (n.status === 'learning') return { bg:'#DBEAFE', bd:'#3B82F6', tx:'#1E40AF', ba:BRAND, label:'学习中' }
-    if (n.status === 'locked') return { bg:'#F3F4F6', bd:'#CBD5E1', tx:'#94A3B8', ba:'#CBD5E1', label:'前置锁定' }
-    return { bg:'#F9FAFB', bd:'#D1D5DB', tx:'#6B7280', ba:'#9CA3AF', label:'未开始' }
+    if (weakMode && (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50) {
+      return isDark
+        ? { bg:'#450A0A', bd:'#DC2626', tx:'#FCA5A5', ba:'#EF4444', label:'薄弱' }
+        : { bg:'#FEE2E2', bd:'#EF4444', tx:'#991B1B', ba:'#EF4444', label:'薄弱' }
+    }
+    if (n.needs_review) {
+      return isDark
+        ? { bg:'#451A03', bd:'#D97706', tx:'#FDE68A', ba:'#F59E0B', label:'待复习' }
+        : { bg:'#FFFBEB', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'待复习' }
+    }
+    if (n.status === 'mastered') {
+      return isDark
+        ? { bg:'#022C22', bd:'#059669', tx:'#6EE7B7', ba:'#10B981', label:'已掌握' }
+        : { bg:'#D1FAE5', bd:'#6EE7B7', tx:'#166534', ba:'#10B981', label:'已掌握' }
+    }
+    if (n.status === 'reviewing') {
+      return isDark
+        ? { bg:'#451A03', bd:'#D97706', tx:'#FDE68A', ba:'#F59E0B', label:'回退复习' }
+        : { bg:'#FEF3C7', bd:'#F59E0B', tx:'#92400E', ba:'#F59E0B', label:'回退复习' }
+    }
+    if (n.status === 'learning') {
+      return isDark
+        ? { bg:'#0F1F3D', bd:'#2563EB', tx:'#93C5FD', ba:'#3B82F6', label:'学习中' }
+        : { bg:'#DBEAFE', bd:'#3B82F6', tx:'#1E40AF', ba:BRAND, label:'学习中' }
+    }
+    if (n.status === 'locked') {
+      return isDark
+        ? { bg:'#1F2937', bd:'#374151', tx:'#6B7280', ba:'#4B5563', label:'前置锁定' }
+        : { bg:'#F3F4F6', bd:'#CBD5E1', tx:'#94A3B8', ba:'#CBD5E1', label:'前置锁定' }
+    }
+    return isDark
+      ? { bg:'#1F2937', bd:'#4B5563', tx:'#9CA3AF', ba:'#6B7280', label:'未开始' }
+      : { bg:'#F9FAFB', bd:'#D1D5DB', tx:'#6B7280', ba:'#9CA3AF', label:'未开始' }
   }
   return <div className="flow-svg-container" style={{ overflow: 'auto', maxHeight: 500, background: BG_PAGE, borderRadius: 8 }}>
     <svg width={w} height={Math.max(180, h)} style={{ minWidth: '100%', fontFamily: 'inherit', transition: 'transform 0.2s', transformOrigin: 'top left', transform: `scale(${zoomLevel||1})` }}>

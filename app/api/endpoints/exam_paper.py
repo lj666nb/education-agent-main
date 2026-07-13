@@ -420,6 +420,27 @@ async def ai_generate_exam(
             except json.JSONDecodeError:
                 is_complete = False
                 reply = reply.replace("[[GENERATE]]", "").strip()
+    elif "type" in reply and "content" in reply and "answer" in reply:
+        # 兜底：尝试从回复中提取 JSON 数组（兼容不输出 [[GENERATE]] 标记的模型）
+        json_start = reply.find("[")
+        json_end = reply.rfind("]")
+        if json_start != -1 and json_end != -1:
+            json_str = reply[json_start:json_end + 1]
+            try:
+                parsed = json.loads(json_str)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    first = parsed[0]
+                    if isinstance(first, dict) and "type" in first and "content" in first:
+                        generated_questions = parsed
+                        try:
+                            generated_questions = _ensure_knowledge_points(
+                                neo4j, db, bank.subject_id, generated_questions
+                            )
+                        except Exception:
+                            pass
+                        is_complete = True
+            except json.JSONDecodeError:
+                pass
 
     updated_params = dict(request.collected_params)
     if is_complete:

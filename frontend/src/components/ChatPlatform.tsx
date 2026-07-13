@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import MessageList from './MessageList'
 import { useNavigate } from 'react-router-dom'
-import { Folder, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
+import { Folder, Plus, X, FileUp, Image, Trash2, Pencil, GitBranch, MessageSquare } from 'lucide-react'
 import Sidebar from './Sidebar'
 import type { Message } from './MessageList'
 import InputArea, { PastedFile } from './InputArea'
@@ -11,7 +11,7 @@ import { chatApi, projectApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 
 import type { DrawioEditorHandle } from './DrawioEditor'
-import { extractDrawioXml, hasDrawioContent, getDrawioSystemPrompt, stripDiagramDuringStreaming } from '../utils/drawio'
+import { extractDrawioXml, hasDrawioContent, getDrawioSystemPrompt, stripDiagramDuringStreaming, stripDiagramMarkers } from '../utils/drawio'
 import { convertMarkdownToMindmapBlock } from '../utils/mindmap'
 import { ModelType, DEFAULT_MODEL } from '../constants/models'
 
@@ -194,6 +194,8 @@ export default function ChatPlatform() {
   const [enableAutoMindmap, setEnableAutoMindmap] = useState(false)
   const [showClearAllModal, setShowClearAllModal] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
+  const [showNewChatAlert, setShowNewChatAlert] = useState(false)
+  const [showMindmapAlert, setShowMindmapAlert] = useState(false)
   const [fileUploadTrigger, setFileUploadTrigger] = useState(0)
 
   // Keep messagesRef in sync with messages
@@ -508,7 +510,7 @@ export default function ChatPlatform() {
         systemPrompt += '**重要规则 — 图表生成功能未开启**：你绝对不能使用任何图表标记（[MERMAID]、[PLOT]、[SVG]、[DRAWIO]）来生成图表、流程图、思维导图、知识图谱、树形图、示意图等。即使用户明确要求你"帮我画个图"、"用图表展示"、"生成一个流程图"等，你也只能用纯文字描述来回答。如果用户明确要求图表，或你的回答确实需要图表来辅助说明，请友好地提醒用户："如果您需要我生成图表来更直观地理解，可以点击输入框左侧的加号按钮 ➕，开启「图表生成」功能哦~"。除此之外不要主动提及此功能。'
       }
       if (enableAutoMindmap) {
-        systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [DRAWIO] 代码块生成一张思维导图，将回复内容的核心知识点以层级结构展示。'
+        systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [MERMAID] 代码块生成一张思维导图（mindmap 格式），将回复内容的核心知识点以层级结构展示。示例格式：\n[MERMAID]\nmindmap\n  root((主题))\n    子主题1\n      细节A\n    子主题2\n[/MERMAID]'
       }
 
       abortRef.current = new AbortController()
@@ -605,6 +607,7 @@ export default function ChatPlatform() {
         const tempContent = fullContent
           .replace(/\[DRAWIO\][\s\S]*?\[\/DRAWIO\]/g, '\n\n> 🧠 **思维导图生成中，请稍候...**\n> 图表正在由后端渲染为 PNG 图片，完成后将自动展示\n\n')
           .replace(/\[PLOT\][\s\S]*?\[\/PLOT\]/g, '\n\n> 📊 **图表生成中，请稍候...**\n> 图表正在由后端渲染为 PNG 图片，完成后将自动展示\n\n')
+          .replace(/\[MERMAID\][\s\S]*?\[\/MERMAID\]/g, '\n\n> 🧠 **思维导图渲染中，请稍候...**\n> 图表将在流式完成后自动渲染\n\n')
         if (activeChatId) {
           const updates: Record<string, any> = {}
           if (tempContent) updates.content = tempContent
@@ -820,7 +823,12 @@ export default function ChatPlatform() {
   }, [previewFile])
 
   const handleNewChat = () => {
-    if (currentChatId) storeResetChat(currentChatId)
+    // 防止重复点击"新建对话"：当前已在新对话时直接提示，避免占用系统资源
+    if (!currentChatId) {
+      setShowNewChatAlert(true)
+      return
+    }
+    storeResetChat(currentChatId)
     storeSetCurrentChatId(null)
     setPastedFiles([]); setIrrelevantContentWarning(null); setActiveDiagramXml(null); setDiagramOpen(false)
   }
@@ -842,7 +850,7 @@ export default function ChatPlatform() {
       const response = await chatApi.getMessages(chatId)
       if (response.data.messages) {
         storeSetMessagesForChat(chatId, response.data.messages.map((msg: any, index: number) => {
-          const base: any = { id: `msg-${index}`, role: msg.role as 'user' | 'assistant', content: msg.content, timestamp: new Date(msg.created_at) }
+          const base: any = { id: `msg-${index}`, dbId: msg.id, role: msg.role as 'user' | 'assistant', content: msg.content, timestamp: new Date(msg.created_at) }
           if (msg.reasoning_content) base.reasoning_content = msg.reasoning_content
           if (msg.citations) base.citations = msg.citations
           if (msg.role === 'assistant') {
@@ -1052,6 +1060,13 @@ export default function ChatPlatform() {
   const handleGenerateMindmap = async (messageId: string, content: string) => {
     if (!currentChatId) return
 
+    // 防止重复生成思维导图（已有图表标记则拒绝）
+    const cleanContent = stripDiagramMarkers(content)
+    if (cleanContent !== content) {
+      alert('当前消息已包含思维导图或图表，无需重复生成。如需更新，请先重新生成 AI 回复。')
+      return
+    }
+
     // 设置生成状态，在消息下方显示加载指示器
     setGeneratingMindmapId(messageId)
 
@@ -1059,8 +1074,9 @@ export default function ChatPlatform() {
     await new Promise(resolve => setTimeout(resolve, 600))
 
     try {
-      // 客户端 Markdown → Mermaid mindmap 转换，无需调用后端 API
-      const mindmapBlock = convertMarkdownToMindmapBlock(content)
+      // 剥离已有的图表标记，避免重复生成时产生冗余 [MERMAID] 块
+      const cleanContent = stripDiagramMarkers(content)
+      const mindmapBlock = convertMarkdownToMindmapBlock(cleanContent)
 
       if (!mindmapBlock) {
         alert('未能从消息内容中提取足够的结构来生成思维导图，请确保消息包含标题或列表结构。')
@@ -1068,17 +1084,27 @@ export default function ChatPlatform() {
         return
       }
 
-      // 将 [MERMAID] 思维导图块追加到原消息内容末尾
+      // 将 [MERMAID] 思维导图块追加到原消息内容末尾（store 中更新）
       storeUpdateMessage(currentChatId, messageId, (msg) => ({
         ...msg,
-        content: (msg.content || '') + mindmapBlock,
+        content: stripDiagramMarkers(msg.content || '') + mindmapBlock,
       }))
 
-      // 同步保存到后端
+      // 同步到后端：优先使用 PUT 更新已有消息，避免创建重复消息
       const updatedMessages = useChatStore.getState().messagesByChat[currentChatId] || []
       const updatedMsg = updatedMessages.find(m => m.id === messageId)
       if (updatedMsg) {
-        chatApi.saveMessage({ chat_id: currentChatId, role: 'assistant', content: updatedMsg.content }).catch(() => {})
+        const newContent = stripDiagramMarkers(updatedMsg.content || '') + mindmapBlock
+        if (updatedMsg.dbId) {
+          // 有数据库 ID → 直接更新已有消息
+          chatApi.updateMessage(updatedMsg.dbId, { content: newContent }).catch((err) => {
+            console.error('更新消息失败，回退到新建:', err)
+            chatApi.saveMessage({ chat_id: currentChatId!, role: 'assistant', content: newContent }).catch(() => {})
+          })
+        } else {
+          // 无数据库 ID（前端临时消息）→ 新建消息
+          chatApi.saveMessage({ chat_id: currentChatId, role: 'assistant', content: newContent }).catch(() => {})
+        }
       }
     } catch (e: any) {
       console.error('生成思维导图失败:', e)
@@ -1272,6 +1298,7 @@ export default function ChatPlatform() {
               onRunCode={handleRunCode}
               onRollback={handleRollback}
               onGenerateMindmap={handleGenerateMindmap}
+              onMindmapAlert={() => setShowMindmapAlert(true)}
               onFeatureCardClick={handleFeatureCardClick}
               generatingMindmapId={generatingMindmapId}
               onEditDiagram={(xml) => {
@@ -1402,6 +1429,68 @@ export default function ChatPlatform() {
                 }}
               >
                 {clearingAll ? '清空中...' : '确认清空'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 新建对话重复提示 Modal */}
+      {showNewChatAlert && (
+        <Modal title="提示" onClose={() => setShowNewChatAlert(false)}>
+          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              backgroundColor: 'oklch(0.55 0.18 200 / 0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}>
+              <MessageSquare size={28} style={{ color: 'var(--primary)' }} />
+            </div>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--gray-700)', margin: '0 0 var(--space-2)', fontWeight: 500 }}>
+              已位于新对话
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', margin: '0 0 var(--space-6)' }}>
+              当前已在新对话页面，无需重复新建。请直接输入消息开始对话。
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowNewChatAlert(false)}
+                className="btn btn-primary"
+                style={{ padding: '8px 20px', fontSize: '0.875rem' }}
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 思维导图重复生成提示 Modal */}
+      {showMindmapAlert && (
+        <Modal title="提示" onClose={() => setShowMindmapAlert(false)}>
+          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              backgroundColor: 'oklch(0.45 0.18 280 / 0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}>
+              <GitBranch size={28} style={{ color: '#7C3AED' }} />
+            </div>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--gray-700)', margin: '0 0 var(--space-2)', fontWeight: 500 }}>
+              已生成过思维导图
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', margin: '0 0 var(--space-6)' }}>
+              当前消息已包含思维导图或图表，无需重复生成。如需更新，请先重新生成 AI 回复后再次生成。
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowMindmapAlert(false)}
+                className="btn btn-primary"
+                style={{ padding: '8px 20px', fontSize: '0.875rem' }}
+              >
+                知道了
               </button>
             </div>
           </div>

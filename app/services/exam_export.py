@@ -177,14 +177,18 @@ def _convert_question_text(content: Any) -> Any:
 # ── PDF export ──
 
 class ExamPDF(FPDF):
+    def __init__(self, font_name="DejaVu"):
+        super().__init__()
+        self._exam_font_name = font_name
+
     def header(self):
         if self.page_no() > 1:
-            self.set_font("DejaVu", "", 8)
+            self.set_font(self._exam_font_name, "", 8)
             self.cell(0, 8, "试卷", align="C", new_x="LMARGIN", new_y="NEXT")
 
     def footer(self):
         self.set_y(-15)
-        self.set_font("DejaVu", "", 8)
+        self.set_font(self._exam_font_name, "", 8)
         self.cell(0, 10, f"第 {self.page_no()} 页", align="C")
 
 
@@ -196,49 +200,77 @@ def export_pdf(
     time_limit_minutes: Optional[int] = None,
 ) -> BytesIO:
     """生成 PDF 试卷"""
-    pdf = ExamPDF()
-    pdf.set_auto_page_break(auto=True, margin=20)
 
-    # 注册 DejaVu 字体（支持中文）
     import os
-    import subprocess, sys
-    _FONT_SEARCH_PATHS = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-    ]
-    dejavu = None
-    dejavu_bold = None
-    for p in _FONT_SEARCH_PATHS:
-        if os.path.exists(p):
-            dejavu = p
-            dejavu_bold = p.replace("Sans", "Sans-Bold").replace("SansCondensed", "SansCondensed-Bold")
-            if not os.path.exists(dejavu_bold):
-                dejavu_bold = dejavu  # fallback: use regular for bold
-            break
-    if not dejavu:
-        # 尝试安装（Docker 场景）
+    import atexit
+
+    # ── 字体选择策略 ──
+    # 优先使用 TrueType 格式的中文字体（CIDFontType2），pymupdf 渲染兼容性更好。
+    # 从 TTC 中提取 TTF 字体文件以绕过 fpdf2 的 CFF CID 字体 (CIDFontType0C) 渲染问题。
+    _TTF_CACHE: Dict[str, str] = {}
+
+    def _extract_ttf_from_ttc(ttc_path: str, font_index: int, cache_key: str) -> Optional[str]:
+        """从 TTC 字体集合中提取单个 TTF 字体文件并缓存"""
+        if cache_key in _TTF_CACHE and os.path.exists(_TTF_CACHE[cache_key]):
+            return _TTF_CACHE[cache_key]
         try:
-            subprocess.check_call(["apt-get", "install", "-y", "-qq", "fonts-dejavu-core"],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            for p in _FONT_SEARCH_PATHS:
-                if os.path.exists(p):
-                    dejavu = p
-                    dejavu_bold = p.replace("Sans", "Sans-Bold").replace("SansCondensed", "SansCondensed-Bold")
-                    if not os.path.exists(dejavu_bold):
-                        dejavu_bold = dejavu
-                    break
+            from fontTools.ttLib import TTCollection
+            ttc = TTCollection(ttc_path)
+            if font_index < len(ttc):
+                ttf_path = f"/tmp/{cache_key}.ttf"
+                ttc[font_index].save(ttf_path)
+                _TTF_CACHE[cache_key] = ttf_path
+                atexit.register(lambda p=ttf_path: os.path.exists(p) and os.remove(p))
+                return ttf_path
         except Exception:
             pass
-    if not dejavu:
-        raise RuntimeError("未找到中文字体，请运行: apt-get install fonts-dejavu-core")
-    pdf.add_font("DejaVu", "", dejavu, uni=True)
-    pdf.add_font("DejaVu", "B", dejavu_bold, uni=True)
+        return None
+
+    # 字体候选列表：(label, regular_path, bold_path, font_name)
+    _FONT_CANDIDATES = []
+
+    # 1) WenQuanYi Micro Hei（TrueType，优先，兼容性最佳）
+    _WQY_TTC = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+    if os.path.exists(_WQY_TTC):
+        wqy_regular = _extract_ttf_from_ttc(_WQY_TTC, 0, "wqy_microhei_regular")
+        wqy_bold = wqy_regular  # WQY Micro Hei 只有 Regular 和 Mono，无独立 Bold
+        if wqy_regular:
+            _FONT_CANDIDATES.append(("WQY", wqy_regular, wqy_bold, "WenQuanYiMicroHei"))
+
+    # 2) Noto Sans CJK SC（CFF CID，回退方案；需要提取 TTF 避免 CIDFontType0C）
+    _NOTO_TTC = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+    _NOTO_BOLD_TTC = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+    if os.path.exists(_NOTO_TTC):
+        noto_regular = _extract_ttf_from_ttc(_NOTO_TTC, 2, "notocjk_regular_sc")  # SC = Simplified Chinese
+        noto_bold = None
+        if os.path.exists(_NOTO_BOLD_TTC):
+            noto_bold = _extract_ttf_from_ttc(_NOTO_BOLD_TTC, 2, "notocjk_bold_sc")
+        if noto_regular:
+            _FONT_CANDIDATES.append(("NotoSC", noto_regular, noto_bold or noto_regular, "NotoSansCJKsc"))
+
+    # 3) DejaVu Sans（仅支持拉丁字符，最后回退）
+    _DEJAVU_REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    _DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    if os.path.exists(_DEJAVU_REGULAR):
+        bold = _DEJAVU_BOLD if os.path.exists(_DEJAVU_BOLD) else _DEJAVU_REGULAR
+        _FONT_CANDIDATES.append(("DejaVu", _DEJAVU_REGULAR, bold, "DejaVu"))
+
+    if not _FONT_CANDIDATES:
+        raise RuntimeError("未找到字体文件，请安装 fonts-wqy-microhei 或 fonts-noto-cjk 或 fonts-dejavu-core")
+
+    label, regular_font, bold_font, font_name = _FONT_CANDIDATES[0]
+
+    pdf = ExamPDF(font_name=font_name)
+    pdf.set_auto_page_break(auto=True, margin=20)
+
+    pdf.add_font(font_name, "", regular_font)
+    pdf.add_font(font_name, "B", bold_font)
 
     pdf.add_page()
-    pdf.set_font("DejaVu", "B", 18)
+    pdf.set_font(font_name, "B", 18)
     pdf.cell(0, 15, title, align="C", new_x="LMARGIN", new_y="NEXT")
 
-    pdf.set_font("DejaVu", size=11)
+    pdf.set_font(font_name, size=11)
     info = [f"总分：{total_score} 分", f"总题数：{sum(s.get('count', 0) for s in sections)} 题"]
     if time_limit_minutes:
         info.append(f"时间：{time_limit_minutes} 分钟")
@@ -248,7 +280,7 @@ def export_pdf(
     q_num = 1
     answer_key = []
     for section in sections:
-        pdf.set_font("DejaVu", "B", 13)
+        pdf.set_font(font_name, "B", 13)
         sec_info = f"{section.get('name', '')}（共{section.get('count', 0)}题，每题{section.get('score_per_question', 0)}分）"
         pdf.cell(0, 12, sec_info, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(4)
@@ -258,11 +290,11 @@ def export_pdf(
             if not q:
                 continue
             stem = _convert_question_text(q.content.get("stem", ""))
-            pdf.set_font("DejaVu", size=11)
-            pdf.multi_cell(0, 7, f"{q_num}. {stem}")
+            pdf.set_font(font_name, size=11)
+            pdf.multi_cell(0, 7, f"{q_num}. {stem}", new_x="LMARGIN", new_y="NEXT")
 
             for opt in q.content.get("options", []):
-                pdf.set_font("DejaVu", size=10)
+                pdf.set_font(font_name, size=10)
                 opt_text = _convert_question_text(opt['text'])
                 pdf.cell(0, 7, f"    {opt['key']}. {opt_text}", new_x="LMARGIN", new_y="NEXT")
 
@@ -280,16 +312,16 @@ def export_pdf(
 
     # 答案页
     pdf.add_page()
-    pdf.set_font("DejaVu", "B", 16)
+    pdf.set_font(font_name, "B", 16)
     pdf.cell(0, 15, "参考答案", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     for item in answer_key:
         ans = ", ".join(item["answer"]) if item["answer"] else "略"
         ans = _convert_question_text(ans)
-        pdf.set_font("DejaVu", size=11)
+        pdf.set_font(font_name, size=11)
         pdf.cell(0, 7, f"{item['num']}. {ans}", new_x="LMARGIN", new_y="NEXT")
         if item.get("explanation"):
-            pdf.set_font("DejaVu", size=9)
+            pdf.set_font(font_name, size=9)
             expl = _convert_question_text(item["explanation"])
             pdf.multi_cell(0, 5, f"    解析：{expl}")
 

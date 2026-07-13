@@ -886,7 +886,7 @@ function CuratedPaperShelf({ papers, busy, message, onAction }: {
   onAction: (template: CuratedPaperTemplate, action: 'pdf' | 'word' | 'start') => void
 }) {
   return (
-    <section style={{ marginBottom: 16, background: 'linear-gradient(135deg, #F8FBFF 0%, #F0FDF8 100%)', border: '1px solid #DBEAFE', borderRadius: 16, padding: '20px' }}>
+    <section style={{ marginBottom: 16, background: 'var(--bank-hero-gradient, linear-gradient(135deg, #F8FBFF 0%, #F0FDF8 100%))', border: '1px solid var(--app-border, #DBEAFE)', borderRadius: 16, padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

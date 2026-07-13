@@ -319,7 +319,16 @@ select {
 .dark [style*='background: rgb(255, 255, 255)'],
 .dark [style*='background-color: rgb(255, 255, 255)'],
 .dark [style*='background: white'],
-.dark [style*='background-color: white'] {
+.dark [style*='background-color: white'],
+.dark [style*="background: '#fff'"],
+.dark [style*="background:'#fff'"],
+.dark [style*="background:#fff"],
+.dark [style*='background: "#fff"'],
+.dark [style*='background:"#fff"'],
+.dark [style*="background: '#ffffff'"],
+.dark [style*="background:'#ffffff'"],
+.dark [style*='background: "#ffffff"'],
+.dark [style*='background:"#ffffff"'] {
   background: var(--app-bg-card) !important;
 }
 
@@ -328,13 +337,62 @@ select {
 .dark [style*='background: rgb(243, 244, 246)'],
 .dark [style*='background-color: rgb(249, 250, 251)'],
 .dark [style*='background-color: rgb(248, 250, 252)'],
-.dark [style*='background-color: rgb(243, 244, 246)'] {
+.dark [style*='background-color: rgb(243, 244, 246)'],
+.dark [style*="background: '#F3F4F6'"],
+.dark [style*="background:'#F3F4F6'"],
+.dark [style*="background: '#f3f4f6'"],
+.dark [style*="background:'#f3f4f6'"],
+.dark [style*="background: '#E5E7EB'"],
+.dark [style*="background:'#E5E7EB'"],
+.dark [style*="background: '#e5e7eb'"],
+.dark [style*="background:'#e5e7eb'"] {
   background: var(--app-bg-card-alt) !important;
 }
 
+/* Accent light backgrounds → dark muted variants */
+.dark [style*="background: '#F0F9FF'"],
+.dark [style*="background:'#F0F9FF'"],
+.dark [style*="background: '#f0f9ff'"],
+.dark [style*="background:'#f0f9ff'"] {
+  background: #0F2A3D !important;
+}
+
+.dark [style*="background: '#DBEAFE'"],
+.dark [style*="background:'#DBEAFE'"],
+.dark [style*="background: '#dbeafe'"],
+.dark [style*="background:'#dbeafe'"] {
+  background: #0F1F3D !important;
+}
+
+.dark [style*="background: '#D1FAE5'"],
+.dark [style*="background:'#D1FAE5'"],
+.dark [style*="background: '#d1fae5'"],
+.dark [style*="background:'#d1fae5'"] {
+  background: #022C22 !important;
+}
+
 .dark [style*='border: 1px solid rgb(229, 231, 235)'],
-.dark [style*='border: 2px solid rgb(229, 231, 235)'] {
+.dark [style*='border: 2px solid rgb(229, 231, 235)'],
+.dark [style*="border: '1px solid #E5E7EB'"],
+.dark [style*="border:'1px solid #E5E7EB'"],
+.dark [style*="border: '1px solid #e5e7eb'"],
+.dark [style*="border:'1px solid #e5e7eb'"],
+.dark [style*="border: '1px solid #E5EDF7'"],
+.dark [style*="border:'1px solid #E5EDF7'"],
+.dark [style*="border:'1.5px solid #D1D5DB'"],
+.dark [style*="border: '1.5px solid #d1d5db'"] {
   border-color: var(--app-border) !important;
+}
+
+/* Accent text colors → lighter for dark backgrounds */
+.dark [style*="color: '#166534'"],
+.dark [style*="color:'#166534'"] {
+  color: #6EE7B7 !important;
+}
+
+.dark [style*="color: '#1E40AF'"],
+.dark [style*="color:'#1E40AF'"] {
+  color: #93C5FD !important;
 }
 
 .dark [style*='color: rgb(31, 41, 55)'],
@@ -356,4 +414,49 @@ select {
   select {
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Additional light surface backgrounds → dark */
+.dark [style*="background: '#F8FAFC'"],
+.dark [style*="background:'#F8FAFC'"],
+.dark [style*="background: '#EEF2F7'"],
+.dark [style*="background:'#EEF2F7'"],
+.dark [style*="background: '#F5F7FB'"],
+.dark [style*="background:'#F5F7FB'"] {
+  background: var(--app-bg-card-alt) !important;
+}
+
+.dark [style*="background: '#FEF2F2'"],
+.dark [style*="background:'#FEF2F2'"] {
+  background: #361C27 !important;
+}
+
+.dark [style*="background: '#FEE2E2'"],
+.dark [style*="background:'#FEE2E2'"] {
+  background: #450A0A !important;
+}
+
+.dark [style*="background: '#F0F7FF'"],
+.dark [style*="background:'#F0F7FF'"] {
+  background: #0F2A3D !important;
+}
+
+.dark [style*="color: '#DC2626'"],
+.dark [style*="color:'#DC2626'"] {
+  color: #FCA5A5 !important;
+}
+
+.dark [style*="color: '#B45309'"],
+.dark [style*="color:'#B45309'"] {
+  color: #FCD34D !important;
+}
+
+.dark [style*="color: '#047857'"],
+.dark [style*="color:'#047857'"] {
+  color: #6EE7B7 !important;
+}
+
+/* Question bank hero gradient */
+.dark {
+  --bank-hero-gradient: linear-gradient(135deg, #0F1F2D 0%, #0F2D22 100%);
 }

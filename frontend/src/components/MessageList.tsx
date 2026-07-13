@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import { splitContentWithDiagrams } from '../utils/drawio'
+import { splitContentWithDiagrams, hasDiagramContent } from '../utils/drawio'
 import { detectLanguage, LANGUAGE_NAMES } from '../utils/codeRunner'
 import DiagramImage from './DiagramImage'
 import MermaidRenderer from './MermaidRenderer'
@@ -27,6 +27,7 @@ export interface Citation {
 
 export interface Message {
   id: string
+  dbId?: string
   role: 'user' | 'assistant' | 'system'
   content: string
   reasoning_content?: string
@@ -45,6 +46,7 @@ interface MessageListProps {
   onRollback?: (messageId: string) => void
   onEditDiagram?: (xml: string) => void
   onGenerateMindmap?: (messageId: string, content: string) => void
+  onMindmapAlert?: () => void
   onFeatureCardClick?: (action: string) => void
   generatingMindmapId?: string | null
 }
@@ -69,7 +71,7 @@ function simpleMarkdown(text: string): string {
   return html
 }
 
-export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap, onFeatureCardClick, generatingMindmapId }: MessageListProps) {
+export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap, onMindmapAlert, onFeatureCardClick, generatingMindmapId }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const userScrolledAwayRef = useRef(false)
@@ -760,8 +762,8 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                   <details open style={{
                     padding: 'var(--space-3)',
                     borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'oklch(0.98 0.02 260 / 0.5)',
-                    border: '1px solid oklch(0.55 0.18 200 / 0.2)',
+                    backgroundColor: 'var(--chat-bubble-ai-bg, #151f2f)',
+                    border: '1px solid var(--chat-bubble-ai-border, #2b3a50)',
                   }}>
                     <summary style={{
                       cursor: 'pointer', color: 'var(--primary)', fontWeight: 600,
@@ -774,9 +776,9 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                       padding: 'var(--space-3)',
                       marginTop: 'var(--space-2)',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'oklch(0.98 0.02 260 / 0.3)',
-                      color: 'var(--gray-700)',
-                      border: '1px solid oklch(0.55 0.18 200 / 0.1)',
+                      backgroundColor: 'var(--app-bg-card-alt, #101a29)',
+                      color: 'var(--app-text-body, #d8e1ec)',
+                      border: '1px solid var(--app-border, #334155)',
                       lineHeight: 1.7,
                     }}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.reasoning_content}</ReactMarkdown>
@@ -791,9 +793,9 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                       padding: 'var(--space-3)',
                       marginTop: 'var(--space-2)',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--warning-bg)',
-                      color: 'var(--gray-800)',
-                      border: '1px solid oklch(from var(--warning) l c h / 0.3)',
+                      backgroundColor: 'var(--app-bg-card-alt, #101a29)',
+                      color: 'var(--app-text-body, #d8e1ec)',
+                      border: '1px solid var(--app-border, #334155)',
                     }}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.reasoning_content}</ReactMarkdown>
                     </div>
@@ -1129,15 +1131,44 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
               </button>
               {/* 生成思维导图 */}
               {message.content && message.content.length > 20 && onGenerateMindmap && (
-                <button
-                  onClick={() => onGenerateMindmap(message.id, message.content)}
-                  title="生成思维导图"
-                  style={iconBtnStyle}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.backgroundColor = 'oklch(0.45 0.18 280 / 0.06)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
-                >
-                  <GitBranch size={15} />
-                </button>
+                (() => {
+                  const alreadyHasMindmap = hasDiagramContent(message.content)
+                  if (alreadyHasMindmap) {
+                    return (
+                      <button
+                        onClick={() => onMindmapAlert?.()}
+                        title="已生成思维导图 — 点击查看提示"
+                        style={{
+                          ...iconBtnStyle,
+                          color: '#7C3AED',
+                          cursor: 'default',
+                          opacity: 0.6,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#7C3AED'
+                          e.currentTarget.style.backgroundColor = 'oklch(0.45 0.18 280 / 0.08)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = 'transparent'
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <GitBranch size={15} />
+                      </button>
+                    )
+                  }
+                  return (
+                    <button
+                      onClick={() => onGenerateMindmap(message.id, message.content)}
+                      title="生成思维导图"
+                      style={iconBtnStyle}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.backgroundColor = 'oklch(0.45 0.18 280 / 0.06)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.backgroundColor = 'transparent' }}
+                    >
+                      <GitBranch size={15} />
+                    </button>
+                  )
+                })()
               )}
             </div>
           )}

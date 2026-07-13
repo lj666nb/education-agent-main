@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/auth'
 import ParticleBackground from './ParticleBackground'
@@ -77,81 +77,11 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const dragOffset = useRef({ x: 0, y: 0 })
-  const [titleStyle, setTitleStyle] = useState({})
 
   const handleStart = () => {
     if (isAuthenticated) navigate('/home')
     else onLoginClick()
   }
-
-  /* ── Drag-Stretch Title Effect ── */
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!titleRef.current) return
-    const rect = titleRef.current.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    const deltaX = (e.clientX - centerX) / (rect.width / 2)
-    const deltaY = (e.clientY - centerY) / (rect.height / 2)
-
-    // Clamp values
-    const clampedX = Math.max(-1, Math.min(1, deltaX))
-    const clampedY = Math.max(-1, Math.min(1, deltaY))
-
-    if (isDragging) {
-      // When "dragging" - more extreme deformation
-      setTitleStyle({
-        transform: `
-          perspective(800px)
-          rotateY(${clampedX * 12}deg)
-          rotateX(${-clampedY * 8}deg)
-          translateX(${dragOffset.current.x + clampedX * 8}px)
-          translateY(${dragOffset.current.y + clampedY * 5}px)
-          scale(${1 + Math.abs(clampedX) * 0.03})
-        `,
-        filter: `blur(${Math.abs(clampedX) * 0.5}px)`,
-        transition: 'transform 0.08s ease-out, filter 0.08s ease-out',
-        letterSpacing: `${0.06 + Math.abs(clampedX) * 0.04}em`,
-      })
-    } else {
-      // Normal hover - subtle parallax
-      setTitleStyle({
-        transform: `
-          perspective(800px)
-          rotateY(${clampedX * 4}deg)
-          rotateX(${-clampedY * 3}deg)
-        `,
-        filter: 'blur(0px)',
-        transition: 'transform 0.2s ease-out, filter 0.2s ease-out',
-      })
-    }
-  }, [isDragging])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true)
-    dragOffset.current = { x: 0, y: 0 }
-    e.preventDefault()
-  }, [])
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-    setTitleStyle({
-      transform: 'perspective(800px) rotateY(0deg) rotateX(0deg)',
-      filter: 'blur(0px)',
-      letterSpacing: '0.06em',
-      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    })
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [handleMouseMove, handleMouseUp])
 
   return (
     <section
@@ -198,7 +128,6 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
           padding: '5px 18px 5px 16px',
           borderRadius: '20px',
           background: 'rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,0.10)',
           color: 'rgba(255,255,255,0.65)',
           fontSize: 'clamp(0.78rem, 1.2vw, 0.9rem)',
@@ -220,15 +149,12 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
         {/* Main Title — with drag-stretch effect */}
         <h1
           ref={titleRef}
-          onMouseDown={handleMouseDown}
           style={{
             marginBottom: '28px',
-            cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
             opacity: 0,
             transform: 'translateY(-20px)',
             animation: 'fadeInSlideDown 0.7s ease-out 0.28s forwards',
-            ...titleStyle,
           }}
         >
           <span
@@ -345,7 +271,6 @@ export default function HeroSection({ onLoginClick }: HeroSectionProps) {
               borderRadius: '14px',
               border: '1.5px solid rgba(255,255,255,0.18)',
               background: 'rgba(255,255,255,0.06)',
-              backdropFilter: 'blur(8px)',
               color: 'rgba(255,255,255,0.8)',
               fontSize: '1rem',
               fontWeight: 300,

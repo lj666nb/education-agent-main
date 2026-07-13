@@ -214,7 +214,10 @@ export default function AppShowcase({ onLoginClick }: AppShowcaseProps) {
                 boxShadow: `0 4px 12px ${sp.color}11`,
                 zIndex: 5,
               }}>
-                ✦ {sp.text}
+                <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: sp.color, marginRight: 4, verticalAlign: 'middle',
+              }} />{sp.text}
               </div>
             ))}
           </div>
@@ -280,7 +283,10 @@ export default function AppShowcase({ onLoginClick }: AppShowcaseProps) {
             </div>
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.8125rem', color: '#64748B' }}>
               <span style={{ background: '#1E293B', padding: '4px 16px', borderRadius: '20px', border: '1px solid #334155' }}>
-                🖥 产品界面示意 <span style={{ color: '#6EE7B7', fontSize: '0.6875rem' }}>· 实时AI对话</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 4 }}>
+                  <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                产品界面示意 <span style={{ color: '#6EE7B7', fontSize: '0.6875rem' }}>· 实时AI对话</span>
               </span>
             </div>
           </div>

@@ -30,20 +30,25 @@ function cleanNodeText(text: string, maxLen = 20): string {
   return cleaned
 }
 
-/** 转义 Mermaid 特殊字符（括号会干扰 mindmap 语法） */
+/** 转义 Mermaid 特殊字符，保留语义但避免语法冲突 */
 function escapeMermaidText(text: string): string {
   return text
-    .replace(/[\(\)\[\]\{\}]/g, '')  // 移除括号
-    .replace(/:/g, '：')              // 冒号转全角
+    .replace(/"/g, "'")       // 双引号转单引号（外层用双引号包裹）
+    .replace(/:/g, '：')       // 冒号转全角
     .replace(/</g, '‹')
     .replace(/>/g, '›')
-    .replace(/"/g, "'")
     .trim()
+}
+
+/** 判断节点文本是否需要引号包裹（包含空格或特殊字符） */
+function needsQuoting(text: string): boolean {
+  return /[\s\(\)\[\]\{\}:<>"']/.test(text)
 }
 
 /**
  * 递归构建 Mermaid mindmap 缩进行。
  * Mermaid mindmap 要求唯一根节点，使用 root((text)) 语法。
+ * 非根节点中包含空格或特殊字符时，用双引号包裹以确保 Mermaid 正确解析。
  *
  * @param nodes 当前层级的节点列表
  * @param depth 当前缩进深度（0 = 直接在 mindmap 声明下一行）
@@ -61,6 +66,9 @@ function buildMermaidLines(nodes: MindmapNode[], depth: number, isRoot: boolean)
     if (isRoot) {
       // 根节点使用 root((...)) 语法
       lines.push(`${prefix}root((${escaped}))`)
+    } else if (needsQuoting(escaped)) {
+      // 节点文本包含空格或特殊字符 → 双引号包裹
+      lines.push(`${prefix}"${escaped}"`)
     } else {
       lines.push(`${prefix}${escaped}`)
     }

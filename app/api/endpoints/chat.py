@@ -1228,6 +1228,116 @@ async def save_message(
     }
 
 
+class UpdateMessageRequest(BaseModel):
+    content: str
+    role: Optional[str] = None
+
+
+@router.put("/messages/{message_id}")
+async def update_message(
+    message_id: str,
+    request: UpdateMessageRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """更新已有消息的内容（用于追加思维导图等场景，避免创建重复消息）"""
+    db_message = db.query(ChatMessageModel).filter(
+        ChatMessageModel.id == message_id
+    ).first()
+
+    if not db_message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="消息不存在"
+        )
+
+    # 验证消息所属的会话属于当前用户
+    session = db.query(ChatSessionModel).filter(
+        ChatSessionModel.id == db_message.session_id,
+        ChatSessionModel.user_id == current_user.student_id
+    ).first()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权修改此消息"
+        )
+
+    content = request.content
+
+    # ═══ 处理 [PLOT] 代码块：执行 → 保存 PNG → 替换为图片 URL ═══
+    if request.role == "assistant" and "[PLOT]" in content:
+        def _process_plot_block(match):
+            code = match.group(1).strip()
+            code = re.sub(r'^```[a-zA-Z]*\n?', '', code)
+            code = re.sub(r'\n?```$', '', code)
+            try:
+                from app.api.endpoints.code_execution import _execute_plot
+                result = _execute_plot(code)
+                if result.success and result.image:
+                    b64_data = result.image
+                    if b64_data.startswith("data:image/png;base64,"):
+                        b64_data = b64_data[len("data:image/png;base64,"):]
+                    import base64
+                    img_bytes = base64.b64decode(b64_data)
+                    plot_id = uuid.uuid4().hex[:12]
+                    filename = f"plot_{plot_id}.png"
+                    plot_dir = os.path.join("uploads", "plots")
+                    os.makedirs(plot_dir, exist_ok=True)
+                    filepath = os.path.join(plot_dir, filename)
+                    with open(filepath, "wb") as f:
+                        f.write(img_bytes)
+                    url = f"/api/v1/chat/plots/{filename}"
+                    logger.info(f"[PLOT] 已保存: {filepath} ({len(img_bytes)} bytes)")
+                    return f"\n\n![图表]({url})\n\n"
+                else:
+                    logger.warning(f"[PLOT] 执行失败: {result.stderr}")
+                    return f"\n\n> ⚠️ 图表生成失败: {result.stderr}\n\n"
+            except Exception as e:
+                logger.error(f"[PLOT] 处理异常: {e}")
+                return f"\n\n> ⚠️ 图表处理异常: {str(e)}\n\n"
+
+        content = re.sub(r'\[PLOT\]([\s\S]*?)\[/PLOT\]', _process_plot_block, content)
+
+    # ═══ 处理 [DRAWIO] 代码块：尝试渲染为 PNG → 替换为图片 URL ═══
+    if request.role == "assistant" and "[DRAWIO]" in content:
+        def _process_drawio_block(match):
+            xml = match.group(1).strip()
+            xml = re.sub(r'^```[a-zA-Z]*\n?', '', xml)
+            xml = re.sub(r'\n?```$', '', xml)
+            if not xml.strip():
+                return "\n\n> ⚠️ 图表内容为空\n\n"
+            try:
+                from app.services.drawio_export import save_drawio_png
+                png_url, _ = save_drawio_png(xml)
+                if png_url:
+                    logger.info(f"[DRAWIO] 已渲染并保存")
+                    return f"\n\n![图表]({png_url})\n\n"
+                else:
+                    return match.group(0)
+            except Exception as e:
+                logger.error(f"[DRAWIO] 处理异常: {e}")
+                return match.group(0)
+
+        content = re.sub(r'\[DRAWIO\]([\s\S]*?)\[/DRAWIO\]', _process_drawio_block, content)
+
+    db_message.content = content
+
+    db_session = db.query(ChatSessionModel).filter(ChatSessionModel.id == db_message.session_id).first()
+    if db_session:
+        db_session.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(db_message)
+
+    return {
+        "id": str(db_message.id),
+        "chat_id": db_message.session_id,
+        "role": db_message.role,
+        "content": db_message.content,
+        "created_at": _fmt_iso(db_message.created_at)
+    }
+
+
 @router.post("/attachments")
 async def create_attachment(
     request: AttachmentCreate,

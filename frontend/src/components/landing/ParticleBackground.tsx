@@ -45,7 +45,6 @@ export default function ParticleBackground() {
         width: ${size}px;
         height: ${size}px;
         pointer-events: none;
-        will-change: transform;
         z-index: 0;
       `
 
@@ -57,7 +56,6 @@ export default function ParticleBackground() {
         el.style.borderRadius = `${4 + Math.random() * 12}px`
         el.style.background = color
         el.style.border = '1px solid rgba(255,255,255,0.06)'
-        el.style.backdropFilter = 'blur(1px)'
       } else {
         // Triangle via clip-path
         el.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)'
@@ -87,6 +85,7 @@ export default function ParticleBackground() {
 
   useEffect(() => {
     createParticles()
+    let running = true
 
     const handleMouse = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY }
@@ -96,7 +95,25 @@ export default function ParticleBackground() {
       createParticles()
     }
 
+    // Pause RAF when hero is not visible
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        running = entry.isIntersecting
+        if (running && !rafRef.current) {
+          rafRef.current = requestAnimationFrame(animate)
+        }
+      },
+      { threshold: 0 }
+    )
+    if (containerRef.current) {
+      visibilityObserver.observe(containerRef.current)
+    }
+
     const animate = () => {
+      if (!running) {
+        rafRef.current = 0
+        return
+      }
       const { x: mx, y: my } = mouseRef.current
       const vw = window.innerWidth / 2
       const vh = window.innerHeight / 2
@@ -131,6 +148,7 @@ export default function ParticleBackground() {
     return () => {
       window.removeEventListener('mousemove', handleMouse)
       window.removeEventListener('resize', handleResize)
+      visibilityObserver.disconnect()
       cancelAnimationFrame(rafRef.current)
       particlesRef.current.forEach(p => p.el.remove())
       particlesRef.current = []

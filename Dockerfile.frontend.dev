@@ -12,4 +12,6 @@ RUN mkdir -p /app/public/monaco-editor/min && cp -r /app/node_modules/monaco-edi
 
 COPY . .
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Clear Vite dependency cache on startup to prevent stale/broken pre-bundling
+# that can cause "Failed to fetch dynamically imported module" errors
+CMD ["sh", "-c", "rm -rf /app/node_modules/.vite && npm run dev -- --host 0.0.0.0"]

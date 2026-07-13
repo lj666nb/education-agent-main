@@ -33,6 +33,7 @@ export default defineConfig({
       'lucide-react',
       'd3',
       'echarts',
+      'mammoth',     // dynamically imported in ChatPlatform for docx preview
     ],
     exclude: ['monaco-editor'],
   },

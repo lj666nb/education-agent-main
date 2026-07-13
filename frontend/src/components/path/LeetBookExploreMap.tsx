@@ -1,5 +1,6 @@
-import type { CSSProperties, MouseEvent } from 'react'
+import { useRef, useEffect, type CSSProperties, type MouseEvent } from 'react'
 import type { PathNodeStatus } from '../../api/path'
+import { useTheme } from '../../store/theme'
 import { ArrowRightIcon, BookOpenIcon, CheckCircleIcon, CodeIcon, TargetIcon } from '../Icons'
 import './LeetBookExploreMap.css'
 
@@ -8,6 +9,13 @@ const INK = '#1F2937'
 const MUTED = '#64748B'
 const LINE = '#E5EDF7'
 const PAGE = '#F5F7FB'
+
+// Dark mode colors
+const BRAND_DARK = '#60A5FA'
+const INK_DARK = '#F1F5F9'
+const MUTED_DARK = '#94A3B8'
+const LINE_DARK = '#334155'
+const PAGE_DARK = '#0B1220'
 
 type NodeGroup = {
   domain: string
@@ -33,12 +41,37 @@ type Props = {
   onToggleWeakMode: () => void
 }
 
-function statusMeta(node: PathNodeStatus) {
-  if (node.status === 'mastered') return { text: '已完成', bg: '#ECFDF5', fg: '#047857', border: '#A7F3D0' }
-  if (node.status === 'learning') return { text: '学习中', bg: '#EFF6FF', fg: BRAND, border: '#BFDBFE' }
-  if (node.status === 'reviewing' || node.needs_review) return { text: '复习中', bg: '#FFFBEB', fg: '#B45309', border: '#FDE68A' }
-  if (node.status === 'locked') return { text: '前置锁定', bg: '#F8FAFC', fg: '#94A3B8', border: '#CBD5E1' }
-  return { text: '未开始', bg: '#FFFFFF', fg: MUTED, border: LINE }
+function statusMeta(node: PathNodeStatus, dark: boolean) {
+  if (node.status === 'mastered') return {
+    text: '已完成',
+    bg: dark ? '#022C22' : '#ECFDF5',
+    fg: dark ? '#6EE7B7' : '#047857',
+    border: dark ? '#065F46' : '#A7F3D0',
+  }
+  if (node.status === 'learning') return {
+    text: '学习中',
+    bg: dark ? '#0F1F3D' : '#EFF6FF',
+    fg: dark ? BRAND_DARK : BRAND,
+    border: dark ? '#1E3A5F' : '#BFDBFE',
+  }
+  if (node.status === 'reviewing' || node.needs_review) return {
+    text: '复习中',
+    bg: dark ? '#451A03' : '#FFFBEB',
+    fg: dark ? '#FCD34D' : '#B45309',
+    border: dark ? '#78350F' : '#FDE68A',
+  }
+  if (node.status === 'locked') return {
+    text: '前置锁定',
+    bg: dark ? '#1F2937' : '#F8FAFC',
+    fg: dark ? '#6B7280' : '#94A3B8',
+    border: dark ? '#374151' : '#CBD5E1',
+  }
+  return {
+    text: '未开始',
+    bg: dark ? '#151F2F' : '#FFFFFF',
+    fg: dark ? MUTED_DARK : MUTED,
+    border: dark ? LINE_DARK : LINE,
+  }
 }
 
 function chapterIndex(index: number) {
@@ -63,6 +96,9 @@ export default function LeetBookExploreMap({
   onReplan,
   onToggleWeakMode,
 }: Props) {
+  const { theme } = useTheme()
+  const dark = theme === 'dark'
+
   const visibleGroups = selectedDomain ? groups.filter(g => g.domain === selectedDomain) : groups
   const activeNode = nodes.find(n => n.status === 'learning') || nodes.find(n => n.status === 'reviewing')
   // Weak knowledge points: mastery > 0% AND < 50%
@@ -73,8 +109,40 @@ export default function LeetBookExploreMap({
     percentage: group.nodes.length ? Math.round(group.nodes.filter(node => node.status === 'mastered').length / group.nodes.length * 100) : 0,
   }))
 
+  const weakSectionRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (weakMode) {
+      // Delay to ensure React has rendered the weak section DOM before scrolling
+      const timer = setTimeout(() => {
+        const el = weakSectionRef.current
+        if (!el) return
+        // Find the nearest ancestor that is actually scrollable (has overflow content)
+        let parent: HTMLElement | null = el.parentElement
+        let scrollParent: HTMLElement | null = null
+        while (parent) {
+          const style = window.getComputedStyle(parent)
+          const canScroll = style.overflow === 'auto' || style.overflow === 'scroll'
+            || style.overflowY === 'auto' || style.overflowY === 'scroll'
+          if (canScroll && parent.scrollHeight > parent.clientHeight) {
+            scrollParent = parent
+            break
+          }
+          parent = parent.parentElement
+        }
+        if (scrollParent) {
+          const offsetTop = el.getBoundingClientRect().top - scrollParent.getBoundingClientRect().top + scrollParent.scrollTop
+          scrollParent.scrollTo({ top: offsetTop - 16, behavior: 'smooth' })
+        } else {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [weakMode])
+
   return (
-    <div style={{ flex: 1, overflow: 'auto', background: PAGE }}>
+    <div style={{ flex: 1, overflow: 'auto', background: dark ? PAGE_DARK : PAGE }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '22px 24px 36px' }}>
         <section style={{
           display: 'grid',
@@ -219,7 +287,7 @@ export default function LeetBookExploreMap({
                   gap: 12,
                 }}>
                   {group.nodes.map((node, index) => {
-                    const meta = statusMeta(node)
+                    const meta = statusMeta(node, dark)
                     return (
                       <button
                         key={node.point_id}
@@ -286,6 +354,7 @@ export default function LeetBookExploreMap({
         )}
 
         {/* Weak knowledge points section — shown when weak mode is active */}
+        <div ref={weakSectionRef}>
         {weakMode && weakNodes.length > 0 && (
           <section style={{
             background: '#fff',
@@ -386,6 +455,7 @@ export default function LeetBookExploreMap({
             </p>
           </div>
         )}
+        </div>
 
         {!loading && !error && nodes.length > 0 && (
           <>

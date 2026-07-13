@@ -177,6 +177,9 @@ export const chatApi = {
   saveMessage: (data: { chat_id: string; role: string; content: string; reasoning_content?: string; citations?: Array<{index: number; title: string; url: string; snippet: string}> }) =>
     api.post('/chat/messages', data),
 
+  updateMessage: (messageId: string, data: { content: string; role?: string }) =>
+    api.put(`/chat/messages/${messageId}`, data),
+
   ocrRecognize: (file: File) => {
     const formData = new FormData()
     formData.append('file', file)

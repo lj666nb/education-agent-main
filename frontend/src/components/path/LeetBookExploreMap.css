@@ -97,6 +97,12 @@
 .leetbook-loop-note strong { color: #4F3BAE; font-size: 11px; }
 .leetbook-loop-note span { color: #6F649F; font-size: 9px; line-height: 1.5; }
 
+/* Dark mode overrides */
+.dark .leetbook-loop-steps span { background: #0F1F3D; }
+.dark .leetbook-loop-note { background: #1E1B3D; border-left-color: #8B7CF6; }
+.dark .leetbook-loop-note strong { color: #A78BFA; }
+.dark .leetbook-loop-note span { color: #8B8CC0; }
+
 @media (max-width: 860px) {
   .leetbook-afterword-grid { grid-template-columns: 1fr; }
 }
