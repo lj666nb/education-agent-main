@@ -104,13 +104,26 @@ async def get_api_setting(
 async def validate_api_setting(
     request: ApiSettingCreate,
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """验证 API Key 是否真正可用（发起实际 API 调用测试）"""
     if request.provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"不支持的 provider: {request.provider}")
 
+    api_key = request.api_key
+    secret_key = request.secret_key
+
+    # 如果用户提交的是 masked key（编辑已有配置时前端预填的），使用存储的真实 key
+    if api_key.startswith("****"):
+        existing = api_settings_crud.get_setting(db, str(current_user.student_id), request.provider)
+        if existing and existing.api_key:
+            api_key = existing.api_key
+            secret_key = getattr(existing, 'secret_key', None) or secret_key
+        else:
+            return {"provider": request.provider, "is_valid": False, "message": "未找到已保存的 API Key，请重新输入完整 Key"}
+
     is_valid = api_settings_crud.validate_provider_key(
-        request.provider, request.api_key, request.secret_key
+        request.provider, api_key, secret_key
     )
     return {"provider": request.provider, "is_valid": is_valid, "message": "API Key 有效" if is_valid else "API Key 无效，请检查"}
 

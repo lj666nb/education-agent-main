@@ -1,5 +1,5 @@
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { ArrowUp, Plus, Brain, Globe, ChevronDown, FileUp, BarChart3, GitBranch } from 'lucide-react'
+import { ArrowUp, Plus, Brain, Globe, ChevronDown, FileUp, BarChart3, GitBranch, Cloud } from 'lucide-react'
 import { chatApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
 import { ModelType, MODEL_OPTIONS, MULTIMODAL_MODELS } from '../constants/models'
@@ -35,6 +35,7 @@ interface InputAreaProps {
   enableAutoMindmap: boolean
   onEnableAutoMindmapChange: (enabled: boolean) => void
   fileUploadTrigger?: number
+  onCloudDriveClick?: () => void
 }
 
 const SUGGESTIONS = [
@@ -93,6 +94,7 @@ export default function InputArea({
   enableAutoMindmap,
   onEnableAutoMindmapChange,
   fileUploadTrigger,
+  onCloudDriveClick,
 }: InputAreaProps) {
   const [input, setInput] = useState('')
   const [isOcrLoading, setIsOcrLoading] = useState(false)
@@ -627,6 +629,9 @@ export default function InputArea({
 
           {/* Auto mindmap toggle */}
           <TagButton icon={GitBranch} label="思维导图" active={enableAutoMindmap} onClick={() => onEnableAutoMindmapChange(!enableAutoMindmap)} />
+
+          {/* 云盘入口 */}
+          <TagButton icon={Cloud} label="云盘" active={false} onClick={onCloudDriveClick} />
 
         </div>
       </div>

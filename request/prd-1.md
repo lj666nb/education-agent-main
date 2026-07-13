@@ -24,6 +24,7 @@
 | admin_user_management | 管理员用户管理（查看、删除用户） | ✅ 是 | ✅ 是 | - | 已完成 |
 | jwt_refresh | JWT令牌刷新机制 | ✅ 是 | ✅ 是 | - | 已完成RefreshToken 7天过期 |
 | multi_user_isolation | 多用户数据隔离 | ✅ 是 | ✅ 是 | - | 已完成，按student_id隔离 |
+| profile_center_redesign | 个人中心学习者档案视觉重构 | ✅ 是 | 🔴 否 | 个人中心界面太单调 | 已完成响应式、深色模式与真实资料编辑链路，等待用户验收 |
 
 ---
 
@@ -94,6 +95,13 @@
       "passed": true,
       "user_feedback": null,
       "notes": "已完成，按student_id隔离"
+    },
+    "profile_center_redesign": {
+      "description": "个人中心学习者档案视觉重构",
+      "completed": true,
+      "passed": false,
+      "user_feedback": "个人中心界面太单调",
+      "notes": "已完成响应式、深色模式与真实资料编辑链路，等待用户验收"
     }
   }
 }

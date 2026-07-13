@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
+import MessageList from './MessageList'
 import { useNavigate } from 'react-router-dom'
 import { Folder, Plus, X, FileUp, Image, Trash2, Pencil } from 'lucide-react'
 import Sidebar from './Sidebar'
@@ -8,15 +9,15 @@ import { useChatStore } from '../store/chat'
 import { AlertTriangleIcon, ArrowLeftIcon as ChevronLeftIcon, ArrowRightIcon } from './Icons'
 import { chatApi, projectApi } from '../api/auth'
 import { cloudDriveApi } from '../api/cloudDrive'
-import { resourcesApi } from '../api/resources'
+
 import type { DrawioEditorHandle } from './DrawioEditor'
 import { extractDrawioXml, hasDrawioContent, getDrawioSystemPrompt, stripDiagramDuringStreaming } from '../utils/drawio'
+import { convertMarkdownToMindmapBlock } from '../utils/mindmap'
 import { ModelType, DEFAULT_MODEL } from '../constants/models'
 
 // Lazy-loaded heavy components (only loaded when needed)
 const DrawioEditor = lazy(() => import('./DrawioEditor'))
 const DraggableWindow = lazy(() => import('./DraggableWindow'))
-const MessageList = lazy(() => import('./MessageList'))
 
 interface ChatSession {
   id: string
@@ -146,6 +147,7 @@ export default function ChatPlatform() {
   const storeSetCurrentChatId = useChatStore(s => s.setCurrentChatId)
   const storeAppendMessages = useChatStore(s => s.appendMessages)
   const storeUpdateLastAssistant = useChatStore(s => s.updateLastAssistant)
+  const storeUpdateMessage = useChatStore(s => s.updateMessage)
   const storeSetIsLoading = useChatStore(s => s.setIsLoading)
   const storeSetEnableThinking = useChatStore(s => s.setEnableThinking)
   const storeSetEnableWebsearch = useChatStore(s => s.setEnableWebsearch)
@@ -188,6 +190,7 @@ export default function ChatPlatform() {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
   const [prefillInput, setPrefillInput] = useState('')
   const [enableAutoChart, setEnableAutoChart] = useState(false)
+  const [generatingMindmapId, setGeneratingMindmapId] = useState<string | null>(null)
   const [enableAutoMindmap, setEnableAutoMindmap] = useState(false)
   const [showClearAllModal, setShowClearAllModal] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
@@ -1047,29 +1050,41 @@ export default function ChatPlatform() {
   )
 
   const handleGenerateMindmap = async (messageId: string, content: string) => {
+    if (!currentChatId) return
+
+    // 设置生成状态，在消息下方显示加载指示器
+    setGeneratingMindmapId(messageId)
+
+    // 短暂延迟让用户看到加载提示（用户体验）
+    await new Promise(resolve => setTimeout(resolve, 600))
+
     try {
-      // Extract key topics from the AI response content for mindmap generation
-      const res = await resourcesApi.generate({
-        knowledge_points: [content.slice(0, 500)],
-        title: '对话思维导图',
-        resource_type: 'mind_map',
-      })
-      if (res.data?.content && currentChatId) {
-        // Render mindmap inline as a new AI message in the chat
-        const mindmapMessage: Message = {
-          id: `mindmap-${Date.now()}`,
-          role: 'assistant',
-          content: res.data.content,
-          timestamp: new Date(),
-        }
-        storeAppendMessages(currentChatId, [mindmapMessage])
-        // Persist to backend
-        chatApi.saveMessage({ chat_id: currentChatId, role: 'assistant', content: res.data.content }).catch(() => {})
-      } else if (res.data?.id) {
-        alert('✅ 思维导图已生成')
+      // 客户端 Markdown → Mermaid mindmap 转换，无需调用后端 API
+      const mindmapBlock = convertMarkdownToMindmapBlock(content)
+
+      if (!mindmapBlock) {
+        alert('未能从消息内容中提取足够的结构来生成思维导图，请确保消息包含标题或列表结构。')
+        setGeneratingMindmapId(null)
+        return
+      }
+
+      // 将 [MERMAID] 思维导图块追加到原消息内容末尾
+      storeUpdateMessage(currentChatId, messageId, (msg) => ({
+        ...msg,
+        content: (msg.content || '') + mindmapBlock,
+      }))
+
+      // 同步保存到后端
+      const updatedMessages = useChatStore.getState().messagesByChat[currentChatId] || []
+      const updatedMsg = updatedMessages.find(m => m.id === messageId)
+      if (updatedMsg) {
+        chatApi.saveMessage({ chat_id: currentChatId, role: 'assistant', content: updatedMsg.content }).catch(() => {})
       }
     } catch (e: any) {
-      alert(e.response?.data?.detail || '生成失败')
+      console.error('生成思维导图失败:', e)
+      alert('思维导图生成失败，请重试')
+    } finally {
+      setGeneratingMindmapId(null)
     }
   }
 
@@ -1080,6 +1095,9 @@ export default function ChatPlatform() {
         break
       case '代码运行':
         navigate('/coding-practice')
+        break
+      case '云盘':
+        navigate('/cloud-drive')
         break
       case '图表生成':
         setEnableAutoChart(!enableAutoChart)
@@ -1109,7 +1127,7 @@ export default function ChatPlatform() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: 'var(--chat-header-height)', padding: '0 16px',
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: 'color-mix(in srgb, var(--app-bg-card) 88%, transparent)',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         borderBottom: '1px solid rgba(0,0,0,0.06)',
         position: 'relative', zIndex: 200, flexShrink: 0,
@@ -1247,7 +1265,6 @@ export default function ChatPlatform() {
 
           {/* Chat Area — only this scrolls */}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <Suspense fallback={<ChatSkeleton />}>
             <MessageList
               messages={messages}
               isLoading={isLoading}
@@ -1256,12 +1273,12 @@ export default function ChatPlatform() {
               onRollback={handleRollback}
               onGenerateMindmap={handleGenerateMindmap}
               onFeatureCardClick={handleFeatureCardClick}
+              generatingMindmapId={generatingMindmapId}
               onEditDiagram={(xml) => {
                 setActiveDiagramXml(xml)
                 if (!diagramOpen) setDiagramOpen(true)
               }}
             />
-            </Suspense>
           </div>
 
           {/* 无关内容警告条 */}
@@ -1320,6 +1337,7 @@ export default function ChatPlatform() {
             enableAutoMindmap={enableAutoMindmap}
             onEnableAutoMindmapChange={setEnableAutoMindmap}
             fileUploadTrigger={fileUploadTrigger}
+            onCloudDriveClick={() => navigate('/cloud-drive')}
           />
         </div>
       </div>

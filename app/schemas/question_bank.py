@@ -368,6 +368,8 @@ class ExamPaperListResponse(BaseModel):
 class SuggestQuestionsRequest(BaseModel):
     sections: List[ExamPaperSection]
     exclude_question_ids: List[str] = Field(default_factory=list)
+    deterministic: bool = Field(False, description="按稳定顺序选题，用于种子试卷")
+    seed_only: bool = Field(False, description="仅从系统种子题目中选题")
 
 
 class SuggestQuestionsResponse(BaseModel):

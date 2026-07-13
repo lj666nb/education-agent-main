@@ -725,3 +725,106 @@ PPT/Word 文档解析支持上传和自动分块索引。RAG 参考来源在 AI 
 
 - 功能代码已实现，PRD 的 F20 标记为 `completed: true`。
 - 本轮自动化回归完成后仍需用户实际体验确认，因此暂记 `passed: false`，`user_feedback: null`；未使用伪造业务数据或预填验收结论。
+
+---
+
+## 2026-07-13 - 全站深色模式一致性修复
+
+### 背景
+
+原主题切换仅修改根节点 `dark` 类，但部分页面、内联样式、原生表单、浮层和独立工作台没有消费统一主题令牌，导致深色页面中混入白色卡片或浅色画布。
+
+### 变更
+
+- 新增 `frontend/src/dark-mode.css`，统一页面、卡片、输入框、边框、文字、状态色、聊天和通知的深色语义令牌。
+- 主题状态同步到 `data-theme`、`color-scheme` 和根节点类，使用布局副作用避免首次渲染闪白。
+- 侧栏、移动菜单、共享空状态、Toast 和章节完成浮层改用语义色。
+- 补齐知识图谱画布、图例、工具栏、学科笔记、代码练习状态及旧内联中性色的深色兼容。
+- 学科笔记中的浅底教学示意图在深色模式下使用适配滤镜，避免大面积白底突兀。
+
+### 验证
+
+- `npx vite build` 通过样式与 Vite 转换；完整 `npm run build` 被工作区既有的 `DiagramImage.tsx` 和 `PracticePage.tsx` TypeScript 错误阻断。
+- Docker 前端容器已重启，`http://localhost:3000` 返回 200。
+- Playwright 使用 `guoketg / 123456` 登录并从界面点击主题按钮，检查首页、题库、个人中心、知识图谱、学科笔记、代码练习、API 设置和 AI 对话。
+- 各页面均保持 `dark` 与浏览器 `color-scheme: dark`，页面无白屏，浏览器 `pageerror` 为 0；同时回切浅色模式验证主题可逆。
+
+---
+
+## 2026-07-13 - 修复编程题判题用例未同步
+
+### 背景
+
+完整题库种子 JSON 包含 21 道编程题题面，但没有携带服务端 `test_cases`。导入器只在基础种子模式下使用 OJ 目录替换编程题，导致完整种子模式虽然发布了题目，`coding_test_cases` 表却是空的，公开运行和隐藏提交都返回“本题尚未配置测试用例”。
+
+### 变更
+
+- `app/seed_data/coding_oj_catalog.py`
+  - 新增统一合并入口，移除种子导出中的编程题副本，并用带真实公开/隐藏用例的 OJ 目录替换。
+- `app/scripts/seed.py`
+  - 基础种子与完整种子统一走同一编程题数据入口，不再按种子文件类型保留两套同步逻辑。
+- `tests/test_coding_oj_catalog.py`
+  - 增加回归测试，验证空用例的完整种子编程题会被替换，并检查 21 题的唯一性及每题至少包含公开、隐藏用例。
+- `request/prd-6-question-bank-v4.md`
+  - 记录用户反馈、修复内容和待用户复验状态。
+
+### 验证
+
+- Docker 隔离环境运行 2 项单元回归，全部通过。
+- 重启后端后数据库包含 21 道已发布编程题、84 条测试用例；每题均为 2 条公开、2 条隐藏。
+- 使用 `guoketg / 123456` 从浏览器登录，进入“矩阵转置”：TODO 模板能返回公开 0/2 和隐藏总计 0/4 的真实运行错误；正确实现公开测试 2/2、隐藏提交总计 4/4 通过。
+- 浏览器控制台错误为 0，验证截图保存至 `test_script/screenshot-coding-judge-fixed.png`。
+
+---
+
+## 2026-07-13 - API 设置页视觉重构
+
+### 背景
+
+API 设置页原先使用单列通用卡片与大量内联样式，服务状态、配置入口和编辑表单的视觉层级接近，页面较长且缺少辨识度。此次只优化界面表现，不改变配置数据、验证规则或接口行为。
+
+### 变更
+
+- `frontend/src/pages/ApiSettingsPage.tsx`
+  - 重构为“AI 能力路由台”：顶部展示真实服务在线数量与连接状态轨道，中部提供 8 项服务状态矩阵，下方使用双列配置卡。
+  - 保留自动验证、手动测试、保存、删除、启用开关、密钥显隐、OCR 双密钥、文本嵌入版本选择和返回首页功能。
+  - 配置编辑时卡片跨列展开，字段和操作集中显示；未编辑时保持紧凑、可扫描。
+- `frontend/src/pages/ApiSettingsPage.css`
+  - 新增页面专属颜色、排版、状态、表单、响应式和深色模式样式。
+  - 增加键盘焦点、减少动态效果偏好及 390px 移动端适配。
+
+### 验证
+
+- `docker-compose exec -T frontend npm run build` 通过。
+- 已执行 `docker-compose up -d` 和 `docker-compose restart frontend`，前端 `http://localhost:3000` 返回 200。
+- 浏览器使用 `guoketg / 123456` 的已登录会话验证：8 项真实服务状态正常展示；DeepSeek 编辑表单保留掩码 Key 和 Base URL；OCR 同时显示 API Key/Secret Key；文本嵌入保留 v1/v2/v3 版本选择。
+- 深色模式根主题、页面背景和卡片背景正确切换；390px 视口无横向溢出，服务与配置卡均变为单列；浏览器页面错误为 0。
+- 截图：`test_script/screenshot-api-settings-before.png`、`test_script/screenshot-api-settings-after.png`、`test_script/screenshot-api-settings-dark.png`、`test_script/screenshot-api-settings-mobile.png`。
+
+---
+
+## 2026-07-13 - 个人中心“学习者档案”视觉重构
+
+### 背景
+
+原个人中心使用通用白色卡片和大量内联样式，账号信息、学习资料与功能入口缺少清晰层级，整体视觉较单调；部分用户提示文案还存在乱码。此次只重构个人中心的界面表现与交互状态，不改变真实资料接口和账户业务规则。
+
+### 变更
+
+- `frontend/src/pages/ProfilePage.tsx`
+  - 重构为“学习者档案”双栏布局：左侧档案封面展示真实头像、身份与资料完整度，右侧集中呈现账号概览、个人资料和快捷入口。
+  - 保留并验证头像上传、资料编辑保存、学习画像、行为记录、个人云盘、功能引导和账户注销链路。
+  - 修复个人中心用户可见乱码，补充加载失败重试、保存中状态、中文错误提示和取消编辑数据回滚。
+  - 文件选择器不使用 `accept` 属性，继续通过 JavaScript 校验图片类型与 5MB 大小限制。
+- `frontend/src/pages/ProfilePage.css`
+  - 新增页面专属墨绿、玉色与琥珀色视觉令牌、响应式布局、深色模式、键盘焦点和减少动态效果适配。
+  - 390px 移动端改为单栏档案流，避免横向溢出。
+- `request/prd-1.md`
+  - 同步人类可读表与 JSON 状态表，记录本次用户反馈、实现状态和待验收状态。
+
+### 验证
+
+- 已执行 `docker-compose up -d` 和 `docker-compose restart frontend`，前端 `http://localhost:3000` 返回 200。
+- Playwright 使用 `guoketg / 123456` 从登录页进入个人中心，真实账号资料正常展示；编辑原有资料并保存成功；学习画像快捷入口可达。
+- 桌面浅色、桌面深色与 390px 移动端均无横向溢出，浏览器 `pageerror` 与控制台错误均为 0。
+- `npm run build` 仍被工作区既有的 `DiagramImage.tsx` 和 `PracticePage.tsx` 类型错误阻断；单独 Vite 构建在当前前端容器中触达 JavaScript 堆内存上限，本次页面在开发服务器中编译和运行正常。

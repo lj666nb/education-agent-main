@@ -7,15 +7,15 @@ import { useState, useEffect } from 'react'
 /* ─────────────────────────────────────────────
    Brand Design Tokens
    ───────────────────────────────────────────── */
-const BRAND_COLOR = '#0284C7'
-const BRAND_COLOR_DARK = '#0369A1'
-const BRAND_COLOR_LIGHT = '#F0F9FF'
+const BRAND_COLOR = 'var(--app-brand)'
+const BRAND_COLOR_DARK = 'var(--app-brand-strong)'
+const BRAND_COLOR_LIGHT = 'var(--app-brand-bg)'
 const SIDEBAR_WIDTH = 232
 const SIDEBAR_COLLAPSED = 60
-const TEXT_PRIMARY = '#1F2937'
-const TEXT_SECONDARY = '#6B7280'
-const TEXT_MUTED = '#9CA3AF'
-const BORDER_LIGHT = '#E5E7EB'
+const TEXT_PRIMARY = 'var(--app-text-heading)'
+const TEXT_SECONDARY = 'var(--app-text-secondary)'
+const TEXT_MUTED = 'var(--app-text-muted)'
+const BORDER_LIGHT = 'var(--app-border)'
 
 /* ─────────────────────────────────────────────
    SVG Icons
@@ -297,12 +297,13 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
       `}</style>
 
       <aside
+        className="app-sidebar"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           width: sidebarW,
           height: '100vh',
-          background: '#FFFFFF',
+          background: 'var(--app-bg-card)',
           borderRight: `1px solid ${BORDER_LIGHT}`,
           display: 'flex',
           flexDirection: 'column',
@@ -611,7 +612,7 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '5px 16px', borderRadius: 8,
                 border: `1px solid ${BORDER_LIGHT}`,
-                background: '#fff', color: TEXT_MUTED,
+                background: 'var(--app-bg-card)', color: TEXT_MUTED,
                 fontSize: '0.75rem', fontWeight: 500,
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'all 0.15s ease',
@@ -643,7 +644,7 @@ export default function SidebarNav({ onMobileToggle }: { onMobileToggle?: () => 
             height: 28,
             borderRadius: '50%',
             border: `1px solid ${BORDER_LIGHT}`,
-            background: '#FFFFFF',
+            background: 'var(--app-bg-card)',
             color: TEXT_MUTED,
             cursor: 'pointer',
             display: 'flex',

@@ -10,28 +10,28 @@ import {
    ───────────────────────────────────────────── */
 const TYPE_STYLES: Record<ToastType, { bg: string; border: string; iconColor: string; textColor: string }> = {
   success: {
-    bg: '#ECFDF5',
-    border: '#A7F3D0',
+    bg: 'var(--toast-success-bg)',
+    border: 'var(--toast-success-border)',
     iconColor: '#10B981',
-    textColor: '#065F46',
+    textColor: 'var(--toast-success-text)',
   },
   error: {
-    bg: '#FEF2F2',
-    border: '#FECACA',
+    bg: 'var(--toast-error-bg)',
+    border: 'var(--toast-error-border)',
     iconColor: '#EF4444',
-    textColor: '#991B1B',
+    textColor: 'var(--toast-error-text)',
   },
   info: {
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
+    bg: 'var(--toast-info-bg)',
+    border: 'var(--toast-info-border)',
     iconColor: '#3B82F6',
-    textColor: '#1E40AF',
+    textColor: 'var(--toast-info-text)',
   },
   warning: {
-    bg: '#FFFBEB',
-    border: '#FDE68A',
+    bg: 'var(--toast-warning-bg)',
+    border: 'var(--toast-warning-border)',
     iconColor: '#F59E0B',
-    textColor: '#92400E',
+    textColor: 'var(--toast-warning-text)',
   },
 }
 

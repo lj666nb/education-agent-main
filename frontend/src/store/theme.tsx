@@ -1,5 +1,5 @@
 // 极简主题上下文 — 管理深色/浅色模式
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 const STORAGE_KEY = 'app_theme'
@@ -27,14 +27,17 @@ function loadTheme(): Theme {
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle('dark', theme === 'dark')
+  const root = document.documentElement
+  root.classList.toggle('dark', theme === 'dark')
+  root.dataset.theme = theme
+  root.style.colorScheme = theme
   try { localStorage.setItem(STORAGE_KEY, theme) } catch {}
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(loadTheme)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     applyTheme(theme)
   }, [theme])
 

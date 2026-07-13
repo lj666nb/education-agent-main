@@ -9,6 +9,81 @@ import 'katex/dist/katex.min.css'
 import { ArrowLeftIcon, PlayIcon, PlusIcon, BookmarkIcon, FileTextIcon, BarChartIcon, BookIcon, ChevronUpIcon, ChevronDownIcon, CloseIcon, AlertTriangleIcon, EditIcon, BookOpenIcon, EyeIcon, BotIcon, CheckCircleIcon, CheckIcon, FileIcon, LinkIcon } from '../components/Icons'
 import { QTYPE_LABELS, DIFF_LABELS } from '../constants/labels'
 
+type CuratedPaperTemplate = {
+  id: string
+  title: string
+  difficulty: string
+  difficultyColor: string
+  description: string
+  duration: number
+  sources: { name: string; url: string }[]
+  sections: { name: string; question_type: string; count: number; score_per_question: number; difficulty?: string | null; domain_ids: string[] }[]
+}
+
+const CURATED_PAPERS: CuratedPaperTemplate[] = [
+  {
+    id: 'starter', title: '入门卷 · 线性结构起步', difficulty: '入门', difficultyColor: '#10B981',
+    description: '复杂度、数组、链表、栈和队列的核心概念，适合第一次系统自测。', duration: 30,
+    sources: [
+      { name: 'OpenDSA 开放课程', url: 'https://opendsa.org/OpenDSA/Books/Everything/html/Intro.html' },
+      { name: '安徽工业大学考试大纲', url: 'https://jxjy.ahut.edu.cn/www/doc/jsj2.pdf' },
+    ],
+    sections: [
+      { name: '一、单项选择题', question_type: 'single_choice', count: 10, score_per_question: 6, difficulty: 'beginner', domain_ids: [] },
+      { name: '二、判断题', question_type: 'true_false', count: 10, score_per_question: 4, difficulty: 'beginner', domain_ids: [] },
+    ],
+  },
+  {
+    id: 'basic', title: '基础卷 · 树与查找', difficulty: '基础', difficultyColor: '#1677E8',
+    description: '覆盖树、二叉树、基础查找与常用存储结构，强化课程主干知识。', duration: 40,
+    sources: [
+      { name: 'OpenDSA 开放课程', url: 'https://opendsa.org/OpenDSA/Books/Everything/html/Intro.html' },
+      { name: 'ExamRadar 客观题练习', url: 'https://examradar.com/online-test/data-structure-online-tests/' },
+    ],
+    sections: [
+      { name: '一、单项选择题', question_type: 'single_choice', count: 10, score_per_question: 6, difficulty: 'basic', domain_ids: [] },
+      { name: '二、判断题', question_type: 'true_false', count: 10, score_per_question: 4, difficulty: 'basic', domain_ids: [] },
+    ],
+  },
+  {
+    id: 'intermediate', title: '进阶卷 · 图与排序', difficulty: '进阶', difficultyColor: '#8B5CF6',
+    description: '检验图遍历、最短路径、最小生成树和经典排序算法的适用条件。', duration: 45,
+    sources: [
+      { name: 'OpenDSA 开放课程', url: 'https://opendsa.org/OpenDSA/Books/Everything/html/Intro.html' },
+      { name: 'Sanfoundry 数据结构题库', url: 'https://www.sanfoundry.com/1000-data-structure-questions-answers/' },
+    ],
+    sections: [
+      { name: '一、单项选择题', question_type: 'single_choice', count: 10, score_per_question: 6, difficulty: 'intermediate', domain_ids: [] },
+      { name: '二、判断题', question_type: 'true_false', count: 8, score_per_question: 5, difficulty: 'intermediate', domain_ids: [] },
+    ],
+  },
+  {
+    id: 'advanced', title: '挑战卷 · 算法分析', difficulty: '挑战', difficultyColor: '#EF4444',
+    description: '聚焦复杂度边界、散列冲突、平衡树和算法选择，适合冲刺复习。', duration: 50,
+    sources: [
+      { name: '江西理工大学考试大纲', url: 'https://yz.jxust.edu.cn/__local/9/68/85/F6D49EA7E2F4BB35E5C4ABC2416_1E70508D_4085A.pdf?e=.pdf' },
+      { name: 'OpenDSA 开放课程', url: 'https://opendsa.org/OpenDSA/Books/Everything/html/Intro.html' },
+    ],
+    sections: [
+      { name: '一、挑战单项选择题', question_type: 'single_choice', count: 10, score_per_question: 6, difficulty: 'advanced', domain_ids: [] },
+      { name: '二、挑战判断题', question_type: 'true_false', count: 4, score_per_question: 5, difficulty: 'advanced', domain_ids: [] },
+      { name: '三、进阶判断题', question_type: 'true_false', count: 4, score_per_question: 5, difficulty: 'intermediate', domain_ids: [] },
+    ],
+  },
+  {
+    id: 'comprehensive', title: '综合模拟卷 · 全章检验', difficulty: '综合', difficultyColor: '#F59E0B',
+    description: '跨越线性表、树、图、查找和排序，按高校客观题结构进行综合模拟。', duration: 60,
+    sources: [
+      { name: '安徽工业大学考试大纲', url: 'https://jxjy.ahut.edu.cn/www/doc/jsj2.pdf' },
+      { name: '清华大学出版社习题指导', url: 'https://www.tup.tsinghua.edu.cn/bookscenter/book_06155002.html' },
+    ],
+    sections: [
+      { name: '一、单项选择题', question_type: 'single_choice', count: 10, score_per_question: 6, difficulty: null, domain_ids: [] },
+      { name: '二、判断题', question_type: 'true_false', count: 10, score_per_question: 4, difficulty: null, domain_ids: [] },
+    ],
+  },
+]
+
 /* ── 常量映射 ── */
 
 // 清除 AI 回复中的 [[GENERATE]] 标记和 JSON 数据
@@ -94,6 +169,8 @@ export default function BankDetailPage() {
   const [papers, setPapers] = useState<any[]>([])
   const [papersLoading, setPapersLoading] = useState(false)
   const [showExamCreator, setShowExamCreator] = useState(false)
+  const [curatedBusy, setCuratedBusy] = useState('')
+  const [curatedMessage, setCuratedMessage] = useState('')
 
   // 创建章节/知识点
   const [addingDomain, setAddingDomain] = useState(false)
@@ -129,6 +206,74 @@ export default function BankDetailPage() {
       setPapers(res.data.papers)
     } catch { /* ignore */ }
     setPapersLoading(false)
+  }
+
+  const downloadPaperFile = (data: BlobPart, title: string, format: 'pdf' | 'word') => {
+    const extension = format === 'pdf' ? 'pdf' : 'docx'
+    const mime = format === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const blob = new Blob([data], { type: mime })
+    const url = window.URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${title}.${extension}`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+  }
+
+  const handleCuratedPaper = async (template: CuratedPaperTemplate, action: 'pdf' | 'word' | 'start') => {
+    if (!bankId || curatedBusy) return
+    setCuratedBusy(`${template.id}-${action}`)
+    setCuratedMessage('')
+    try {
+      let paper = papers.find((item: any) => item.title === template.title)
+      if (!paper) {
+        setCuratedMessage(`正在从题库编排《${template.title}》…`)
+        const suggested = await questionBankApi.suggestQuestions(bankId, {
+          sections: template.sections,
+          deterministic: true,
+          seed_only: true,
+        })
+        if (!suggested.data.total_questions) throw new Error('当前题库没有可用于组卷的选择题或判断题')
+        const sourceText = template.sources.map(source => source.name).join('、')
+        const totalScore = suggested.data.sections.reduce(
+          (sum: number, section: any) => sum + Number(section.count || 0) * Number(section.score_per_question || 0), 0,
+        )
+        const created = await questionBankApi.createExamPaper(bankId, {
+          title: template.title,
+          description: `${template.description} 结构参考：${sourceText}。题目从当前数据结构客观题库抽取。`,
+          total_score: totalScore || 100,
+          time_limit_minutes: template.duration,
+          generate_method: 'curated',
+          sections: suggested.data.sections,
+        })
+        paper = created.data
+        await loadPapers()
+      }
+
+      if (action === 'start') {
+        const started = await questionBankApi.startExamPractice(paper.id)
+        navigate(started.data.practice_url)
+        return
+      }
+
+      setCuratedMessage(`正在导出《${template.title}》…`)
+      if (action === 'pdf') {
+        const exported = await questionBankApi.exportExamPDF(paper.id)
+        downloadPaperFile(exported.data, template.title, 'pdf')
+      } else {
+        const exported = await questionBankApi.exportExamWord(paper.id)
+        downloadPaperFile(exported.data, template.title, 'word')
+      }
+      setCuratedMessage(`《${template.title}》已下载，并已加入下方“我的试卷”`)
+    } catch (err: any) {
+      setCuratedMessage(err.response?.data?.detail || err.message || '试卷生成失败，请稍后重试')
+    } finally {
+      setCuratedBusy('')
+    }
   }
 
   const loadAll = async () => {
@@ -314,7 +459,13 @@ export default function BankDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--app-bg-page)', padding: '24px' }}>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .curated-paper-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .curated-paper-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        .curated-paper-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(30,58,138,.10); border-color: #BFDBFE !important; }
+        @media (max-width: 720px) { .curated-paper-grid { grid-template-columns: 1fr; } }
+      `}</style>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -624,10 +775,17 @@ export default function BankDetailPage() {
           )}
         </div>
         ) : (
-        /* ── 试卷列表 ── */
+        <>
+        <CuratedPaperShelf
+          papers={papers}
+          busy={curatedBusy}
+          message={curatedMessage}
+          onAction={handleCuratedPaper}
+        />
+        {/* ── 试卷列表 ── */}
         <div className="card-hover" style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--app-text-heading)' }}><EditIcon size={18} color="#1F2937" /> 试卷</span>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--app-text-heading)' }}><EditIcon size={18} color="#1F2937" /> 我的试卷</span>
             <button onClick={() => setShowExamCreator(true)}
               style={{ padding: '6px 16px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '12px', cursor: 'pointer', fontWeight: 500 }}>
               + 新建试卷
@@ -673,7 +831,7 @@ export default function BankDetailPage() {
                       <span>总分 {p.total_score}</span>
                       {p.time_limit_minutes && <span>{p.time_limit_minutes} 分钟</span>}
                       <span style={{ color: p.generate_method === 'upload' ? 'var(--app-info)' : 'var(--app-text-muted)' }}>
-                        {p.generate_method === 'upload' ? '上传' : p.generate_method === 'ai' ? 'AI 出题' : '手动'}
+                        {p.generate_method === 'upload' ? '上传' : p.generate_method === 'ai' ? 'AI 出题' : p.generate_method === 'curated' ? '精选试卷' : '手动'}
                       </span>
                     </div>
                   </div>
@@ -688,6 +846,7 @@ export default function BankDetailPage() {
             </div>
           )}
         </div>
+        </>
         )}
       </div>
 
@@ -717,6 +876,71 @@ export default function BankDetailPage() {
       )}
 
     </div>
+  )
+}
+
+function CuratedPaperShelf({ papers, busy, message, onAction }: {
+  papers: any[]
+  busy: string
+  message: string
+  onAction: (template: CuratedPaperTemplate, action: 'pdf' | 'word' | 'start') => void
+}) {
+  return (
+    <section style={{ marginBottom: 16, background: 'linear-gradient(135deg, #F8FBFF 0%, #F0FDF8 100%)', border: '1px solid #DBEAFE', borderRadius: 16, padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', color: '#1E3A8A', background: '#DBEAFE', padding: '4px 8px', borderRadius: 6 }}>CURATED PAPERS</span>
+            <span style={{ fontSize: 12, color: 'var(--app-text-muted)' }}>公开资料整理 · 仅选择与判断</span>
+          </div>
+          <h2 style={{ margin: '10px 0 4px', fontSize: 19, color: 'var(--app-text-heading)' }}>精选分级试卷</h2>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--app-text-muted)', lineHeight: 1.7 }}>首次下载会自动从当前题库组卷，并永久加入下方“我的试卷”。再次下载将直接复用，不重复创建。</p>
+        </div>
+        <span style={{ fontSize: 12, color: '#047857', background: '#D1FAE5', padding: '7px 10px', borderRadius: 8, fontWeight: 600 }}>5 套 · PDF / Word · 可在线考试</span>
+      </div>
+
+      <div className="curated-paper-grid">
+        {CURATED_PAPERS.map((template, index) => {
+          const saved = papers.some((paper: any) => paper.title === template.title)
+          const questionCount = template.sections.reduce((sum, section) => sum + section.count, 0)
+          return (
+            <article key={template.id} className="curated-paper-card" style={{ background: '#fff', border: '1px solid #E5EDF7', borderRadius: 13, padding: 16, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', width: 5, left: 0, top: 14, bottom: 14, borderRadius: '0 4px 4px 0', background: template.difficultyColor }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: template.difficultyColor, background: `${template.difficultyColor}12`, padding: '4px 8px', borderRadius: 6 }}>{template.difficulty}</span>
+                <span style={{ fontSize: 10, color: 'var(--app-text-placeholder)', fontFamily: 'monospace' }}>DS-PAPER-{String(index + 1).padStart(2, '0')}</span>
+              </div>
+              <h3 style={{ margin: '12px 0 7px', fontSize: 15, color: 'var(--app-text-heading)' }}>{template.title}</h3>
+              <p style={{ minHeight: 42, margin: 0, color: 'var(--app-text-muted)', fontSize: 12, lineHeight: 1.7 }}>{template.description}</p>
+              <div style={{ display: 'flex', gap: 12, margin: '11px 0', fontSize: 11, color: 'var(--app-text-secondary)', flexWrap: 'wrap' }}>
+                <span>{questionCount} 题</span><span>{template.duration} 分钟</span><span>满分 100</span>
+                {saved && <span style={{ color: '#059669', fontWeight: 700 }}>✓ 已加入</span>}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--app-text-placeholder)', marginBottom: 12 }}>
+                来源：{template.sources.map((source, sourceIndex) => (
+                  <span key={source.url}>{sourceIndex > 0 && '、'}<a href={source.url} target="_blank" rel="noreferrer" style={{ color: '#1677E8', textDecoration: 'none' }}>{source.name}</a></span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                <button onClick={() => onAction(template, 'pdf')} disabled={!!busy}
+                  style={{ padding: '7px 11px', border: 'none', borderRadius: 8, background: '#1E3A8A', color: '#fff', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer', opacity: busy && busy !== `${template.id}-pdf` ? .55 : 1 }}>
+                  <FileIcon size={11} color="#fff" /> {busy === `${template.id}-pdf` ? '生成中…' : '下载 PDF'}
+                </button>
+                <button onClick={() => onAction(template, 'word')} disabled={!!busy}
+                  style={{ padding: '7px 11px', border: '1px solid #BFDBFE', borderRadius: 8, background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+                  {busy === `${template.id}-word` ? '生成中…' : '下载 Word'}
+                </button>
+                <button onClick={() => onAction(template, 'start')} disabled={!!busy}
+                  style={{ padding: '7px 11px', border: 'none', borderRadius: 8, background: '#D1FAE5', color: '#047857', fontSize: 11, fontWeight: 600, cursor: busy ? 'wait' : 'pointer' }}>
+                  <PlayIcon size={10} color="#047857" /> {busy === `${template.id}-start` ? '准备中…' : '在线考试'}
+                </button>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+      {message && <div role="status" style={{ marginTop: 14, padding: '10px 12px', borderRadius: 9, background: message.includes('失败') || message.includes('没有') ? '#FEF2F2' : '#ECFDF5', color: message.includes('失败') || message.includes('没有') ? '#B91C1C' : '#047857', fontSize: 12 }}>{message}</div>}
+    </section>
   )
 }
 

@@ -45,10 +45,10 @@ class ApiSettingsCRUD:
         "tavily": {
             "url": "https://api.tavily.com/search",
             "method": "POST",
-            "auth_header": None,
-            "auth_template": None,
+            "auth_header": "Authorization",
+            "auth_template": "Bearer {api_key}",
             "expected_status": [200],
-            "validate_body": {"api_key": "{api_key}", "query": "test", "max_results": 1},
+            "validate_body": {"query": "test", "max_results": 1},
         },
         "unsplash": {
             "url": None,
@@ -133,7 +133,7 @@ class ApiSettingsCRUD:
                     validate_body = config.get("validate_body")
                     if validate_body:
                         import json
-                        body = json.dumps({k: v.format(api_key=api_key, secret_key=secret_key or "") for k, v in validate_body.items()})
+                        body = json.dumps({k: v.format(api_key=api_key, secret_key=secret_key or "") if isinstance(v, str) else v for k, v in validate_body.items()})
                         headers.setdefault("Content-Type", "application/json")
                     resp = client.post(formatted_url, headers=headers, content=body)
 

@@ -261,10 +261,18 @@ async def suggest_questions(
             domain_ids=section.domain_ids or None,
             exclude_ids=exclude_ids,
         )
+        if data.seed_only:
+            questions = [q for q in questions if q.created_by == SYSTEM_OWNER_ID]
         available = len(questions)
-        selected = optimizer.select_balanced(
-            questions, section.count, section.domain_ids,
-        )
+        if data.deterministic:
+            # Seed papers must resolve to the same question UUIDs after every
+            # database rebuild. UUID ordering is stable because seed questions
+            # use fixed IDs from data_structures_full_seed.json.
+            selected = [str(q.id) for q in sorted(questions, key=lambda q: str(q.id))[:section.count]]
+        else:
+            selected = optimizer.select_balanced(
+                questions, section.count, section.domain_ids,
+            )
         exclude_ids.extend([UUID(s) for s in selected])
         result.append({
             "name": section.name,

@@ -70,12 +70,12 @@ class TavilySearchService(BaseSearchService):
                 resp = await client.post(
                     self.BASE_URL,
                     json={
-                        "api_key": self.api_key,
                         "query": query,
                         "search_depth": settings.TAVILY_SEARCH_DEPTH,
                         "max_results": min(max_results, settings.TAVILY_MAX_RESULTS),
                         "include_answer": False,
                     },
+                    headers={"Authorization": f"Bearer {self.api_key}"},
                 )
 
                 if resp.status_code != 200:

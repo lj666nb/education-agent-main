@@ -59,6 +59,8 @@ export default function PracticePage() {
     if (pointParam) {
       const backUrl = `/path/knowledge/${encodeURIComponent(pointParam)}${stateIdParam ? `?state=${encodeURIComponent(stateIdParam)}` : ''}`
       navigate(backUrl)
+    } else if (sessionMode === 'wrong_answer') {
+      navigate('/review')
     } else {
       navigate(`/banks/${bankId}`)
     }
@@ -82,6 +84,7 @@ export default function PracticePage() {
   const [answerMode, setAnswerMode] = useState<'during' | 'after'>('during')
   const [domainCounts, setDomainCounts] = useState<{ domain_id: string; domain_name: string; total: number; unanswered: number; wrong: number }[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [sessionMode, setSessionMode] = useState<string>('')
   const [reviewMode, setReviewMode] = useState(false)  // 结果页回看模式，显示答案
 
   // ── practice state ──
@@ -259,17 +262,14 @@ export default function PracticePage() {
     try {
       const sessionRes = await questionBankApi.getPracticeSession(sid)
       const session = sessionRes.data
+      setSessionMode(session.mode || '')
       if (!session.question_order?.length) {
         setError('该试卷没有题目'); setLoading(false); return
       }
 
-      const qRes = await questionBankApi.listQuestions(session.bank_id, { page_size: 100 })
-      const qMap = new Map(qRes.data.questions.map((q: QuestionItem) => [q.id, q]))
-      const ordered: QuestionItem[] = []
-      for (const qid of session.question_order) {
-        const q = qMap.get(qid)
-        if (q) ordered.push(q)
-      }
+      // 按会话保存的 UUID 精确读取，避免题库分页导致试卷题目缺失或变化。
+      const qRes = await questionBankApi.getPracticeSessionQuestions(sid)
+      const ordered: QuestionItem[] = qRes.data
       if (ordered.length === 0) {
         setError('该试卷未找到题目'); setLoading(false); return
       }
@@ -1316,7 +1316,7 @@ export default function PracticePage() {
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-          <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> {pointParam ? '返回知识点' : '返回题库'}</span>
+          <span style={{ color: 'var(--app-brand)', cursor: 'pointer', fontSize: '13px' }} onClick={goBack}><ArrowLeftIcon size={14} /> {pointParam ? '返回知识点' : sessionMode === 'wrong_answer' ? '返回复习中心' : '返回题库'}</span>
           <span style={{ padding: '4px 16px', background: 'var(--app-brand-bg)', borderRadius: 14, fontSize: '12px', color: 'var(--app-brand)', fontWeight: 500 }}>{bankName}</span>
         </div>
 
@@ -1440,7 +1440,7 @@ export default function PracticePage() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => handleRestart(false)}
                 style={{ padding: '10px 24px', background: 'var(--app-brand)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
                 重新练习
@@ -1451,10 +1451,17 @@ export default function PracticePage() {
                   练习错题
                 </button>
               )}
-              <button onClick={goBack}
-                style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
-                {pointParam ? '返回知识点' : '返回题库'}
-              </button>
+              {sessionMode === 'wrong_answer' ? (
+                <button onClick={() => navigate('/review')}
+                  style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none', borderRadius: 12, fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📋 返回复习中心
+                </button>
+              ) : (
+                <button onClick={goBack}
+                  style={{ padding: '10px 24px', background: 'var(--app-bg-page)', color: 'var(--app-text-body)', border: 'none', borderRadius: 12, fontSize: '14px', cursor: 'pointer' }}>
+                  {pointParam ? '返回知识点' : '返回题库'}
+                </button>
+              )}
             </div>
           )}
           {sessionId && !pointParam && (

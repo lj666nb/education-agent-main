@@ -55,28 +55,35 @@ class MongoDBConnection:
         metacognitive_calibration: float = 0.0,
         attention_feature: float = 0.5
     ) -> bool:
-        profile = {
-            "student_id": student_id,
-            "dimensions": {
-                "active_hours": active_hours or {
-                    "morning": 0.25,
-                    "afternoon": 0.25,
-                    "evening": 0.25,
-                    "night": 0.25
+        result = self.db.student_profiles.update_one(
+            {"student_id": student_id},
+            {
+                "$setOnInsert": {
+                    "student_id": student_id,
+                    "timeline": [],
+                    "created_at": datetime.utcnow(),
                 },
-                "learning_rhythm": {
-                    "scalar": learning_rhythm_scalar,
-                    "trend": learning_rhythm_trend
-                },
-                "metacognitive_calibration": metacognitive_calibration,
-                "attention_feature": attention_feature
+                "$set": {
+                    "dimensions": {
+                        "active_hours": active_hours or {
+                            "morning": 0.25,
+                            "afternoon": 0.25,
+                            "evening": 0.25,
+                            "night": 0.25
+                        },
+                        "learning_rhythm": {
+                            "scalar": learning_rhythm_scalar,
+                            "trend": learning_rhythm_trend
+                        },
+                        "metacognitive_calibration": metacognitive_calibration,
+                        "attention_feature": attention_feature
+                    },
+                    "updated_at": datetime.utcnow()
+                }
             },
-            "timeline": [],
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
-        result = self.db.student_profiles.insert_one(profile)
-        return result.inserted_id is not None
+            upsert=True
+        )
+        return result.acknowledged
 
     def get_student_profile(self, student_id: str) -> Optional[Dict[str, Any]]:
         return self.db.student_profiles.find_one({"student_id": student_id})

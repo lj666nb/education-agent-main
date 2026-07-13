@@ -83,9 +83,9 @@ export default function CodingPracticePage() {
     <div className="coding-practice-page">
       <main className="coding-practice-main">
         <div className="coding-practice-topbar">
-          <button type="button" className="coding-practice-back" onClick={() => navigate('/home')}>
+          <button type="button" className="coding-practice-back" onClick={() => navigate('/banks')}>
             <ArrowLeft size={16} />
-            返回首页
+            返回题库
           </button>
         </div>
 

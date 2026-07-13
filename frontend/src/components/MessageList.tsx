@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { RefreshCw, Volume2, Copy, Brain, Download, ChevronDown, FileText, FileUp, Play, BarChart3, GitBranch, Link, Maximize2, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { RefreshCw, Volume2, Copy, Brain, Download, ChevronDown, FileText, FileUp, Play, BarChart3, GitBranch, Link, Maximize2, X, ZoomIn, ZoomOut, RotateCcw, Cloud } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -46,6 +46,7 @@ interface MessageListProps {
   onEditDiagram?: (xml: string) => void
   onGenerateMindmap?: (messageId: string, content: string) => void
   onFeatureCardClick?: (action: string) => void
+  generatingMindmapId?: string | null
 }
 
 function simpleMarkdown(text: string): string {
@@ -68,7 +69,7 @@ function simpleMarkdown(text: string): string {
   return html
 }
 
-export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap, onFeatureCardClick }: MessageListProps) {
+export default function MessageList({ messages, isLoading, enableThinking = false, onRunCode, onRollback, onEditDiagram, onGenerateMindmap, onFeatureCardClick, generatingMindmapId }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const userScrolledAwayRef = useRef(false)
@@ -670,6 +671,7 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
           {[
             { icon: FileUp, title: '文件上传', desc: '支持 PDF、Word、PPT' },
             { icon: Play, title: '代码运行', desc: 'Python 代码在线执行' },
+            { icon: Cloud, title: '云盘', desc: '文件存储与管理' },
             { icon: BarChart3, title: '图表生成', desc: 'AI 自动绘制各类图表' },
             { icon: GitBranch, title: '思维导图', desc: '知识结构可视化' },
           ].map(({ icon: Icon, title, desc }) => (
@@ -923,6 +925,31 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                 return <DiagramImage key={`d-${segIdx}`} xml={seg.content} onEdit={onEditDiagram} />
               }
             })}
+
+            {/* 思维导图生成中指示器 */}
+            {generatingMindmapId === message.id && (
+              <div style={{
+                margin: '0.75rem 0',
+                padding: '1rem 1.25rem',
+                backgroundColor: 'oklch(0.45 0.18 280 / 0.04)',
+                borderRadius: 'var(--radius-md)',
+                border: '2px dashed oklch(0.45 0.18 280 / 0.2)',
+                display: 'flex', alignItems: 'center', gap: '12px',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ animation: 'diagram-spin 1s linear infinite', color: '#7C3AED', flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="31.4 31.4" strokeLinecap="round" opacity="0.25"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                </svg>
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#7C3AED' }}>
+                    🧠 正在生成思维导图...
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)', marginTop: '2px' }}>
+                    正在从 AI 回复中提取知识点结构
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Sources (RAG) */}
             {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
@@ -1327,6 +1354,10 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
 
       <style>{`
         @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes diagram-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }

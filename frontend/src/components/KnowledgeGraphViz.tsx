@@ -19,7 +19,7 @@ const TYPE_COLORS = [
   '#a855f7', '#e11d48', '#0891b2', '#ca8a04', '#059669',
 ]
 
-const BG_COLOR = '#FAFBFC'
+const BG_COLOR = 'var(--kg-canvas, #FAFBFC)'
 
 // ── 边样式映射 ──
 const RELATION_STYLES: Record<string, { color: string; dash: string }> = {
@@ -192,7 +192,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       .join('text')
       .text(d => d.label)
       .attr('font-size', 9)
-      .attr('fill', '#9CA3AF')
+      .attr('fill', 'var(--kg-text-muted, #9CA3AF)')
       .attr('text-anchor', 'middle')
       .attr('dy', -4)
 
@@ -227,7 +227,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       .attr('text-anchor', 'middle')
       .attr('dy', d => d.radius + 13)
       .attr('font-size', 10)
-      .attr('fill', '#374151')
+      .attr('fill', 'var(--kg-text, #374151)')
       .attr('font-family', 'system-ui, -apple-system, sans-serif')
 
     // ── 事件绑定 ──
@@ -467,7 +467,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       {/* ── 知识点列表（左下角，可点击聚焦） ── */}
       <div style={{
         position: 'absolute', left: 12, bottom: 12,
-        background: 'rgba(255,255,255,0.92)', borderRadius: 10,
+        background: 'var(--app-bg-elevated)', borderRadius: 10,
         border: '1px solid #E5E7EB', padding: '6px 0',
         fontSize: 11, maxWidth: 200, maxHeight: 260, overflowY: 'auto',
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
@@ -497,7 +497,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '3px 12px', border: 'none', borderRadius: 0,
-                background: isFocused ? 'rgba(79,109,245,0.08)' : 'transparent',
+                background: isFocused ? 'var(--kg-primary-soft)' : 'transparent',
                 color: isFocused ? '#4f6df5' : '#6B7280',
                 cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
                 textAlign: 'left', width: '100%',
@@ -505,10 +505,10 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
                 transition: 'background 0.15s, color 0.15s',
               }}
               onMouseEnter={e => {
-                if (!isFocused) { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.color = '#374151' }
+                if (!isFocused) { e.currentTarget.style.background = 'var(--app-bg-hover)'; e.currentTarget.style.color = 'var(--kg-text)' }
               }}
               onMouseLeave={e => {
-                if (!isFocused) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280' }
+                if (!isFocused) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--kg-text-secondary)' }
               }}
             >
               <span style={{
@@ -527,7 +527,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       {/* ── 关系线样式说明 ── */}
       <div style={{
         position: 'absolute', left: 12, top: 12,
-        background: 'rgba(255,255,255,0.92)', borderRadius: 10,
+        background: 'var(--app-bg-elevated)', borderRadius: 10,
         border: '1px solid #E5E7EB', padding: '6px 10px',
         fontSize: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
       }}>
@@ -557,7 +557,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
       {/* ── 布局切换栏 ── */}
       <div style={{
         position: 'absolute', right: 12, bottom: 12,
-        display: 'flex', gap: 3, background: 'rgba(255,255,255,0.92)',
+        display: 'flex', gap: 3, background: 'var(--app-bg-elevated)',
         borderRadius: 10, border: '1px solid #E5E7EB', padding: 3,
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
       }}>
@@ -573,7 +573,7 @@ export default function KnowledgeGraphViz({ nodes, edges, onNodeClick, highlight
             style={{
               width: 30, height: 28, borderRadius: 7, border: 'none',
               background: currentLayout === layout ? '#4f6df5' : 'transparent',
-              color: currentLayout === layout ? '#fff' : '#6B7280',
+              color: currentLayout === layout ? '#fff' : 'var(--kg-text-secondary)',
               fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
@@ -611,7 +611,7 @@ function ControlBtn({ label, title, onClick }: { label: string; title: string; o
     <button onClick={onClick} title={title}
       style={{
         width: 30, height: 30, borderRadius: 8, border: '1px solid #E5E7EB',
-        background: 'rgba(255,255,255,0.92)', color: '#374151',
+        background: 'var(--app-bg-elevated)', color: 'var(--kg-text)',
         fontSize: 16, cursor: 'pointer', fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)',

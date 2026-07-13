@@ -1,0 +1,359 @@
+/*
+ * Global theme contract.
+ *
+ * New UI should consume these semantic tokens instead of literal neutral colors.
+ * The compatibility selectors near the bottom keep older inline-styled screens
+ * readable until those screens are migrated component by component.
+ */
+:root {
+  --app-brand-strong: #075985;
+  --app-bg-elevated: #ffffff;
+  --app-bg-input: #ffffff;
+  --app-bg-hover: #f1f5f9;
+  --app-bg-overlay: rgba(15, 23, 42, 0.48);
+  --app-focus-ring: rgba(2, 132, 199, 0.22);
+  --app-shadow-color: rgba(15, 23, 42, 0.12);
+
+  --toast-success-bg: #ecfdf5;
+  --toast-success-border: #a7f3d0;
+  --toast-success-text: #065f46;
+  --toast-error-bg: #fef2f2;
+  --toast-error-border: #fecaca;
+  --toast-error-text: #991b1b;
+  --toast-info-bg: #eff6ff;
+  --toast-info-border: #bfdbfe;
+  --toast-info-text: #1e40af;
+  --toast-warning-bg: #fffbeb;
+  --toast-warning-border: #fde68a;
+  --toast-warning-text: #92400e;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --app-brand: #38bdf8;
+  --app-brand-strong: #7dd3fc;
+  --app-brand-bg: rgba(14, 165, 233, 0.14);
+  --app-info: #38bdf8;
+  --app-blue: #60a5fa;
+  --app-indigo: #60a5fa;
+  --app-purple: #a78bfa;
+
+  --app-text-heading: #f1f5f9;
+  --app-text-body: #d8e1ec;
+  --app-text-secondary: #a7b4c5;
+  --app-text-muted: #7f8da1;
+  --app-text-placeholder: #64748b;
+  --app-border: #334155;
+  --app-bg-page: #0b1220;
+  --app-bg-card: #151f2f;
+  --app-bg-card-alt: #101a29;
+  --app-bg-elevated: #1b2738;
+  --app-bg-input: #111c2b;
+  --app-bg-hover: #223047;
+  --app-bg-overlay: rgba(2, 6, 23, 0.72);
+  --app-bg-danger: rgba(239, 68, 68, 0.13);
+  --app-focus-ring: rgba(56, 189, 248, 0.28);
+  --app-shadow-color: rgba(0, 0, 0, 0.42);
+
+  --success: #34d399;
+  --success-bg: rgba(16, 185, 129, 0.13);
+  --warning: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, 0.14);
+  --danger: #fb7185;
+  --danger-bg: rgba(244, 63, 94, 0.14);
+  --app-success: #34d399;
+  --app-danger: #fb7185;
+  --app-danger-dark: #fda4af;
+  --app-warning: #fbbf24;
+  --app-green-dark: #6ee7b7;
+  --app-amber-dark: #fcd34d;
+
+  --chat-bg: linear-gradient(180deg, #0b1220 0%, #101a29 100%);
+  --chat-bubble-ai-bg: #151f2f;
+  --chat-bubble-ai-border: #2b3a50;
+  --chat-bubble-ai-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --chat-input-bg: #151f2f;
+  --chat-input-shadow: 0 6px 26px rgba(0, 0, 0, 0.3);
+  --chat-input-shadow-focus: 0 6px 26px rgba(56, 189, 248, 0.16);
+  --chat-tag-bg: #223047;
+  --chat-tag-active-bg: #0284c7;
+
+  --toast-success-bg: #0d2f29;
+  --toast-success-border: #1e5b4d;
+  --toast-success-text: #a7f3d0;
+  --toast-error-bg: #361c27;
+  --toast-error-border: #6b2c3a;
+  --toast-error-text: #fecdd3;
+  --toast-info-bg: #142b46;
+  --toast-info-border: #28537f;
+  --toast-info-text: #bfdbfe;
+  --toast-warning-bg: #352811;
+  --toast-warning-border: #6a4d15;
+  --toast-warning-text: #fde68a;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--app-bg-page);
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+.dark body {
+  background: var(--app-bg-page);
+}
+
+.dark ::selection {
+  color: #f8fafc;
+  background: rgba(2, 132, 199, 0.7);
+}
+
+.dark :where(input, textarea, select):not([type='range']):not([type='checkbox']):not([type='radio']) {
+  border-color: var(--app-border);
+  color: var(--app-text-body);
+  background-color: var(--app-bg-input);
+}
+
+.dark :where(input, textarea)::placeholder {
+  color: var(--app-text-placeholder);
+  opacity: 1;
+}
+
+.dark :where(input, textarea, select):focus-visible,
+.dark :where(button, a):focus-visible {
+  outline: 2px solid var(--app-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--app-focus-ring);
+}
+
+.dark .app-sidebar {
+  box-shadow: 7px 0 24px rgba(0, 0, 0, 0.18);
+}
+
+.dark .nav-dropdown-menu {
+  border-color: var(--app-border);
+  background: var(--app-bg-elevated);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
+}
+
+.dark .nav-dropdown-item:not(:last-child),
+.dark .nav-dropdown-item-danger {
+  border-color: var(--app-border);
+}
+
+.dark .nav-dropdown-item:hover {
+  background: var(--app-brand-bg);
+}
+
+.dark .nav-dropdown-item-danger:hover {
+  background: var(--app-bg-danger);
+}
+
+.dark .card,
+.dark .empty-state,
+.dark .empty-state-card,
+.dark .modal-content {
+  border-color: var(--app-border);
+  color: var(--app-text-body);
+  background: var(--app-bg-card);
+  box-shadow: 0 8px 28px var(--app-shadow-color);
+}
+
+.dark .btn-secondary,
+.dark .input {
+  border-color: var(--app-border);
+  color: var(--app-text-body);
+  background: var(--app-bg-input);
+}
+
+.dark .btn-secondary:hover {
+  border-color: #475569;
+  color: var(--app-text-heading);
+  background: var(--app-bg-hover);
+}
+
+.dark .alert-success,
+.dark .badge-success {
+  color: #a7f3d0;
+}
+
+.dark .alert-error,
+.dark .badge-danger {
+  color: #fecdd3;
+}
+
+/* Knowledge graph workspace */
+.dark .kg-workspace {
+  --kg-primary: #7c91ff;
+  --kg-primary-dark: #9aa9ff;
+  --kg-primary-soft: rgba(124, 145, 255, 0.14);
+  --kg-canvas: #0b1220;
+  --kg-surface: #151f2f;
+  --kg-text: #edf2f8;
+  --kg-text-secondary: #a7b4c5;
+  --kg-text-muted: #74839a;
+  --kg-border: #334155;
+}
+
+.dark .kg-header,
+.dark .kg-canvas__toolbar {
+  background: rgba(21, 31, 47, 0.94);
+}
+
+.dark .kg-header__stats,
+.dark .kg-library-item,
+.dark .kg-empty-card,
+.dark .kg-dropzone {
+  background: #101a29;
+}
+
+.dark :where(.kg-library-item:hover, .kg-header__nav button:hover, .kg-canvas__actions button:hover, .kg-text-action:hover) {
+  background: #223047;
+}
+
+.dark :where(.kg-library-item__icon, .kg-library-item__actions button, .kg-dropzone__icon, .kg-secondary-action, .kg-task-card, .kg-canvas-state__mark) {
+  border-color: var(--kg-border);
+  background: #1b2738;
+}
+
+.dark .kg-primary-action:disabled {
+  color: #7f8da1;
+  background: #273449;
+}
+
+.dark .kg-notice--error,
+.dark .kg-task-card--failed {
+  border-color: #6b2c3a;
+  color: #fecdd3;
+  background: #361c27;
+}
+
+.dark .kg-notice--warning {
+  border-color: #6a4d15;
+  color: #fde68a;
+  background: #352811;
+}
+
+.dark .kg-task-card--done {
+  border-color: #1e5b4d;
+  background: #0d2f29;
+}
+
+.dark .kg-result-grid div {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.dark .kg-progress {
+  background: #2b3a50;
+}
+
+/* Documentation / subject notes */
+.dark {
+  --ds-bg-page: #0b1220;
+  --ds-bg-sidebar: #101a29;
+  --ds-bg-content: #0b1220;
+  --ds-text-primary: #edf2f8;
+  --ds-text-secondary: #b7c2d1;
+  --ds-text-muted: #7f8da1;
+  --ds-accent: #38bdf8;
+  --ds-accent-light: rgba(56, 189, 248, 0.13);
+  --ds-border: #334155;
+}
+
+.dark .ds-content th {
+  background: #151f2f;
+}
+
+.dark .ds-content code {
+  color: #fda4af;
+  background: #1b2738;
+}
+
+.dark .ds-content pre code {
+  color: inherit;
+  background: transparent;
+}
+
+.dark .ds-content blockquote {
+  background: #101f30;
+}
+
+.dark :where(.ds-sidebar, .ds-content)::-webkit-scrollbar-thumb {
+  background: #3b4a60;
+}
+
+/* Remaining light-only states in the coding workbench. */
+.dark .oj-workspace {
+  --oj-code: #0d1118;
+}
+
+.dark :where(.oj-status-success, .oj-test-pass) {
+  color: #a7f3d0;
+  background: #0d2f29;
+}
+
+.dark :where(.oj-status-warning, .oj-hint-card) {
+  border-color: #6a4d15;
+  color: #fde68a;
+  background: #352811;
+}
+
+.dark :where(.oj-status-danger, .oj-test-fail) {
+  color: #fecdd3;
+  background: #361c27;
+}
+
+/*
+ * Compatibility layer for legacy React inline styles. It only remaps neutral
+ * light surfaces and neutral dark text; accent colors remain untouched.
+ */
+.dark [style*='background: rgb(255, 255, 255)'],
+.dark [style*='background-color: rgb(255, 255, 255)'],
+.dark [style*='background: white'],
+.dark [style*='background-color: white'] {
+  background: var(--app-bg-card) !important;
+}
+
+.dark [style*='background: rgb(249, 250, 251)'],
+.dark [style*='background: rgb(248, 250, 252)'],
+.dark [style*='background: rgb(243, 244, 246)'],
+.dark [style*='background-color: rgb(249, 250, 251)'],
+.dark [style*='background-color: rgb(248, 250, 252)'],
+.dark [style*='background-color: rgb(243, 244, 246)'] {
+  background: var(--app-bg-card-alt) !important;
+}
+
+.dark [style*='border: 1px solid rgb(229, 231, 235)'],
+.dark [style*='border: 2px solid rgb(229, 231, 235)'] {
+  border-color: var(--app-border) !important;
+}
+
+.dark [style*='color: rgb(31, 41, 55)'],
+.dark [style*='color: rgb(30, 41, 59)'],
+.dark [style*='color: rgb(55, 65, 81)'] {
+  color: var(--app-text-heading) !important;
+}
+
+.dark [style*='color: rgb(107, 114, 128)'],
+.dark [style*='color: rgb(100, 116, 139)'] {
+  color: var(--app-text-secondary) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  button,
+  input,
+  textarea,
+  select {
+    transition-duration: 0.01ms !important;
+  }
+}

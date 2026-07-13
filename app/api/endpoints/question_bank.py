@@ -2793,6 +2793,44 @@ async def get_practice_session(
     return PracticeSessionResponse.model_validate(session)
 
 
+@router.get("/practice-sessions/{session_id}/questions", response_model=List[PracticeQuestionResponse])
+async def get_practice_session_questions(
+    session_id: UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
+    """按会话保存的题目 ID 和顺序精确返回题目。
+
+    试卷练习不能复用题库分页接口，否则题目不在第一页时会被静默丢失。
+    """
+    session = db.query(PracticeSession).filter(
+        PracticeSession.id == session_id,
+        PracticeSession.user_id == current_user.student_id,
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="练习会话不存在")
+
+    ordered_ids: List[UUID] = []
+    for question_id in session.question_order or []:
+        try:
+            ordered_ids.append(UUID(str(question_id)))
+        except (ValueError, TypeError):
+            continue
+    if not ordered_ids:
+        return []
+
+    questions = db.query(Question).filter(
+        Question.id.in_(ordered_ids),
+        Question.bank_id == session.bank_id,
+    ).all()
+    question_map = {q.id: q for q in questions}
+    return [
+        PracticeQuestionResponse.model_validate(question_map[question_id])
+        for question_id in ordered_ids
+        if question_id in question_map
+    ]
+
+
 # ====== Wrong Review (错题复习) ======
 
 class WrongReviewItem(BaseModel):

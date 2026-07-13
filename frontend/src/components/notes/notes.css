@@ -157,3 +157,31 @@
   .ds-sidebar--open { transform: translateX(0); }
   .ds-content { padding: 24px 20px; max-width: 100%; }
 }
+
+/* Keep this block after the light :root contract so lazy-loaded CSS cannot
+   replace the active dark theme variables. */
+.dark {
+  --ds-bg-page: #0b1220;
+  --ds-bg-sidebar: #101a29;
+  --ds-bg-content: #0b1220;
+  --ds-text-primary: #edf2f8;
+  --ds-text-secondary: #b7c2d1;
+  --ds-text-muted: #7f8da1;
+  --ds-accent: #38bdf8;
+  --ds-accent-light: rgba(56, 189, 248, 0.13);
+  --ds-border: #334155;
+}
+
+.dark .ds-content th { background: #151f2f; }
+.dark .ds-content code { color: #fda4af; background: #1b2738; }
+.dark .ds-content pre code { color: inherit; background: transparent; }
+.dark .ds-content blockquote { background: #101f30; }
+.dark .ds-content img {
+  padding: 1px;
+  border: 1px solid var(--ds-border);
+  background: #101a29;
+  filter: invert(.88) hue-rotate(180deg);
+  opacity: .94;
+}
+.dark .ds-sidebar::-webkit-scrollbar-thumb,
+.dark .ds-content::-webkit-scrollbar-thumb { background: #3b4a60; }

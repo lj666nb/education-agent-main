@@ -42,12 +42,12 @@ export default function Layout() {
           style={{
             position: 'fixed', top: 10, left: 10, zIndex: 100,
             width: 36, height: 36, borderRadius: 8,
-            border: '1px solid #E5E7EB', background: '#fff',
+            border: '1px solid var(--app-border)', background: 'var(--app-bg-card)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--app-text-body)" strokeWidth="2" strokeLinecap="round">
             <line x1="4" y1="6" x2="20" y2="6" />
             <line x1="4" y1="12" x2="20" y2="12" />
             <line x1="4" y1="18" x2="20" y2="18" />

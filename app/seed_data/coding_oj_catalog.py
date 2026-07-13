@@ -1430,3 +1430,18 @@ def build_curated_coding_questions(point_id_by_name: dict[str, str]) -> list[dic
         question["test_cases"] = source["test_cases"]
         questions.append(question)
     return questions
+
+
+def merge_curated_coding_questions(
+    questions: list[dict],
+    point_id_by_name: dict[str, str],
+) -> list[dict]:
+    """Use the curated catalog as the single source of programming problems.
+
+    Exported full-seed JSON files may contain the public problem statement but
+    intentionally omit server-side judge cases.  Keeping those rows would
+    publish runnable-looking problems with no cases, so replace every
+    programming row regardless of which seed file was selected.
+    """
+    non_programming = [item for item in questions if item.get("type") != "programming"]
+    return non_programming + build_curated_coding_questions(point_id_by_name)

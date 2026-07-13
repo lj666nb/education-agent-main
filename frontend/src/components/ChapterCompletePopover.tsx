@@ -23,22 +23,22 @@ export default function ChapterCompletePopover({ domainId, domainName, wrongCoun
       }} />
       <div style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
-        width: 340, borderRadius: 14, background: '#fff',
+        width: 340, borderRadius: 14, background: 'var(--app-bg-elevated)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-        border: '1px solid #E5E7EB', overflow: 'hidden',
+        border: '1px solid var(--app-border)', overflow: 'hidden',
         animation: 'slideUp 0.3s ease',
       }}>
         <style>{`@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-        <div style={{ padding: '16px 18px 14px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1F2937' }}>
+        <div style={{ padding: '16px 18px 14px', borderBottom: '1px solid var(--app-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--app-text-heading)' }}>
             {allCorrect ? '🎉 章节完成' : '📖 章节练习完成'}
           </span>
           <button onClick={() => { setDismissed(true); onClose() }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 2, fontSize: '1rem' }}>✕</button>
         </div>
 
         <div style={{ padding: '14px 18px 18px' }}>
-          <div style={{ fontSize: '0.85rem', color: '#6B7280', marginBottom: 12, lineHeight: 1.6 }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
             章节「{domainName}」的全部题目已完成
           </div>
 

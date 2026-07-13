@@ -258,6 +258,9 @@ export const questionBankApi = {
   getPracticeSession: (sessionId: string) =>
     api.get<Record<string, any>>(`/question-bank/practice-sessions/${sessionId}`),
 
+  getPracticeSessionQuestions: (sessionId: string) =>
+    api.get<QuestionItem[]>(`/question-bank/practice-sessions/${sessionId}/questions`),
+
   // === Knowledge Point → Practice Bank ===
   getKnowledgePointPracticeBank: (kpUuid: string) =>
     api.get<{ bank_id: string; bank_name: string }>(
@@ -314,6 +317,8 @@ export const questionBankApi = {
   suggestQuestions: (bankId: string, data: {
     sections: { name: string; question_type: string; count: number; score_per_question: number; difficulty?: string | null; domain_ids: string[] }[];
     exclude_question_ids?: string[];
+    deterministic?: boolean;
+    seed_only?: boolean;
   }) => api.post<{ sections: any[]; total_questions: number }>(
     `/question-bank/banks/${bankId}/exam-papers/suggest-questions`, data),
 

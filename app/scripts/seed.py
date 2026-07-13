@@ -677,15 +677,12 @@ def _seed_data_structures_from_json(db: Session) -> bool:
 
     banks_data = seed.get("banks") or [bank_data]
 
-    # Replace legacy generic programming rows with the curated OJ catalog. The
-    # source JSON still carries objective questions; programming data lives in a
-    # dedicated module so cases, scaffolds and hints remain reviewable.
-    # Skip this when using the full seed (which already contains all questions).
-    from app.seed_data.coding_oj_catalog import build_curated_coding_questions, CODE_BANK_ID
-    if seed_path == base_seed_path:
-        point_id_by_name = {point.name: str(point.id) for point in point_by_seed_id.values()}
-        curated_coding_questions = build_curated_coding_questions(point_id_by_name)
-        questions_data = [item for item in questions_data if item.get("type") != "programming"] + curated_coding_questions
+    # Programming statements and private judge data must come from one source.
+    # Full-seed exports can omit top-level test_cases, so always replace their
+    # programming rows with the curated catalog instead of trusting the export.
+    from app.seed_data.coding_oj_catalog import merge_curated_coding_questions, CODE_BANK_ID
+    point_id_by_name = {point.name: str(point.id) for point in point_by_seed_id.values()}
+    questions_data = merge_curated_coding_questions(questions_data, point_id_by_name)
 
     for item in banks_data:
         if item["id"] == CODE_BANK_ID:

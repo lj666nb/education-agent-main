@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_DIR="/opt/education-agent-main"
+REPO_DIR="/root/education-agent"
 LOG_FILE="/var/log/edu-agent-auto-update.log"
 GITHUB_ARCHIVE="https://codeload.github.com/lj666nb/education-agent-main/zip/refs/heads/main"
 TEMP_DIR="/tmp/edu-agent-update"
