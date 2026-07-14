@@ -48,6 +48,12 @@ services:
     volumes:
       - neo4jdata:/data
     mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:7474/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   mongodb:
     image: mongo:7

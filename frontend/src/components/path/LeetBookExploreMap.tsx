@@ -385,7 +385,7 @@ export default function LeetBookExploreMap({
               gap: 12,
             }}>
               {weakNodes.map(node => {
-                const meta = statusMeta(node)
+                const meta = statusMeta(node, dark)
                 return (
                   <button
                     key={node.point_id}
