@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { profileV2Api } from '../api'
+import { profileApi, profileV2Api } from '../api'
 import { useAuthStore } from '../store/auth'
 import { ArrowLeftIcon, StarIcon, BarChartIcon, MusicIcon, BookOpenIcon, CodeIcon } from '../components/Icons'
 
@@ -39,6 +39,20 @@ export default function ProfileInitPage() {
     setError('')
     try {
       const cognitiveStyle = STYLE_MAP[formData.preferredStyle] || 'mixed'
+
+      // 保存基本信息到 UserProfile (PostgreSQL)，不丢失表单填写的数据
+      try {
+        await profileApi.updateProfile({
+          major: formData.major,
+          grade: formData.grade,
+          learning_goal: formData.learningGoal,
+        })
+      } catch (err: any) {
+        // UserProfile 保存失败不阻塞画像创建，仅记录日志
+        console.warn('UserProfile 保存失败（可能已存在）:', err)
+      }
+
+      // 创建画像 V2 (Neo4j + MongoDB)
       await profileV2Api.createProfile({
         cognitive_style: cognitiveStyle,
         cognitive_style_confidence: 0.6,

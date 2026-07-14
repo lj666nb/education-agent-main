@@ -1,9 +1,29 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  Shapes, List, Layers, TreePine, Workflow, Search, ArrowUpDown, BookOpen,
+  type LucideIcon,
+} from 'lucide-react'
 import { chapters, type NoteChapter, type NoteSection } from '../components/notes/ds-notes'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import TutorChat from '../components/notes/TutorChat'
 import '../components/notes/notes.css'
+
+/** Map chapter icon name to lucide component */
+const ICON_MAP: Record<string, LucideIcon> = {
+  'shapes': Shapes,
+  'list': List,
+  'layers': Layers,
+  'tree-pine': TreePine,
+  'workflow': Workflow,
+  'search': Search,
+  'arrow-up-down': ArrowUpDown,
+}
+
+function ChapterIcon({ name, size = 16 }: { name: string; size?: number }) {
+  const Icon = ICON_MAP[name]
+  return Icon ? <Icon size={size} strokeWidth={2} /> : null
+}
 
 /** 支持的语言 */
 type CodeLang = 'python' | 'c' | 'cpp'
@@ -104,7 +124,8 @@ export default function DataStructureNotesPage() {
       {/* ── Left Sidebar ── */}
       <aside className={`ds-sidebar${mobileSidebar ? ' ds-sidebar--open' : ''}`}>
         <div className="ds-sidebar-header">
-          📖 数据结构笔记
+          <BookOpen size={18} strokeWidth={2} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+          数据结构笔记
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {chapters.map(ch => {
@@ -113,7 +134,7 @@ export default function DataStructureNotesPage() {
               <div key={ch.id} className="ds-sidebar-chapter">
                 <div className="ds-sidebar-chapter-title" onClick={() => toggleChapter(ch.id)}>
                   <span className={`ds-sidebar-chevron${isExpanded ? ' ds-sidebar-chevron--open' : ''}`}>▶</span>
-                  <span className="ds-sidebar-chapter-icon">{ch.icon}</span>
+                  <span className="ds-sidebar-chapter-icon"><ChapterIcon name={ch.icon} /></span>
                   {ch.title}
                 </div>
                 {isExpanded && ch.sections.map(sec => (
@@ -151,7 +172,7 @@ export default function DataStructureNotesPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div style={{ fontSize: 12, color: 'var(--ds-text-muted)' }}>
-                {selectedSection.chapter.icon} {selectedSection.chapter.title}
+                <ChapterIcon name={selectedSection.chapter.icon} />{' '}{selectedSection.chapter.title}
               </div>
               {/* Language selector */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -201,7 +222,7 @@ export default function DataStructureNotesPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--ds-text-muted)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📖</div>
+            <div style={{ marginBottom: 16 }}><BookOpen size={48} strokeWidth={1.5} /></div>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ds-text-primary)' }}>选择章节开始阅读</div>
             <div style={{ fontSize: 14, marginTop: 8 }}>从左侧目录选择要学习的数据结构内容</div>
           </div>

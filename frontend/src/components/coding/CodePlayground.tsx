@@ -937,6 +937,7 @@ function SolutionPanel({
   onLoad: () => void
   onGoCode: () => void
 }) {
+  const [copied, setCopied] = useState(false)
   if (attemptCount === 0) {
     return (
       <div className="oj-solution-lock">
@@ -964,7 +965,21 @@ function SolutionPanel({
       {solution.explanation && <p className="oj-prose">{solution.explanation}</p>}
       {solution.complexity && <div className="oj-complexity"><Clock3 size={16} /><span>{solution.complexity}</span></div>}
       <div className="oj-solution-code">
-        <div>参考实现 · {LANGUAGE_LABELS[language] || language}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>参考实现 · {LANGUAGE_LABELS[language] || language}</span>
+          <button
+            type="button"
+            className="oj-copy-button"
+            onClick={() => {
+              navigator.clipboard.writeText(standard).then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }).catch(() => {})
+            }}
+          >
+            {copied ? <><Check size={13} /> 已复制</> : <><Clipboard size={13} /> 复制代码</>}
+          </button>
+        </div>
         <CodeEditor code={standard} language={language} readOnly height={420} />
       </div>
     </article>

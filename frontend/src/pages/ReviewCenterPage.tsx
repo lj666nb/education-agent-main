@@ -287,7 +287,7 @@ export default function ReviewCenterPage() {
         {showAllDue && <div className="rc-due-list">
           {duePoints.length === 0 ? <div className="rc-due-empty"><Check size={17} />今天的计划已清空</div> : duePoints.map(point => (
             <div key={point.point_id}>
-              <span><b>{point.point_name}</b><small>掌握度 {point.mastery_score}% · {point.review_label}</small></span>
+              <span><b>{point.point_name}</b><small>掌握度 {Math.max(0, point.mastery_score || 0)}% · {point.review_label}</small></span>
               <div>
                 <button onClick={() => navigate(`/path/knowledge/${point.point_id}`)}>查看知识点</button>
                 <button className="primary" disabled={completingId === point.point_id} onClick={() => completeReview(point)}>{completingId === point.point_id ? <Loader2 className="spin" size={15} /> : <Check size={15} />}完成复习</button>

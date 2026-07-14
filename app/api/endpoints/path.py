@@ -37,7 +37,7 @@ from app.schemas.question_bank import (
     AgentRecommendation, AgentRecommendationListResponse,
 )
 from app.services.path_generator import build_summary, generate_empty_path
-from app.services.mastery_calculator import calculate_mastery
+from app.services.mastery_calculator import calculate_mastery, sanitize_record_values
 from app.services.learning_agent import LearningAgent
 from app.services.path_planner import PathPlanner
 from app.services.path_state_manager import PathStateManager
@@ -110,7 +110,9 @@ async def get_current_path(
     # 构建困难点集合（连续错误 >= 3 且掌握度 < 60）
     difficult_points = set()
     for r in records:
-        if r.consecutive_errors >= 3 and r.mastery_score < 60:
+        ce = max(0, r.consecutive_errors or 0)
+        ms = max(0, min(100, r.mastery_score or 0))
+        if ce >= 3 and ms < 60:
             difficult_points.add(str(r.point_id))
 
     # 构建带层级的数据结构
@@ -170,7 +172,7 @@ async def get_current_path(
                     domain_name=dom["name"],
                     domain_sort_order=dom["sort_order"],
                     sort_order=pt["sort_order"],
-                    mastery_score=record.mastery_score if record else 0,
+                    mastery_score=max(0, min(100, record.mastery_score if record else 0)),
                     status=record.status if record else "not_started",
                     is_difficult=pid in difficult_points,
                     needs_review=(record.status == "reviewing") if record else False,
@@ -401,19 +403,28 @@ async def get_knowledge_detail(
     }
 
     if record:
+        safe = sanitize_record_values(
+            mastery_score=record.mastery_score,
+            recent_accuracy=record.recent_accuracy,
+            total_practiced=record.total_practiced,
+            total_correct=record.total_correct,
+            consecutive_errors=record.consecutive_errors,
+            study_count=record.study_count,
+            total_time_spent_seconds=record.total_time_spent_seconds,
+        )
         return KnowledgePointRecordResponse(
             point_id=str(point.id),
             point_name=point.name,
             domain_name=domain_name,
             subject_name=subject_name,
-            mastery_score=record.mastery_score,
-            recent_accuracy=record.recent_accuracy,
-            consecutive_errors=record.consecutive_errors,
-            total_practiced=record.total_practiced,
-            total_correct=record.total_correct,
+            mastery_score=safe["mastery_score"],
+            recent_accuracy=safe["recent_accuracy"],
+            consecutive_errors=safe["consecutive_errors"],
+            total_practiced=safe["total_practiced"],
+            total_correct=safe["total_correct"],
             total_questions=total_questions,
-            total_time_spent_seconds=record.total_time_spent_seconds,
-            study_count=record.study_count,
+            total_time_spent_seconds=safe["total_time_spent_seconds"],
+            study_count=safe["study_count"],
             last_study_at=record.last_study_at,
             last_practice_at=record.last_practice_at,
             next_review_at=record.next_review_at,
@@ -714,7 +725,15 @@ async def record_knowledge_study(
             record.last_study_at = None if record.study_count == 0 else record.last_study_at
             if record.study_count == 0:
                 record.status = "not_started"
-            record.mastery_score = 0
+                # 彻底清理：取消学习标记时需要重置所有学习相关字段
+                record.mastery_score = 0
+                record.recent_accuracy = 0
+                record.total_practiced = 0
+                record.total_correct = 0
+                record.consecutive_errors = 0
+                record.next_review_at = None
+            else:
+                record.mastery_score = 0
     else:
         if not record:
             record = KnowledgePointRecord(

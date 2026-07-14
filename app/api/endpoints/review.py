@@ -18,6 +18,7 @@ from sqlalchemy import func
 from app.api.dependencies import CurrentUser, get_current_user
 from app.db.database import get_db
 from app.models.question_bank import KnowledgePointRecord, KnowledgePoint, KnowledgeDomain, Subject, WrongAnswerRecord
+from app.services.mastery_calculator import sanitize_record_values
 
 logger = logging.getLogger(__name__)
 
@@ -105,14 +106,22 @@ async def get_review_dashboard(
         if lst and lst.tzinfo is None:
             lst = lst.replace(tzinfo=CHINA_TZ)
 
+        safe = sanitize_record_values(
+            mastery_score=p.mastery_score,
+            recent_accuracy=p.recent_accuracy,
+            total_practiced=p.total_practiced,
+            total_correct=p.total_correct,
+            consecutive_errors=p.consecutive_errors,
+            study_count=p.study_count,
+        )
         due_points_data.append({
             "point_id": str(p.point_id) if p.point_id else None,
             "point_name": p.point_name or "未知知识点",
-            "mastery_score": p.mastery_score or 0,
-            "recent_accuracy": p.recent_accuracy or 0,
-            "consecutive_errors": p.consecutive_errors or 0,
-            "total_practiced": p.total_practiced or 0,
-            "study_count": p.study_count or 0,
+            "mastery_score": safe["mastery_score"],
+            "recent_accuracy": safe["recent_accuracy"],
+            "consecutive_errors": safe["consecutive_errors"],
+            "total_practiced": safe["total_practiced"],
+            "study_count": safe["study_count"],
             "status": p.status or "not_started",
             "last_study_at": lst.isoformat() if lst else None,
             "next_review_at": next_review.isoformat() if next_review else None,
@@ -253,14 +262,22 @@ async def get_knowledge_points(
                         next_review = next_review.replace(tzinfo=CHINA_TZ)
                     if last_practice and last_practice.tzinfo is None:
                         last_practice = last_practice.replace(tzinfo=CHINA_TZ)
+                    safe = sanitize_record_values(
+                        mastery_score=rec.mastery_score,
+                        recent_accuracy=rec.recent_accuracy,
+                        total_practiced=rec.total_practiced,
+                        total_correct=rec.total_correct,
+                        consecutive_errors=rec.consecutive_errors,
+                        study_count=rec.study_count,
+                    )
                     subject_map[sub_key]["domains"][dom_key]["points"].append({
                         "point_id": pid,
                         "point_name": pt.name,
-                        "mastery_score": rec.mastery_score or 0,
-                        "recent_accuracy": rec.recent_accuracy or 0,
-                        "consecutive_errors": rec.consecutive_errors or 0,
-                        "total_practiced": rec.total_practiced or 0,
-                        "study_count": rec.study_count or 0,
+                        "mastery_score": safe["mastery_score"],
+                        "recent_accuracy": safe["recent_accuracy"],
+                        "consecutive_errors": safe["consecutive_errors"],
+                        "total_practiced": safe["total_practiced"],
+                        "study_count": safe["study_count"],
                         "status": rec.status or "not_started",
                         "last_practice_at": last_practice.isoformat() if last_practice else None,
                         "next_review_at": next_review.isoformat() if next_review else None,
@@ -327,7 +344,7 @@ async def get_review_trends(
         day_key = r.last_study_at.strftime("%Y-%m-%d") if r.last_study_at else None
         if day_key:
             daily[day_key]["review_count"] += 1
-            daily[day_key]["total_mastery"] += (r.mastery_score or 0)
+            daily[day_key]["total_mastery"] += max(0, r.mastery_score or 0)
             daily[day_key]["count"] += 1
 
     trends = []
@@ -388,11 +405,15 @@ async def get_weak_points(
         if next_review and next_review.tzinfo is None:
             next_review = next_review.replace(tzinfo=CHINA_TZ)
 
+        safe = sanitize_record_values(
+            mastery_score=r.mastery_score,
+            consecutive_errors=r.consecutive_errors,
+        )
         weak_points.append({
             "point_id": str(r.point_id) if r.point_id else None,
             "point_name": r.point_name or "未知知识点",
-            "mastery_score": r.mastery_score or 0,
-            "consecutive_errors": r.consecutive_errors or 0,
+            "mastery_score": safe["mastery_score"],
+            "consecutive_errors": safe["consecutive_errors"],
             "domain_name": domain_name,
             "subject_name": subject_name,
             "needs_review": bool(next_review and next_review <= _now()) if next_review else False,

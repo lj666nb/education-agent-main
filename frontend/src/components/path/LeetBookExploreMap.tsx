@@ -102,7 +102,7 @@ export default function LeetBookExploreMap({
   const visibleGroups = selectedDomain ? groups.filter(g => g.domain === selectedDomain) : groups
   const activeNode = nodes.find(n => n.status === 'learning') || nodes.find(n => n.status === 'reviewing')
   // Weak knowledge points: mastery > 0% AND < 50%
-  const weakNodes = nodes.filter(n => (n.mastery_score || 0) > 0 && (n.mastery_score || 0) < 50)
+  const weakNodes = nodes.filter(n => Math.max(0, n.mastery_score || 0) > 0 && Math.max(0, n.mastery_score || 0) < 50)
   const chapterProgress = groups.map(group => ({
     ...group,
     completed: group.nodes.filter(node => node.status === 'mastered').length,
@@ -333,12 +333,12 @@ export default function LeetBookExploreMap({
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: MUTED, fontSize: 11, marginBottom: 5 }}>
                             <span>掌握度</span>
-                            <span>{node.mastery_score || 0}%</span>
+                            <span>{Math.max(0, node.mastery_score || 0)}%</span>
                           </div>
                           <div style={{ height: 5, borderRadius: 999, background: '#E5E7EB', overflow: 'hidden' }}>
                             <div style={{
                               height: '100%',
-                              width: `${node.mastery_score || 0}%`,
+                              width: `${Math.max(0, node.mastery_score || 0)}%`,
                               background: node.mastery_score >= 80 ? '#10B981' : BRAND,
                               borderRadius: 999,
                             }} />
@@ -426,12 +426,12 @@ export default function LeetBookExploreMap({
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: MUTED, fontSize: 11, marginBottom: 5 }}>
                         <span>掌握度</span>
-                        <span style={{ color: '#DC2626', fontWeight: 700 }}>{node.mastery_score || 0}%</span>
+                        <span style={{ color: '#DC2626', fontWeight: 700 }}>{Math.max(0, node.mastery_score || 0)}%</span>
                       </div>
                       <div style={{ height: 5, borderRadius: 999, background: '#FEE2E2', overflow: 'hidden' }}>
                         <div style={{
                           height: '100%',
-                          width: `${node.mastery_score || 0}%`,
+                          width: `${Math.max(0, node.mastery_score || 0)}%`,
                           background: '#EF4444',
                           borderRadius: 999,
                         }} />

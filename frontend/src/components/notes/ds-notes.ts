@@ -17,7 +17,7 @@ export const chapters: NoteChapter[] = [
   {
     id: 'basics',
     title: '零、数据结构基础',
-    icon: '📐',
+    icon: 'shapes',
     sections: [
       {
         id: 'logical-physical',
@@ -102,7 +102,7 @@ O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(n³) < O(2ⁿ) < O(n!) < O(nⁿ
   {
     id: 'linear-list',
     title: '一、线性表',
-    icon: '📋',
+    icon: 'list',
     sections: [
       {
         id: 'array',
@@ -786,7 +786,7 @@ def fast_transpose(sparse: SparseMatrix) -> SparseMatrix:
   {
     id: 'stack-queue',
     title: '二、栈和队列',
-    icon: '📚',
+    icon: 'layers',
     sections: [
       {
         id: 'stack',
@@ -1209,7 +1209,7 @@ int kmp_search(const char *txt, const char *pat) {
   {
     id: 'tree',
     title: '三、树和二叉树',
-    icon: '🌳',
+    icon: 'tree-pine',
     sections: [
       {
         id: 'binary-tree',
@@ -2105,7 +2105,7 @@ def inorder_traverse_threaded(root: ThreadedNode) -> list[int]:
   {
     id: 'graph',
     title: '四、图',
-    icon: '🕸️',
+    icon: 'workflow',
     sections: [
       {
         id: 'graph-basics',
@@ -2570,7 +2570,7 @@ def topological_sort(graph, V):
   {
     id: 'search',
     title: '五、查找',
-    icon: '🔍',
+    icon: 'search',
     sections: [
       {
         id: 'binary-search',
@@ -2830,7 +2830,7 @@ class MyHashMap:
   {
     id: 'sort',
     title: '六、排序',
-    icon: '📊',
+    icon: 'arrow-up-down',
     sections: [
       {
         id: 'basic-sorts',

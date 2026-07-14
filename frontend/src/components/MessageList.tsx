@@ -391,50 +391,6 @@ export default function MessageList({ messages, isLoading, enableThinking = fals
                       <Copy size={12} />
                       复制
                     </button>
-                    <button
-                      onClick={() => onRunCode?.(codeString, lang)}
-                      title="运行代码"
-                      style={{
-                        padding: '0.125rem 0.5rem',
-                        fontSize: '0.65rem',
-                        border: 'none',
-                        borderRadius: '3px',
-                        backgroundColor: '#2ea043',
-                        color: 'white',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        fontWeight: 500,
-                      }}
-                    >
-                      <Play size={12} fill="currentColor" />
-                      运行
-                    </button>
-                    {lang === 'python' && (
-                      <button
-                        onClick={() => { if (onRunCode) onRunCode(codeString, lang) }}
-                        disabled={false}
-                        title="运行 Python 代码"
-                        style={{
-                          padding: '0.125rem 0.5rem',
-                          fontSize: '0.65rem',
-                          border: 'none',
-                          borderRadius: '3px',
-                          backgroundColor: '#7C3AED',
-                          color: 'white',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          fontWeight: 500,
-                          opacity: 1,
-                        }}
-                      >
-                        <BarChart3 size={12} />
-                        绘制
-                      </button>
-                    )}
                   </div>
                 </div>
                 <SyntaxHighlighter

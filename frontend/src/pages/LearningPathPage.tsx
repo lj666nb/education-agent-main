@@ -78,7 +78,7 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
           <rect x={6} y={y - 13} width={80} height={26} rx={6} fill={BRAND} opacity="0.08"/>
           <text x={46} y={y + 3} textAnchor="middle" fontSize="11" fontWeight={700} fill={BRAND}>{(g.domain||'').length > 7 ? (g.domain||'').slice(0, 6) + '…' : g.domain}</text>
           {g.nodes.map((n, ni) => {
-            const s = n.mastery_score || 0
+            const s = Math.max(0, n.mastery_score || 0)
             const { bg, bd, tx, ba } = statusColor(n)
             const x = 100 + ni * (N_W + GX), ny = y - N_H / 2
             const hl = highlightNode === n.point_id
@@ -261,8 +261,8 @@ const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect,
 
             {/* Segmented progress bar */}
             <div style={{ display:'flex', gap:2, height:4, marginTop:12, borderRadius:2, overflow:'hidden' }}>
-              <div style={{ background:'#10B981', width:(p.completed_nodes/p.total_nodes*100)+'%', transition:'width 0.5s' }}/>
-              <div style={{ background:BRAND, width:Math.max(0,(p.progress_pct-p.completed_nodes/p.total_nodes*100))+'%', opacity:0.5 }}/>
+              <div style={{ background:'#10B981', width:(p.completed_nodes/Math.max(1,p.total_nodes)*100)+'%', transition:'width 0.5s' }}/>
+              <div style={{ background:BRAND, width:Math.max(0,(p.progress_pct-p.completed_nodes/Math.max(1,p.total_nodes)*100))+'%', opacity:0.5 }}/>
               <div style={{ background:'#E5E7EB', flex:1 }}/>
             </div>
             <div style={{ display:'flex', gap:12, fontSize:10, color:T3, marginTop:4 }}>
@@ -316,7 +316,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
   if(detailLoading)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>加载中...</div>
   if(!detailData)return<div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:T3}}>暂无数据</div>
 
-  const mastery=detailData.mastery_score||0
+  const mastery=Math.max(0, detailData.mastery_score||0)
   const masteryColor=mastery>=80?'#10B981':mastery>=50?'#F59E0B':mastery>=20?'#F97316':'#EF4444'
 
   return <div style={{flex:1,overflow:'auto',background:BG_PAGE}}>
@@ -347,9 +347,9 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
           <div style={{display:'flex',gap:16,flexWrap:'wrap',marginBottom:14}}>
             {[
               {l:'掌握度',v:mastery+'%',c:masteryColor},
-              {l:'已刷题数',v:detailData.total_practiced||0,c:BRAND},
-              {l:'正确率',v:(detailData.recent_accuracy||0)+'%',c:'#10B981'},
-              {l:'错题数',v:Math.max(0,(detailData.total_practiced||0)-(detailData.total_correct||0)),c:'#EF4444'},
+              {l:'已刷题数',v:Math.max(0, detailData.total_practiced||0),c:BRAND},
+              {l:'正确率',v:Math.max(0, detailData.recent_accuracy||0)+'%',c:'#10B981'},
+              {l:'错题数',v:Math.max(0, Math.max(0, detailData.total_practiced||0)-Math.max(0, detailData.total_correct||0)),c:'#EF4444'},
               {l:'艾宾浩斯复习',v:detailData.next_review_at?new Date(detailData.next_review_at).toLocaleDateString('zh-CN',{month:'short',day:'numeric'}):'暂未设置',c:'#F59E0B'},
             ].map((m,i)=>(
               <div key={i} style={{flex:'1 1 90px',minWidth:90,textAlign:'center',padding:'10px 8px',borderRadius:10,background:BG_PAGE}}>
@@ -361,7 +361,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
 
           {/* Triple progress bars */}
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {[{l:'理论学习进度',v:mastery,w:mastery+'%',c:'#10B981'},{l:'刷题巩固进度',v:Math.min(100,(detailData.total_practiced||0)*5),w:Math.min(100,(detailData.total_practiced||0)*5)+'%',c:BRAND},{l:'测评达标进度',v:(detailData.recent_accuracy||0),w:(detailData.recent_accuracy||0)+'%',c:'#7C3AED'}].map((b,i)=>(
+            {[{l:'理论学习进度',v:mastery,w:mastery+'%',c:'#10B981'},{l:'刷题巩固进度',v:Math.min(100, Math.max(0, detailData.total_practiced||0)*5),w:Math.min(100, Math.max(0, detailData.total_practiced||0)*5)+'%',c:BRAND},{l:'测评达标进度',v:Math.max(0, detailData.recent_accuracy||0),w:Math.max(0, detailData.recent_accuracy||0)+'%',c:'#7C3AED'}].map((b,i)=>(
               <div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
                 <span style={{fontSize:11,color:T2,width:90,textAlign:'right',flexShrink:0}}>{b.l}</span>
                 <div style={{flex:1,height:8,background:'#F3F4F6',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',borderRadius:4,background:b.c,width:b.w,transition:'width 0.6s'}}/></div>
@@ -405,17 +405,17 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
           {/* Practice Tab */}
           {activeTab==='practice'&&<div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-              <div><h3 style={{fontSize:14,fontWeight:600,margin:'0 0 2px',color:T1}}>📝 专项练习</h3><p style={{fontSize:12,color:T3,margin:0}}>{detailData.total_practiced>0?`已练习${detailData.total_practiced}题·正确${detailData.total_correct}题`:'暂无练习记录'}</p></div>
+              <div><h3 style={{fontSize:14,fontWeight:600,margin:'0 0 2px',color:T1}}>📝 专项练习</h3><p style={{fontSize:12,color:T3,margin:0}}>{(detailData.total_practiced||0)>0?`已练习${Math.max(0, detailData.total_practiced||0)}题·正确${Math.max(0, detailData.total_correct||0)}题`:'暂无练习记录'}</p></div>
               <button onClick={()=>onPractice(pointId)} style={{padding:'8px 18px',borderRadius:8,border:'none',background:BRAND,color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>✏️ 开始练习 →</button>
             </div>
             {/* 专项练习进度条 */}
             {(detailData.total_questions||0) > 0 && <div style={{marginBottom:12,padding:'12px',borderRadius:8,background:BG_PAGE}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:11,color:T2}}>
                 <span>📊 专项练习进度</span>
-                <span>{detailData.total_practiced||0} / {detailData.total_questions||0} 题{detailData.total_practiced>=detailData.total_questions?' ✅ 全部完成':''}</span>
+                <span>{Math.max(0, detailData.total_practiced||0)} / {Math.max(0, detailData.total_questions||0)} 题{(detailData.total_practiced||0)>=(detailData.total_questions||0)?' ✅ 全部完成':''}</span>
               </div>
               <div style={{height:8,background:'#F3F4F6',borderRadius:4,overflow:'hidden'}}>
-                <div style={{height:'100%',borderRadius:4,transition:'width 0.6s',background:detailData.total_practiced>=detailData.total_questions?'#10B981':`linear-gradient(90deg,${BRAND},#38BDF8)`,width:Math.min(100,Math.round((detailData.total_practiced||0)/Math.max(1,detailData.total_questions||1)*100))+'%'}}/>
+                <div style={{height:'100%',borderRadius:4,transition:'width 0.6s',background:detailData.total_practiced>=detailData.total_questions?'#10B981':`linear-gradient(90deg,${BRAND},#38BDF8)`,width:Math.min(100,Math.round(Math.max(0, detailData.total_practiced||0)/Math.max(1,detailData.total_questions||1)*100))+'%'}}/>
               </div>
             </div>}
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
@@ -424,7 +424,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
             {detailData.total_practiced>0&&<div style={{padding:'12px',borderRadius:8,background:BG_PAGE}}>
               <div style={{fontSize:11,color:T3,marginBottom:6}}>近3次练习趋势</div>
               <div style={{display:'flex',alignItems:'flex-end',gap:8,height:40}}>
-                {[0.6,0.75,detailData.recent_accuracy/100||0.8].map((v,i)=><div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                {[0.6,0.75,Math.max(0, detailData.recent_accuracy||0)/100||0.8].map((v,i)=><div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
                   <span style={{fontSize:12,fontWeight:700,color:v>=0.7?'#10B981':'#F59E0B'}}>{Math.round(v*100)}%</span>
                   <div style={{width:'100%',height:24,borderRadius:4,background:v>=0.7?'#D1FAE5':'#FEF3C7',display:'flex',alignItems:'flex-end',overflow:'hidden'}}><div style={{width:'100%',height:(v*100)+'%',background:v>=0.7?'#10B981':'#F59E0B',borderRadius:2}}/></div>
                   <span style={{fontSize:9,color:T3}}>第{i+1}次</span>
@@ -445,22 +445,22 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
           {/* Wrong Answers Tab */}
           {activeTab==='wrong'&&<div>
             <h3 style={{fontSize:14,fontWeight:600,margin:'0 0 12px',color:T1}}>❌ 错题复盘专区</h3>
-            {Math.max(0,(detailData.total_practiced||0)-(detailData.total_correct||0))===0?(
+            {Math.max(0, Math.max(0, detailData.total_practiced||0)-Math.max(0, detailData.total_correct||0))===0?(
               <div style={{padding:20,textAlign:'center',color:'#10B981',fontSize:13}}>
                 <span style={{fontSize:28}}>🎉</span><br/>本知识点暂无错题记录，继续加油！
               </div>
             ):<div>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
                 <div style={{display:'flex',gap:10,fontSize:12,color:T2}}>
-                  <span>总错题: <b style={{color:'#EF4444'}}>{Math.max(0,(detailData.total_practiced||0)-(detailData.total_correct||0))}道</b></span>
-                  <span>正确率: <b style={{color:'#10B981'}}>{detailData.recent_accuracy||0}%</b></span>
-                  <span>练习次数: <b style={{color:BRAND}}>{detailData.total_practiced||0}次</b></span>
+                  <span>总错题: <b style={{color:'#EF4444'}}>{Math.max(0, Math.max(0, detailData.total_practiced||0)-Math.max(0, detailData.total_correct||0))}道</b></span>
+                  <span>正确率: <b style={{color:'#10B981'}}>{Math.max(0, detailData.recent_accuracy||0)}%</b></span>
+                  <span>练习次数: <b style={{color:BRAND}}>{Math.max(0, detailData.total_practiced||0)}次</b></span>
                 </div>
                 <button onClick={()=>alert('即将打开专项错题练习')} style={{padding:'6px 12px',borderRadius:6,border:'none',background:'#EF4444',color:'#fff',fontSize:11,cursor:'pointer',fontWeight:600,fontFamily:'inherit'}}>⚠️ 批量加入复习计划</button>
               </div>
               <div style={{padding:16,background:'#FEF2F2',borderRadius:8,border:'1px solid #FECACA',textAlign:'center',color:'#991B1B',fontSize:12}}>
                 <span style={{fontSize:20}}>📋</span><br/>
-                共 <b>{Math.max(0,(detailData.total_practiced||0)-(detailData.total_correct||0))}</b> 道错题待复习<br/>
+                共 <b>{Math.max(0, Math.max(0, detailData.total_practiced||0)-Math.max(0, detailData.total_correct||0))}</b> 道错题待复习<br/>
                 <span style={{fontSize:10,color:T3}}>前往「智能题库」→ 筛选本知识点 → 仅做错题模式开始练习</span><br/>
                 <button onClick={()=>onPractice(pointId)} style={{marginTop:8,padding:'6px 14px',borderRadius:6,border:'none',background:BRAND,color:'#fff',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>✏️ 去题库练习 →</button>
               </div>
@@ -489,7 +489,7 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
                 {t:detailData.last_practice_at?'最近练习':'尚无练习',d:detailData.last_practice_at?new Date(detailData.last_practice_at).toLocaleDateString('zh-CN'):'开始你的第一次练习',c:'#10B981'},
                 {t:'阅读讲义',d:detailData.review_material?'已生成阅读讲义':'点击阅读讲义 Tab 生成',c:'#6366F1'},
                 {t:'练习记录',d:detailData.last_practice_at?`已练习${detailData.total_practiced||0}题`:'尚未练习',c:'#7C3AED'},
-                {t:'学习次数',d:`已学习${detailData.study_count||0}次`,'c':BRAND},
+                {t:'学习次数',d:`已学习${Math.max(0, detailData.study_count||0)}次`,'c':BRAND},
               ].map((e,i)=>(
                 <div key={i} style={{marginBottom:16,position:'relative'}}>
                   <div style={{position:'absolute',left:-20,top:4,width:10,height:10,borderRadius:'50%',background:e.c,border:'2px solid #fff',boxShadow:'0 0 0 2px '+e.c}}/>

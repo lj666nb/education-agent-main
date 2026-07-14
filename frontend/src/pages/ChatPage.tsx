@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { chatApi, profileV2Api } from '../api'
+import { chatApi, profileApi, profileV2Api } from '../api'
+import { useAuthStore } from '../store/auth'
 
 interface ChatMessage {
   id: string
@@ -75,27 +76,24 @@ export default function ChatPage() {
       addSystemMessage(reply)
 
       if (is_complete) {
-        const cognitiveStyleMap: Record<string, string> = {
-          'visual': 'visual',
-          'auditory': 'auditory',
-          'reading_writing': 'reading_writing',
-          'kinesthetic': 'kinesthetic',
-          'mixed': 'mixed',
+        // 已收集的数据（LLM 提取后的最终值已在后端持久化）
+        const finalInfo = collected_info
+
+        // 前端侧也保存到 UserProfile（确保不丢失），后端已做去重
+        try {
+          await profileApi.updateProfile({
+            major: finalInfo.major || '',
+            grade: finalInfo.grade || '',
+            learning_goal: finalInfo.learningGoal || '',
+          })
+        } catch (err: any) {
+          console.warn('UserProfile 保存失败:', err)
         }
 
-        const cognitiveStyle = cognitiveStyleMap[collected_info.preferredStyle] || 'mixed'
+        // 标记画像完成（路由守卫据此放行）
+        useAuthStore.getState().setProfileCompleted(true)
 
-        await profileV2Api.createProfile({
-          cognitive_style: cognitiveStyle,
-          cognitive_style_confidence: 0.6,
-          active_hours: { morning: 0.25, afternoon: 0.25, evening: 0.25, night: 0.25 },
-          learning_rhythm_scalar: 0.5,
-          learning_rhythm_trend: 0.0,
-          metacognitive_calibration: 0.0,
-          attention_feature: 0.5,
-          knowledge_points: [],
-        })
-
+        // 画像 V2 已在后端持久化，前端无需再调用 createProfile
         addSystemMessage('画像初始化完成！我已根据你的回答生成了个性化学习画像。')
         setTimeout(() => {
           navigate('/profile/dynamic')

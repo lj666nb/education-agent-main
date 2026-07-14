@@ -1031,11 +1031,11 @@ async def get_daily_stats(
     items = [DailyStatsItem(
         date=r.record_date.strftime("%Y-%m-%d"),
         total_questions=r.total_questions,
-        correct_count=r.correct_count,
-        incorrect_count=r.incorrect_count,
-        total_time_spent_seconds=r.total_time_spent_seconds,
-        session_count=r.session_count,
-        accuracy=round(r.correct_count / max(r.correct_count + r.incorrect_count, 1) * 100, 1),
+        correct_count=max(0, r.correct_count),
+        incorrect_count=max(0, r.incorrect_count),
+        total_time_spent_seconds=max(0, r.total_time_spent_seconds),
+        session_count=max(0, r.session_count),
+        accuracy=round(max(0, r.correct_count) / max(max(0, r.correct_count) + max(0, r.incorrect_count), 1) * 100, 1),
     ) for r in records]
 
     return DailyStatsResponse(items=items, total=len(items))

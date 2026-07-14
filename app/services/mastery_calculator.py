@@ -10,6 +10,39 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+def sanitize_record_values(
+    mastery_score: Optional[int] = None,
+    recent_accuracy: Optional[int] = None,
+    total_practiced: Optional[int] = None,
+    total_correct: Optional[int] = None,
+    consecutive_errors: Optional[int] = None,
+    study_count: Optional[int] = None,
+    total_time_spent_seconds: Optional[int] = None,
+) -> dict:
+    """清理知识点记录的数值字段，确保全部在合理范围内。
+
+    防止因历史 bug 或数据迁移导致的负值 / 越界值泄露到前端。
+    """
+    def _clamp(val, lo, hi, default=0):
+        if val is None:
+            return default
+        return max(lo, min(hi, int(val)))
+
+    result = {
+        "mastery_score": _clamp(mastery_score, 0, 100),
+        "recent_accuracy": _clamp(recent_accuracy, 0, 100),
+        "total_practiced": _clamp(total_practiced, 0, 999999),
+        "total_correct": _clamp(total_correct, 0, 999999),
+        "consecutive_errors": _clamp(consecutive_errors, 0, 999999),
+        "study_count": _clamp(study_count, 0, 999999),
+        "total_time_spent_seconds": _clamp(total_time_spent_seconds, 0, 99999999),
+    }
+    # 确保 total_correct 不会超过 total_practiced（逻辑上不可能）
+    if result["total_correct"] > result["total_practiced"]:
+        result["total_correct"] = result["total_practiced"]
+    return result
+
+
 def calculate_mastery(
     total_practiced: int,
     total_correct: int,
@@ -28,6 +61,13 @@ def calculate_mastery(
     - 遗忘衰减: 超过7天未练习,每天减2分
     - 连续错误惩罚: >=3次连续错误减15分
     """
+    # 输入验证：确保所有值在合理范围内
+    total_practiced = max(0, total_practiced)
+    total_correct = max(0, min(total_correct, total_practiced))  # 正确数不能超过总数
+    recent_accuracy = max(0, min(100, recent_accuracy))
+    study_count = max(0, study_count)
+    consecutive_errors = max(0, consecutive_errors)
+
     if total_practiced == 0 and study_count == 0:
         return 0
 

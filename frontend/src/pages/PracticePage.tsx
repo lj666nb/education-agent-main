@@ -574,7 +574,13 @@ export default function PracticePage() {
     // 结束练习会话
     if (sessionId) {
       try {
+        const objectiveCount = allAnswers.filter(a => {
+          const q = questions.find(q => q.id === a.questionId)
+          return q && !SUBJECTIVE_TYPES.includes(q.type)
+        }).length
         const correctCount = allAnswers.filter(a => a.isCorrect).length
+        // 主观题不计入正确/错误统计（需用户自评），避免污染 DailyPracticeRecord
+        const incorrectCount = Math.max(0, objectiveCount - correctCount)
         await questionBankApi.updatePracticeSession(sessionId, {
           status: 'completed',
           current_index: currentIndex,
@@ -582,7 +588,7 @@ export default function PracticePage() {
             total: questions.length,
             completed: allAnswers.length,
             correct: correctCount,
-            incorrect: allAnswers.length - correctCount,
+            incorrect: incorrectCount,
           },
           finished_at: new Date().toISOString(),
         })
