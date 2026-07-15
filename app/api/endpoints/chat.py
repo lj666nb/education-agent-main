@@ -744,10 +744,7 @@ async def chat_completions(
                 if user_api:
                     user_api_key = user_api.get("api_key")
                     user_api_base = user_api.get("base_url")
-                    if provider == "qwen":
-                        user_api_model = "qwen-turbo-latest"
-                    elif provider == "deepseek":
-                        user_api_model = "deepseek-chat"
+                    user_api_model = get_model_config(request.model)["model_id"]
             if user_api_key:
                 from app.services.intent_detector import IntentDetector
                 detector = IntentDetector(api_key=user_api_key, base_url=user_api_base, model=user_api_model)
