@@ -460,3 +460,392 @@ select {
 .dark {
   --bank-hero-gradient: linear-gradient(135deg, #0F1F2D 0%, #0F2D22 100%);
 }
+
+/* Additional light backgrounds → dark */
+.dark [style*="background: '#F0FDF4'"],
+.dark [style*="background:'#F0FDF4'"],
+.dark [style*="background: '#f0fdf4'"],
+.dark [style*="background:'#f0fdf4'"] {
+  background: #0D2F29 !important;
+}
+
+.dark [style*="background: '#FFFBEB'"],
+.dark [style*="background:'#FFFBEB'"],
+.dark [style*="background: '#fffdeb'"],
+.dark [style*="background:'#fffbeb'"] {
+  background: #352811 !important;
+}
+
+.dark [style*="background: '#F7F5FF'"],
+.dark [style*="background:'#F7F5FF'"],
+.dark [style*="background: '#f7f5ff'"],
+.dark [style*="background:'#f7f5ff'"] {
+  background: #1E1B3D !important;
+}
+
+.dark [style*="background: '#ECE8FF'"],
+.dark [style*="background:'#ECE8FF'"],
+.dark [style*="background: '#ece8ff'"],
+.dark [style*="background:'#ece8ff'"] {
+  background: #1E1B3D !important;
+}
+
+.dark [style*="background: '#E1EFFF'"],
+.dark [style*="background:'#E1EFFF'"],
+.dark [style*="background: '#e1efff'"],
+.dark [style*="background:'#e1efff'"] {
+  background: #0F223D !important;
+}
+
+.dark [style*="background: '#F2F5F8'"],
+.dark [style*="background:'#F2F5F8'"],
+.dark [style*="background: '#f2f5f8'"],
+.dark [style*="background:'#f2f5f8'"] {
+  background: #1B2738 !important;
+}
+
+.dark [style*="background: '#FFF7ED'"],
+.dark [style*="background:'#FFF7ED'"],
+.dark [style*="background: '#fff7ed'"],
+.dark [style*="background:'#fff7ed'"] {
+  background: #352811 !important;
+}
+
+.dark [style*="background: '#EDF0F3'"],
+.dark [style*="background:'#EDF0F3'"],
+.dark [style*="background: '#edf0f3'"],
+.dark [style*="background:'#edf0f3'"] {
+  background: #1B2738 !important;
+}
+
+/* Additional border colors → dark */
+.dark [style*="border: '1px solid #E5EDF7'"],
+.dark [style*="border:'1px solid #E5EDF7'"],
+.dark [style*="border: '1px solid #e5edf7'"],
+.dark [style*="border:'1px solid #e5edf7'"],
+.dark [style*="border: '1px dashed #E5EDF7'"],
+.dark [style*="border:'1px dashed #E5EDF7'"],
+.dark [style*="border: '1px dashed #e5edf7'"],
+.dark [style*="border:'1px dashed #e5edf7'"] {
+  border-color: var(--app-border) !important;
+}
+
+.dark [style*="border: '1px solid #BDDADD'"],
+.dark [style*="border:'1px solid #BDDADD'"],
+.dark [style*="border: '1px solid #bddadd'"],
+.dark [style*="border:'1px solid #bddadd'"] {
+  border-color: #28535A !important;
+}
+
+.dark [style*="border-bottom: '1px solid #edf0f3'"],
+.dark [style*="border-bottom: '1px solid #EDF0F3'"],
+.dark [style*="border-top: '1px solid #edf0f3'"],
+.dark [style*="border-top: '1px solid #EDF0F3'"] {
+  border-color: var(--app-border) !important;
+}
+
+.dark [style*="border: '1px solid #FECACA'"],
+.dark [style*="border:'1px solid #FECACA'"],
+.dark [style*="border: '1px solid #fecaca'"],
+.dark [style*="border:'1px solid #fecaca'"] {
+  border-color: #6B2C3A !important;
+}
+
+.dark [style*="border: '1px solid #BBF7D0'"],
+.dark [style*="border:'1px solid #BBF7D0'"],
+.dark [style*="border: '1px solid #bbf7d0'"],
+.dark [style*="border:'1px solid #bbf7d0'"] {
+  border-color: #1E5B4D !important;
+}
+
+.dark [style*="border: '1px solid #BFDBFE'"],
+.dark [style*="border:'1px solid #BFDBFE'"],
+.dark [style*="border: '1px solid #bfdbfe'"],
+.dark [style*="border:'1px solid #bfdbfe'"] {
+  border-color: #28537F !important;
+}
+
+.dark [style*="border: '1px solid #cabee8'"],
+.dark [style*="border:'1px solid #cabee8'"] {
+  border-color: #3D3560 !important;
+}
+
+/* Additional text colors → lighter for dark */
+.dark [style*="color: '#065F46'"],
+.dark [style*="color:'#065F46'"],
+.dark [style*="color: '#065f46'"],
+.dark [style*="color:'#065f46'"] {
+  color: #6EE7B7 !important;
+}
+
+.dark [style*="color: '#B91C1C'"],
+.dark [style*="color:'#B91C1C'"],
+.dark [style*="color: '#b91c1c'"],
+.dark [style*="color:'#b91c1c'"] {
+  color: #FCA5A5 !important;
+}
+
+.dark [style*="color: '#991B1B'"],
+.dark [style*="color:'#991B1B'"],
+.dark [style*="color: '#991b1b'"],
+.dark [style*="color:'#991b1b'"] {
+  color: #FECDD3 !important;
+}
+
+.dark [style*="color: '#D97706'"],
+.dark [style*="color:'#D97706'"],
+.dark [style*="color: '#d97706'"],
+.dark [style*="color:'#d97706'"] {
+  color: #FCD34D !important;
+}
+
+.dark [style*="color: '#059669'"],
+.dark [style*="color:'#059669'"],
+.dark [style*="color: '#059669'"],
+.dark [style*="color:'#059669'"] {
+  color: #6EE7B7 !important;
+}
+
+.dark [style*="color: '#6D5BD0'"],
+.dark [style*="color:'#6D5BD0'"],
+.dark [style*="color: '#6d5bd0'"],
+.dark [style*="color:'#6d5bd0'"] {
+  color: #A78BFA !important;
+}
+
+.dark [style*="color: '#1E3A8A'"],
+.dark [style*="color:'#1E3A8A'"],
+.dark [style*="color: '#1e3a8a'"],
+.dark [style*="color:'#1e3a8a'"] {
+  color: #93C5FD !important;
+}
+
+.dark [style*="color: '#a9332b'"],
+.dark [style*="color:'#a9332b'"],
+.dark [style*="color: '#A9332B'"],
+.dark [style*="color:'#A9332B'"] {
+  color: #FCA5A5 !important;
+}
+
+.dark [style*="color: '#086d76'"],
+.dark [style*="color:'#086d76'"],
+.dark [style*="color: '#086D76'"],
+.dark [style*="color:'#086D76'"] {
+  color: #67E8F9 !important;
+}
+
+.dark [style*="color: '#5d41a3'"],
+.dark [style*="color:'#5d41a3'"],
+.dark [style*="color: '#5D41A3'"],
+.dark [style*="color:'#5D41A3'"] {
+  color: #A78BFA !important;
+}
+
+.dark [style*="color: '#2d7d57'"],
+.dark [style*="color:'#2d7d57'"],
+.dark [style*="color: '#2D7D57'"],
+.dark [style*="color:'#2D7D57'"] {
+  color: #6EE7B7 !important;
+}
+
+/* 复习中心 resource links */
+.dark [style*="background: rgba(255, 255, 255, 0.82)"],
+.dark [style*="background: rgba(255,255,255,0.82)"],
+.dark [style*="background:rgba(255, 255, 255, 0.82)"],
+.dark [style*="background:rgba(255,255,255,0.82)"] {
+  background: rgba(21, 31, 47, 0.82) !important;
+}
+
+/* Progress bar backgrounds */
+.dark [style*="background: '#EEF2F7'"],
+.dark [style*="background:'#EEF2F7'"],
+.dark [style*="background: '#eef2f7'"],
+.dark [style*="background:'#eef2f7'"] {
+  background: #223047 !important;
+}
+
+/* Filter tab active background in review center */
+.rc-filter-tabs button.active,
+.dark .rc-filter-tabs button.active {
+  background: var(--app-bg-card) !important;
+  border-color: var(--app-border) !important;
+  color: var(--app-text-heading) !important;
+}
+
+/* Review center misc fixes */
+.dark .rc-due-list > div {
+  border-bottom-color: var(--app-border) !important;
+}
+
+.dark .rc-index > button {
+  border-bottom-color: var(--app-border) !important;
+}
+
+.dark .rc-resources a {
+  background: rgba(21, 31, 47, 0.82) !important;
+}
+
+/* Question bank detail: answer toggle section */
+.dark [style*="background: '#F0FDF4'"],
+.dark [style*="background:'#F0FDF4'"] {
+  background: #0D2F29 !important;
+}
+
+.dark [style*="border-color: '#A7F3D0'"],
+.dark [style*="border-color:'#A7F3D0'"] {
+  border-color: #1E5B4D !important;
+}
+
+/* Tab pill active state — generic */
+.dark [style*="background: 'var(--app-bg-card)'"],
+.dark [style*="background:'var(--app-bg-card)'"] {
+  background: var(--app-bg-card) !important;
+}
+
+/* Specific hex text colors → lighter dark equivalents */
+.dark [style*="color: '#2C3A52'"],
+.dark [style*="color:'#2C3A52'"],
+.dark [style*="color: '#2c3a52'"],
+.dark [style*="color:'#2c3a52'"] {
+  color: #E8EDF5 !important;
+}
+
+.dark [style*="color: '#1F2937'"],
+.dark [style*="color:'#1F2937'"],
+.dark [style*="color: '#1f2937'"],
+.dark [style*="color:'#1f2937'"] {
+  color: #F1F5F9 !important;
+}
+
+.dark [style*="color: '#374151'"],
+.dark [style*="color:'#374151'"],
+.dark [style*="color: '#374151'"],
+.dark [style*="color:'#374151'"] {
+  color: #D1D5DB !important;
+}
+
+.dark [style*="color: '#4B5563'"],
+.dark [style*="color:'#4B5563'"],
+.dark [style*="color: '#4b5563'"],
+.dark [style*="color:'#4b5563'"] {
+  color: #CBD5E1 !important;
+}
+
+.dark [style*="color: '#9CA3AF'"],
+.dark [style*="color:'#9CA3AF'"],
+.dark [style*="color: '#9ca3af'"],
+.dark [style*="color:'#9ca3af'"] {
+  color: #A7B4C5 !important;
+}
+
+.dark [style*="background: '#F9FAFB'"],
+.dark [style*="background:'#F9FAFB'"],
+.dark [style*="background: '#f9fafb'"],
+.dark [style*="background:'#f9fafb'"] {
+  background: #101A29 !important;
+}
+
+.dark [style*="background: '#E8EBEF'"],
+.dark [style*="background:'#E8EBEF'"],
+.dark [style*="background: '#e8ebef'"],
+.dark [style*="background:'#e8ebef'"] {
+  background: #223047 !important;
+}
+
+.dark [style*="background: '#E8ECF0'"],
+.dark [style*="background:'#E8ECF0'"],
+.dark [style*="background: '#e8ecf0'"],
+.dark [style*="background:'#e8ecf0'"] {
+  background: #223047 !important;
+}
+
+.dark [style*="border: '1px solid #F3F4F6'"],
+.dark [style*="border:'1px solid #F3F4F6'"],
+.dark [style*="border: '1px solid #f3f4f6'"],
+.dark [style*="border:'1px solid #f3f4f6'"],
+.dark [style*="border: '1px solid #F9FAFB'"],
+.dark [style*="border:'1px solid #F9FAFB'"],
+.dark [style*="border: '1px solid #f9fafb'"],
+.dark [style*="border:'1px solid #f9fafb'"],
+.dark [style*="border-top: '1px solid #F3F4F6'"],
+.dark [style*="border-top:'1px solid #F3F4F6'"],
+.dark [style*="border-top: '1px solid #f3f4f6'"],
+.dark [style*="border-top:'1px solid #f3f4f6'"],
+.dark [style*="border-top: '1px solid #F9FAFB'"],
+.dark [style*="border-top:'1px solid #F9FAFB'"],
+.dark [style*="border-top: '1px solid #f9fafb'"],
+.dark [style*="border-top:'1px solid #f9fafb'"],
+.dark [style*="border-bottom: '1px solid #F3F4F6'"],
+.dark [style*="border-bottom:'1px solid #F3F4F6'"],
+.dark [style*="border-bottom: '1px solid #f3f4f6'"],
+.dark [style*="border-bottom:'1px solid #f3f4f6'"],
+.dark [style*="border-bottom: '1px solid #F9FAFB'"],
+.dark [style*="border-bottom:'1px solid #F9FAFB'"],
+.dark [style*="border-bottom: '1px solid #f9fafb'"],
+.dark [style*="border-bottom:'1px solid #f9fafb'"] {
+  border-color: var(--app-border) !important;
+}
+
+.dark [style*="border: '1px dashed #D1D5DB'"],
+.dark [style*="border:'1px dashed #D1D5DB'"],
+.dark [style*="border: '1px dashed #d1d5db'"],
+.dark [style*="border:'1px dashed #d1d5db'"] {
+  border-color: var(--app-border) !important;
+}
+
+/* Override rgba(30,58,138,x) translucent blue backgrounds — used for badges/chips */
+.dark [style*="background: 'rgba(30, 58, 138, 0.1)'"],
+.dark [style*="background:'rgba(30, 58, 138, 0.1)'"] {
+  background: rgba(56, 189, 248, 0.12) !important;
+}
+
+.dark [style*="background: 'rgba(30,58,138,0.08)'"],
+.dark [style*="background:'rgba(30,58,138,0.08)'"] {
+  background: rgba(56, 189, 248, 0.10) !important;
+}
+
+.dark [style*="background: 'rgba(30,58,138,0.04)'"],
+.dark [style*="background:'rgba(30,58,138,0.04)'"] {
+  background: rgba(56, 189, 248, 0.06) !important;
+}
+
+/* chip badges with specific rgba backgrounds */
+.dark [style*="background: 'rgba(99, 102, 241, 0.08)'"],
+.dark [style*="background:'rgba(99, 102, 241, 0.08)'"] {
+  background: rgba(129, 140, 248, 0.12) !important;
+}
+
+.dark [style*="background: 'rgba(236, 72, 153, 0.08)'"],
+.dark [style*="background:'rgba(236, 72, 153, 0.08)'"] {
+  background: rgba(244, 114, 182, 0.10) !important;
+}
+
+/* Semi-transparent red overlays → darker in dark mode */
+.dark [style*="background: 'rgba(239, 68, 68, 0.15)'"],
+.dark [style*="background:'rgba(239, 68, 68, 0.15)'"],
+.dark [style*="background: 'rgba(239,68,68,0.15)'"],
+.dark [style*="background:'rgba(239,68,68,0.15)'"] {
+  background: rgba(248, 113, 113, 0.15) !important;
+}
+
+/* Light yellow/warm backgrounds → dark warm equivalents */
+.dark [style*="background: '#FEF3C7'"],
+.dark [style*="background:'#FEF3C7'"],
+.dark [style*="background: '#fef3c7'"],
+.dark [style*="background:'#fef3c7'"] {
+  background: #352811 !important;
+}
+
+.dark [style*="background: '#FFF7ED'"],
+.dark [style*="background:'#FFF7ED'"],
+.dark [style*="background: '#fff7ed'"],
+.dark [style*="background:'#fff7ed'"] {
+  background: #352811 !important;
+}
+
+.dark [style*="border: '1px solid #FDE68A'"],
+.dark [style*="border:'1px solid #FDE68A'"],
+.dark [style*="border: '1px solid #fde68a'"],
+.dark [style*="border:'1px solid #fde68a'"] {
+  border-color: #6A4D15 !important;
+}
