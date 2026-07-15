@@ -88,9 +88,9 @@ class ApiSettingsCRUD:
         return None
 
     def is_provider_available(self, db: Session, user_id: str, provider: str) -> bool:
-        """检查 provider 是否可用（Key 存在即认为可用，因为保存时已验证过有效性）"""
+        """检查 provider 是否已配置并启用。"""
         setting = self.get_setting(db, user_id, provider)
-        return bool(setting and setting.api_key)
+        return bool(setting and setting.api_key and setting.is_enabled)
 
     def validate_provider_key(self, provider: str, api_key: str, secret_key: Optional[str] = None) -> bool:
         """实际验证 API Key 的有效性

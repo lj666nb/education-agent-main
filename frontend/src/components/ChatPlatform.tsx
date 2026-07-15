@@ -543,6 +543,8 @@ export default function ChatPlatform() {
       }
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
+      let sseBuffer = ''
+      let streamError: string | null = null
       let lastSources: Array<{document_name: string; content_snippet: string; score: number}> | null = null
       let lastCitations: Array<{index: number; title: string; url: string; snippet: string}> | null = null
       let lastDetectedXml: string | null = null
@@ -550,14 +552,22 @@ export default function ChatPlatform() {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
+          // A JSON SSE event may be split across multiple network chunks.
+          // Keep the incomplete final line for the next read instead of
+          // silently discarding it as a JSON parse error.
+          sseBuffer += decoder.decode(value, { stream: true })
+          const lines = sseBuffer.split('\n')
+          sseBuffer = lines.pop() || ''
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
               if (data === '[DONE]') continue
               try {
                 const parsed = JSON.parse(data)
+                if (parsed.type === 'error') {
+                  streamError = parsed.message || 'AI 服务调用失败，请稍后重试'
+                  continue
+                }
                 // 意图检测事件：无关内容警告（仅当用户正在查看该会话时展示）
                 if (parsed.type === 'irrelevant_content') {
                   if (useChatStore.getState().currentChatId === activeChatId) {
@@ -609,6 +619,7 @@ export default function ChatPlatform() {
             }
           }
         }
+        if (streamError) throw new Error(streamError)
         // After streaming, temporarily hide [DRAWIO]/[PLOT] blocks while backend processes them.
         // This replaces diagram markers with placeholder text, so users see "思维导图生成中..."
         // instead of raw XML code during the brief window between stream-end and saveMessage.
