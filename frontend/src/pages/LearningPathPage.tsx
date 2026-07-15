@@ -6,7 +6,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer'
 import LeetBookExploreMap from '../components/path/LeetBookExploreMap'
 import { useTheme } from '../store/theme'
 
-const BRAND = '#1677E8', T1 = '#2C3A52', T2 = '#64748B', T3 = '#94A3B8', BL = '#E5EDF7'
+const BRAND = '#1677E8', T1 = 'var(--app-text-heading)', T2 = 'var(--app-text-secondary)', T3 = 'var(--app-text-muted)', BL = 'var(--app-border)'
 const BG_PAGE = 'var(--app-bg-page)'
 
 /* ── Icons ── */
