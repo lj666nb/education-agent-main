@@ -36,13 +36,26 @@ export default function ExamPaperDetailPage() {
     setExportingPDF(true)
     try {
       const res = await questionBankApi.exportExamPDF(paperId!)
+      // 如果后端返回的是 JSON 错误（responseType blob 也会得到 Blob），尝试解析
+      if (res.data.type && res.data.type !== 'application/pdf') {
+        const text = await res.data.text()
+        try {
+          const err = JSON.parse(text)
+          throw new Error(err.detail || '导出 PDF 失败')
+        } catch {
+          throw new Error('导出 PDF 失败：响应格式异常')
+        }
+      }
       const blob = new Blob([res.data], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `${paper?.title || '试卷'}.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       window.URL.revokeObjectURL(url)
-    } catch { alert('导出 PDF 失败') }
+    } catch (err: any) {
+      const msg = typeof err === 'object' && err.message ? err.message : '导出 PDF 失败'
+      alert(msg)
+    }
     setExportingPDF(false)
   }
 
@@ -50,13 +63,25 @@ export default function ExamPaperDetailPage() {
     setExportingWord(true)
     try {
       const res = await questionBankApi.exportExamWord(paperId!)
+      if (res.data.type && res.data.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const text = await res.data.text()
+        try {
+          const err = JSON.parse(text)
+          throw new Error(err.detail || '导出 Word 失败')
+        } catch {
+          throw new Error('导出 Word 失败：响应格式异常')
+        }
+      }
       const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `${paper?.title || '试卷'}.docx`
       document.body.appendChild(a); a.click(); a.remove()
       window.URL.revokeObjectURL(url)
-    } catch { alert('导出 Word 失败') }
+    } catch (err: any) {
+      const msg = typeof err === 'object' && err.message ? err.message : '导出 Word 失败'
+      alert(msg)
+    }
     setExportingWord(false)
   }
 

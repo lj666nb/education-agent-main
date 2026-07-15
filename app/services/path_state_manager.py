@@ -796,7 +796,7 @@ class PathStateManager:
         return next_node
 
     def restart_path(self, user_id: str) -> Dict[str, Any]:
-        """结束当前路径，保留历史"""
+        """结束当前路径，保留历史，并清零路径中知识点的掌握度"""
         state = (
             self.db.query(LearningPathState)
             .filter(
@@ -812,9 +812,43 @@ class PathStateManager:
 
         state.phase = "completed"
         state.updated_at = datetime.utcnow()
+
+        # 清零路径中所有知识点的掌握度
+        node_order = state.node_order or []
+        point_ids = []
+        for node in node_order:
+            nid = node.get("node_id") if isinstance(node, dict) else node
+            if nid:
+                try:
+                    point_ids.append(UUID(str(nid)))
+                except (ValueError, AttributeError):
+                    pass
+
+        if point_ids:
+            records = (
+                self.db.query(KnowledgePointRecord)
+                .filter(
+                    KnowledgePointRecord.user_id == user_id,
+                    KnowledgePointRecord.point_id.in_(point_ids),
+                )
+                .all()
+            )
+            for record in records:
+                record.mastery_score = 0
+                record.recent_accuracy = 0
+                record.consecutive_errors = 0
+                record.total_practiced = 0
+                record.total_correct = 0
+                record.total_time_spent_seconds = 0
+                record.study_count = 0
+                record.status = "not_started"
+                record.next_review_at = None
+                record.last_study_at = None
+                record.last_practice_at = None
+
         self.db.commit()
 
-        return {"success": True, "message": "路径已结束，可以初始化新的学习路径"}
+        return {"success": True, "message": "路径已结束，知识点掌握度已清零，可以初始化新的学习路径"}
 
     # ── 辅助：构建推荐理由 ──
     def _build_reason(

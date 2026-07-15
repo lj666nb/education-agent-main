@@ -108,19 +108,12 @@ const PathFlowDiagram = memo(function PFD({ nodes, groups, onNodeClick, onNodeCo
 /* ═══════════════════════════════════════════════════════════════
    PAGE 1: PATH LIST (Select Screen)
    ═══════════════════════════════════════════════════════════════ */
-const PATH_TEMPLATES = [
-  { name: '数据结构速成', desc: '14天快速掌握核心数据结构', subject: '数据结构', days: 14, icon: '⚡', goalType: '学期提升', targetScore: '80', deadline: '' },
-  { name: '期末突击', desc: '7天期末全面复习冲刺', subject: '数据结构', days: 7, icon: '🎯', goalType: '升学备考', targetScore: '90', deadline: '' },
-  { name: '考研专项', desc: '系统构建数据结构知识体系', subject: '数据结构', days: 45, icon: '📚', goalType: '升学备考', targetScore: '95', deadline: '' },
-]
-
-const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect, onTemplate, onDelete, onToggleFavorite, onReset, favorites }: {
+const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect, onDelete, onToggleFavorite, onReset, favorites }: {
   paths: PathListItem[]; loading: boolean; onCreate: (mode:string) => void; onSelect: (id:string)=>void
-  onTemplate: (t:typeof PATH_TEMPLATES[0])=>void; onDelete: (id:string)=>void; onToggleFavorite: (id:string)=>void; onReset: (id:string)=>void; favorites: Set<string>
+  onDelete: (id:string)=>void; onToggleFavorite: (id:string)=>void; onReset: (id:string)=>void; favorites: Set<string>
 }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [showTemplates, setShowTemplates] = useState(false)
   const [hoverId, setHoverId] = useState<string|null>(null)
 
   const filtered = useMemo(() => {
@@ -177,45 +170,23 @@ const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect,
       <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, background:'#fff', border:'1px solid '+BL, flex:1, minWidth:160, maxWidth:260 }}>
         <SearchIcon/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜索路径名称..." style={{ border:'none', outline:'none', fontSize:12, flex:1, fontFamily:'inherit', color:T1 }}/>
       </div>
-      <button onClick={()=>setShowTemplates(!showTemplates)} style={{ padding:'7px 14px', borderRadius:8, border:'1px solid '+(showTemplates?BRAND:BL), background:showTemplates?'#F0F9FF':'#fff', color:showTemplates?BRAND:T2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>📋 模板库</button>
       <button onClick={()=>onCreate('ai')} style={{ padding:'7px 14px', borderRadius:8, border:'none', background:BRAND, color:'#fff', fontSize:12, cursor:'pointer', fontWeight:600, fontFamily:'inherit', display:'flex', alignItems:'center', gap:4 }}><PlusIcon/> AI生成路径</button>
-      <button onClick={()=>onCreate('manual')} style={{ padding:'7px 14px', borderRadius:8, border:'1.5px dashed #D1D5DB', background:'#fff', color:T2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>+ 手动编排</button>
     </div>
-
-    {/* ── Template Library ── */}
-    {showTemplates && (
-      <div style={{ padding:'0 28px 12px', display:'flex', gap:10, flexWrap:'wrap' }}>
-        {PATH_TEMPLATES.map((t,i)=>(
-          <div key={i} onClick={()=>onTemplate(t)} style={{ flex:'1 1 160px', minWidth:160, maxWidth:220, background:'#fff', borderRadius:10, border:'1px solid '+BL, padding:'14px', cursor:'pointer', transition:'all 0.15s' }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=BRAND;e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(22,119,232,0.1)'}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=BL;e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
-            <div style={{ fontSize:20, marginBottom:4 }}>{t.icon}</div>
-            <div style={{ fontSize:13, fontWeight:700, color:T1 }}>{t.name}</div>
-            <div style={{ fontSize:11, color:T3, marginTop:2 }}>{t.desc}</div>
-            <div style={{ fontSize:10, color:BRAND, marginTop:6, fontWeight:500 }}>{t.days}天 · 一键导入</div>
-          </div>
-        ))}
-      </div>
-    )}
 
     {/* ── Empty State ── */}
     {paths.length === 0 ? (
       <div style={{ margin:'20px 28px', background:'#fff', borderRadius:16, border:'1px solid '+BL, padding:60, textAlign:'center' }}>
         <div style={{ fontSize:40, marginBottom:12 }}>🗺️</div>
         <h3 style={{ fontSize:18, fontWeight:700, color:T1, margin:'0 0 6px' }}>开始你的学习之旅</h3>
-        <p style={{ fontSize:13, color:T3, marginBottom:24, lineHeight:1.6 }}>三种方式创建学习路径，选择最适合你的方式开始数据结构学习之旅</p>
+        <p style={{ fontSize:13, color:T3, marginBottom:24, lineHeight:1.6 }}>上传PDF构建知识图谱，AI自动规划学习路径</p>
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
           <button onClick={()=>window.location.href='/knowledge-graph'} style={{ padding:'10px 24px', borderRadius:10, border:'none', background:BRAND, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex',flexDirection:'column',alignItems:'center',gap:4 }}>
             <span style={{fontSize:18}}>📄</span>上传PDF图谱生成
             <span style={{fontSize:10,fontWeight:400,opacity:0.8}}>AI自动抽取知识点</span>
           </button>
-          <button onClick={()=>{setShowTemplates(true);onCreate('ai')}} style={{ padding:'10px 24px', borderRadius:10, border:'1.5px solid '+BL, background:'#fff', color:T1, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex',flexDirection:'column',alignItems:'center',gap:4 }}>
-            <span style={{fontSize:18}}>📋</span>模板一键导入
-            <span style={{fontSize:10,fontWeight:400,color:T3}}>速成/冲刺/考研路径</span>
-          </button>
-          <button onClick={()=>onCreate('manual')} style={{ padding:'10px 24px', borderRadius:10, border:'1.5px dashed #D1D5DB', background:'#fff', color:T2, fontSize:13, cursor:'pointer', fontFamily:'inherit', display:'flex',flexDirection:'column',alignItems:'center',gap:4 }}>
-            <span style={{fontSize:18}}>🧩</span>手动自定义搭建
-            <span style={{fontSize:10,fontWeight:400,color:T3}}>自由编排知识点顺序</span>
+          <button onClick={()=>onCreate('ai')} style={{ padding:'10px 24px', borderRadius:10, border:'1.5px solid '+BL, background:'#fff', color:T1, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex',flexDirection:'column',alignItems:'center',gap:4 }}>
+            <span style={{fontSize:18}}>🤖</span>AI生成路径
+            <span style={{fontSize:10,fontWeight:400,color:T3}}>基于知识图谱智能规划</span>
           </button>
         </div>
       </div>
@@ -533,9 +504,9 @@ const DetailScreen = memo(function DS({ pointId, detailData, detailLoading, node
 /* ═══════════════════════════════════════════════════════════════
    CREATE PATH MODAL
    ═══════════════════════════════════════════════════════════════ */
-const CreatePathModal = memo(function CPM({ subjects, initialSubjectId, onBack, onCreate, mode }: {
+const CreatePathModal = memo(function CPM({ subjects, initialSubjectId, onBack, onCreate }: {
   subjects: any[]; initialSubjectId: string; onBack: ()=>void
-  onCreate: (data:{subjectId:string;goalType:string;targetScore:string;deadline:string})=>Promise<void>; mode: string
+  onCreate: (data:{subjectId:string;goalType:string;targetScore:string;deadline:string})=>Promise<void>
 }) {
   const [sid,setSid]=useState(initialSubjectId); const [gt,setGt]=useState(''); const [ts,setTs]=useState(''); const [dl,setDl]=useState('')
   const [err,setErr]=useState(''); const [cr,setCr]=useState(false)
@@ -544,9 +515,9 @@ const CreatePathModal = memo(function CPM({ subjects, initialSubjectId, onBack, 
   return <div style={{flex:1,overflow:'auto',padding:'24px 32px',background:BG_PAGE}}>
     <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:4,color:BRAND,background:'none',border:'none',cursor:'pointer',fontSize:13,marginBottom:16,fontFamily:'inherit'}}><BackIcon/>路径列表</button>
     <div style={{maxWidth:520,margin:'0 auto'}}>
-      <h2 style={{fontSize:22,fontWeight:700,color:T1,margin:'0 0 2px'}}>{mode==='ai'?'🤖 AI智能生成':'✋ 手动编排路径'}</h2>
-      <p style={{fontSize:14,color:T3,marginBottom:24}}>{mode==='ai'?'AI基于知识图谱自动规划最优学习顺序':'手动选择知识点，自由编排学习顺序'}</p>
-      {mode==='ai'?<div style={{display:'flex',flexDirection:'column',gap:16}}>
+      <h2 style={{fontSize:22,fontWeight:700,color:T1,margin:'0 0 2px'}}>🤖 AI智能生成</h2>
+      <p style={{fontSize:14,color:T3,marginBottom:24}}>AI基于知识图谱自动规划最优学习顺序</p>
+      <div style={{display:'flex',flexDirection:'column',gap:16}}>
         <div><label style={{fontSize:13,fontWeight:600,color:T1,display:'block',marginBottom:6}}>选择学科</label>
           <select value={sid} onChange={e=>setSid(e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1px solid #D1D5DB',fontSize:14,color:T1,background:'#fff',fontFamily:'inherit'}}><option value="">请选择学科...</option>{subjects.map((s:any)=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
           {subj&&<div style={{marginTop:6,fontSize:12,color:T3}}>知识点：{subjKpCount} · 章节：{subjDomains.length}</div>}</div>
@@ -558,12 +529,7 @@ const CreatePathModal = memo(function CPM({ subjects, initialSubjectId, onBack, 
         <div><label style={{fontSize:13,fontWeight:600,color:T1,display:'block',marginBottom:6}}>截止日期（选填）</label><input type="date" value={dl} onChange={e=>setDl(e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1px solid #D1D5DB',fontSize:14,color:T1,fontFamily:'inherit',boxSizing:'border-box'}}/></div>
         {err&&<div style={{padding:'10px 14px',borderRadius:8,background:'#FEF2F2',border:'1px solid #FECACA',color:'#991B1B',fontSize:13}}>{err}</div>}
         <button onClick={handleCreate} disabled={!sid||!gt||cr} style={{width:'100%',padding:14,borderRadius:12,border:'none',cursor:(sid&&gt&&!cr)?'pointer':'not-allowed',background:(sid&&gt&&!cr)?BRAND:'#D1D5DB',color:'#fff',fontSize:15,fontWeight:600,fontFamily:'inherit'}}>{cr?'⏳ 创建中...':'🚀 AI生成学习路径'}</button>
-      </div>:<div style={{padding:40,textAlign:'center',color:T3,fontSize:13,border:'2px dashed #D1D5DB',borderRadius:14,background:'#fff'}}>
-        <div style={{fontSize:40,marginBottom:12}}>🧩</div>
-        <div style={{fontWeight:600,color:T1,marginBottom:4}}>手动编排模式</div>
-        <div>请先从AI生成路径作为基础，再在流程图中拖拽调整节点顺序</div>
-        <button onClick={()=>window.location.href='/path?tab=ai'} style={{marginTop:16,padding:'10px 24px',borderRadius:10,border:'none',background:BRAND,color:'#fff',fontSize:13,cursor:'pointer',fontWeight:600,fontFamily:'inherit'}}>切换AI生成</button>
-      </div>}
+      </div>
     </div>
   </div>
 })
@@ -575,7 +541,6 @@ export default function LearningPathPage() {
   const nav=useNavigate(); const [sp]=useSearchParams()
   const [pv,setPv]=useState<'select'|'create'|'overview'|'detail'>('select')
   const [pid,setPid]=useState<string|null>(null); const [sid,setSid]=useState<string|null>(null)
-  const [createMode,setCreateMode]=useState('ai')
   const [subjects,setSubjects]=useState<any[]>([]); const [nodes,setNodes]=useState<PathNodeStatus[]>([])
   const [sum,setSum]=useState<Record<string,number>>({total:0,mastered:0,learning:0,not_started:0,reviewing:0,difficult:0})
   const [load,setLoad]=useState(false); const [err,setErr]=useState<string|null>(null); const [pl,setPl]=useState<PathListItem[]>([]); const [pll,setPll]=useState(true)
@@ -616,11 +581,6 @@ export default function LearningPathPage() {
   const _back=useCallback(()=>{setPv('overview');if(sid){_url('overview',sid);_ref()}},[sid,_ref])
   const _gen=async(data:{subjectId:string;goalType:string;targetScore:string;deadline:string})=>{
     const goalDescription=`目标分数:${data.targetScore||'未设置'},截止:${data.deadline||'未设置'}`
-    if(createMode==='manual'){
-      const r=await pathApi.initPath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription})
-      await _sel(r.data.state_id)
-      return
-    }
     const generated=await pathApi.generatePath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription,target_score:data.targetScore,deadline:data.deadline})
     if(!generated.data.nodes?.length)throw new Error(generated.data.description||'AI未返回可用路径，请检查学科知识点或API配置')
     const confirmed=await pathApi.confirmPath({subject_id:data.subjectId,goal_type:data.goalType,goal_description:goalDescription,generated_path:generated.data})
@@ -632,7 +592,6 @@ export default function LearningPathPage() {
   const _deletePath=async(id:string)=>{if(!confirm('确定删除此路径？'))return;try{await pathApi.restartPath();_list()}catch(_){}}
   const _resetPath=async(id:string)=>{try{await pathApi.restartPath();_list()}catch(_){}}
   const _toggleFavorite=(id:string)=>{setFavorites(prev=>{const n=new Set(prev);if(n.has(id))n.delete(id);else n.add(id);return n})}
-  const _handleTemplate=async(t:typeof PATH_TEMPLATES[0])=>{try{const r=await pathApi.initPath({subject_id:subjects.find(s=>s.name===t.subject)?.id||'',goal_type:t.goalType,goal_description:`模板:${t.name},目标分数:${t.targetScore},${t.deadline}`});await _sel(r.data.state_id)}catch(_){alert('导入模板失败，请检查学科数据')}}
   const _handleNodeContext=(e:React.MouseEvent,n:PathNodeStatus)=>{setCtxNode(n);setCtxPos({x:e.clientX,y:e.clientY})}
   // Path sharing (no rate dependency)
   const _sharePath=()=>{const url=`${window.location.origin}/path?view=overview&state=${sid}`;navigator.clipboard?.writeText(url).then(()=>alert('分享链接已复制到剪贴板！其他用户可直接导入此路径。')).catch(()=>prompt('复制此链接分享路径：',url))}
@@ -676,10 +635,10 @@ export default function LearningPathPage() {
     </div>}
 
     {/* ── Select View (Page 1) ── */}
-    {pv==='select'&&<PathSelectScreen paths={pl} loading={pll} onSelect={_sel} onCreate={(m)=>{setCreateMode(m);setPv('create')}} onTemplate={_handleTemplate} onDelete={_deletePath} onToggleFavorite={_toggleFavorite} onReset={_resetPath} favorites={favorites}/>}
+    {pv==='select'&&<PathSelectScreen paths={pl} loading={pll} onSelect={_sel} onCreate={(m)=>{setPv('create')}} onDelete={_deletePath} onToggleFavorite={_toggleFavorite} onReset={_resetPath} favorites={favorites}/>}
 
     {/* ── Create View ── */}
-    {pv==='create'&&<CreatePathModal subjects={subjects} initialSubjectId={sp.get('subjectId')||''} mode={createMode} onBack={_goback} onCreate={async(data)=>{setLoad(true);try{await _gen(data)}finally{setLoad(false)}}}/>}
+    {pv==='create'&&<CreatePathModal subjects={subjects} initialSubjectId={sp.get('subjectId')||''} onBack={_goback} onCreate={async(data)=>{setLoad(true);try{await _gen(data)}finally{setLoad(false)}}}/>}
 
     {/* ── Detail View (Page 3) ── */}
     {pv==='detail'&&pid&&<DetailScreen pointId={pid} detailData={dd} detailLoading={ddl} nodes={nodes} onBack={_back} onPractice={(p:string)=>_navigateToPractice(p)} onNavigateNode={_navigateNode}/>}
