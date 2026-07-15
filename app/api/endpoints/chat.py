@@ -813,21 +813,41 @@ async def chat_completions(
                         yield f"data: {json.dumps({'type': 'search_status', 'status': 'searching', 'message': '正在搜索...'})}\n\n"
                         yield f"data: {json.dumps({'type': 'search_status', 'status': 'error', 'message': f'搜索暂时不可用: {search_error}'})}\n\n"
 
-                    async with client.stream(
-                        "POST",
-                        f"{model_config['base_url']}/chat/completions",
-                        headers=headers,
-                        json=payload
-                    ) as response:
-                        if response.status_code != 200:
-                            raise HTTPException(
-                                status_code=status.HTTP_502_BAD_GATEWAY,
-                                detail=f"{request.model.value} API 调用失败: {response.text}"
-                            )
+                    try:
+                        async with client.stream(
+                            "POST",
+                            f"{model_config['base_url']}/chat/completions",
+                            headers=headers,
+                            json=payload
+                        ) as response:
+                            if response.status_code != 200:
+                                # StreamingResponse has already sent HTTP 200 headers at this
+                                # point, so raising here only aborts the connection and the
+                                # browser reports a misleading "network error". Read the
+                                # upstream response and return a structured SSE error instead.
+                                await response.aread()
+                                upstream_detail = response.text.strip()[:500]
+                                if response.status_code == 401:
+                                    message = "AI 服务鉴权失败：API Key 无效或已过期，请在 API 设置中重新配置"
+                                elif response.status_code == 403:
+                                    message = "AI 服务拒绝访问：当前 API Key 没有该模型权限"
+                                elif response.status_code == 429:
+                                    message = "AI 服务请求过于频繁或余额不足，请稍后重试"
+                                else:
+                                    message = f"{request.model.value} API 调用失败（{response.status_code}）"
+                                    if upstream_detail:
+                                        message += f"：{upstream_detail}"
+                                logger.warning(
+                                    "AI 上游调用失败: model=%s status=%s detail=%s",
+                                    request.model.value,
+                                    response.status_code,
+                                    upstream_detail,
+                                )
+                                yield f"data: {json.dumps({'type': 'error', 'status': response.status_code, 'message': message})}\n\n"
+                                return
 
-                        async for line in response.aiter_lines():
-                            if line:
-                                if line.startswith("data: "):
+                            async for line in response.aiter_lines():
+                                if line and line.startswith("data: "):
                                     data = line[6:]
                                     if data == "[DONE]":
                                         yield f"data: {json.dumps({'done': True})}\n\n"
@@ -847,6 +867,18 @@ async def chat_completions(
                                                     yield f"data: {json.dumps(resp_data)}\n\n"
                                         except json.JSONDecodeError:
                                             continue
+                    except httpx.TimeoutException:
+                        logger.warning("AI 上游调用超时: model=%s", request.model.value)
+                        yield f"data: {json.dumps({'type': 'error', 'message': 'AI 服务响应超时，请稍后重试'})}\n\n"
+                        return
+                    except httpx.RequestError as exc:
+                        logger.warning(
+                            "AI 上游网络请求失败: model=%s error=%s",
+                            request.model.value,
+                            type(exc).__name__,
+                        )
+                        yield f"data: {json.dumps({'type': 'error', 'message': '服务器暂时无法连接 AI 服务，请稍后重试'})}\n\n"
+                        return
 
                     # 4. 引用数据（流结束后发送）
                     if web_citations:
