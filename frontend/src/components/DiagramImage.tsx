@@ -148,7 +148,6 @@ export default function DiagramImage({ xml, onEdit }: DiagramImageProps) {
                 spin: false,
                 nav: false,
                 layers: false,
-                fit: true,
               }}
             />
 

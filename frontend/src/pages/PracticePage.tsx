@@ -1100,7 +1100,7 @@ export default function PracticePage() {
             </div>
 
             {/* start button */}
-            <button onClick={handleStartPractice} disabled={loading}
+            <button onClick={() => void handleStartPractice()} disabled={loading}
               style={{
                 width: '100%', padding: '14px', background: 'var(--app-success)', color: '#fff', border: 'none',
                 borderRadius: 12, fontSize: '16px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
