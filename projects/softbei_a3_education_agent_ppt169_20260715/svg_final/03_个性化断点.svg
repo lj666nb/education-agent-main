@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header">
+    <text x="56" y="76" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">四个断点，让个性化停留在“标签”</text>
+    <text x="58" y="122" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">教学数据没有连成持续服务，系统就只能反复从零开始</text>
+  </g>
+  <g id="broken-chain">
+    <line x1="120" y1="284" x2="1160" y2="284" stroke="#1B4351" stroke-width="8" stroke-linecap="round"/>
+    <line x1="252" y1="284" x2="332" y2="284" stroke="#FF7A90" stroke-width="8" stroke-dasharray="12 10"/>
+    <line x1="512" y1="284" x2="592" y2="284" stroke="#FF7A90" stroke-width="8" stroke-dasharray="12 10"/>
+    <line x1="772" y1="284" x2="852" y2="284" stroke="#FF7A90" stroke-width="8" stroke-dasharray="12 10"/>
+  </g>
+  <g id="problem-profile">
+    <circle cx="188" cy="284" r="54" fill="#0E2530" stroke="#FF7A90" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/student -->
+  <g transform="translate(160, 256) scale(0.21875)" fill="#FF7A90">
+    <path d="M224,64,128,96,32,64l96-32Z" opacity="0.2"/>
+    <path d="M226.53,56.41l-96-32a8,8,0,0,0-5.06,0l-96,32a8,8,0,0,0-5.4,6.75A5,5,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.59,86.29a64,64,0,0,0,20.65,88.05c-18,7.06-33.56,19.83-44.94,37.29a8,8,0,1,0,13.4,8.74C77.77,197.25,101.57,184,128,184s50.23,13.25,65.3,36.37a8,8,0,0,0,13.4-8.74c-11.38-17.46-27-30.23-44.94-37.29a64,64,0,0,0,20.65-88l44.12-14.7a8,8,0,0,0,0-15.18ZM176,120A48,48,0,1,1,89.35,91.55l36.12,12a8,8,0,0,0,5.06,0l36.12-12A47.89,47.89,0,0,1,176,120ZM128,87.57,57.3,64,128,40.43,198.7,64Z"/>
+  </g>
+    <text x="92" y="384" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" font-weight="700" fill="#F0FAFF">画像碎片化</text>
+    <text x="92" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">偏好、掌握度与行为</text>
+    <text x="92" y="463" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">分散在不同环节</text>
+  </g>
+  <g id="problem-resource">
+    <circle cx="448" cy="284" r="54" fill="#0E2530" stroke="#FFD166" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/books -->
+  <g transform="translate(420, 256) scale(0.21875)" fill="#FFD166">
+    <path d="M48,72h64V184H48ZM190.64,38.39a8,8,0,0,0-9.5-6.21l-46.81,10a8.07,8.07,0,0,0-6.15,9.57L139.79,107l62.46-13.42Z" opacity="0.2"/>
+    <path d="M231.65,194.55,198.46,36.75a16,16,0,0,0-19-12.39L132.65,34.42a16.08,16.08,0,0,0-12.3,19l33.19,157.8A16,16,0,0,0,169.16,224a16.25,16.25,0,0,0,3.38-.36l46.81-10.06A16.09,16.09,0,0,0,231.65,194.55ZM136,50.15c0-.06,0-.09,0-.09l46.8-10,3.33,15.87L139.33,66Zm6.62,31.47,46.82-10.05,3.34,15.9L146,97.53Zm6.64,31.57,46.82-10.06,13.3,63.24-46.82,10.06ZM216,197.94l-46.8,10-3.33-15.87L212.67,182,216,197.85C216,197.91,216,197.94,216,197.94ZM104,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32ZM56,48h48V64H56Zm0,32h48v96H56Zm48,128H56V192h48v16Z"/>
+  </g>
+    <text x="352" y="384" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" font-weight="700" fill="#F0FAFF">资源供给慢</text>
+    <text x="352" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">教师难以为每个学生</text>
+    <text x="352" y="463" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">实时重组多模态内容</text>
+  </g>
+  <g id="problem-path">
+    <circle cx="708" cy="284" r="54" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/path -->
+  <g transform="translate(680, 256) scale(0.21875)" fill="#3D7EFF">
+    <path d="M224,200a24,24,0,1,1-24-24A24,24,0,0,1,224,200Z" opacity="0.2"/>
+    <path d="M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z"/>
+  </g>
+    <text x="612" y="384" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" font-weight="700" fill="#F0FAFF">路径静态化</text>
+    <text x="612" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">课程顺序固定，无法随</text>
+    <text x="612" y="463" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">知识差距动态调整</text>
+  </g>
+  <g id="problem-feedback">
+    <circle cx="968" cy="284" r="54" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/chart-line-up -->
+  <g transform="translate(940, 256) scale(0.21875)" fill="#00B8D9">
+    <path d="M224,56V208H32V48H216A8,8,0,0,1,224,56Z" opacity="0.2"/>
+    <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0V156.69l50.34-50.35a8,8,0,0,1,11.32,0L128,132.69,180.69,80H160a8,8,0,0,1,0-16h40a8,8,0,0,1,8,8v40a8,8,0,0,1-16,0V91.31l-58.34,58.35a8,8,0,0,1-11.32,0L96,123.31l-56,56V200H224A8,8,0,0,1,232,208Z"/>
+  </g>
+    <text x="872" y="384" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" font-weight="700" fill="#F0FAFF">反馈不回流</text>
+    <text x="872" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">练习结果没有驱动</text>
+    <text x="872" y="463" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">下一次资源与策略</text>
+  </g>
+  <g id="so-what">
+    <rect x="92" y="538" width="1076" height="92" rx="10" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="128" y="595" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#FFD166">所以：必须把“人、内容、路径、评价”放进同一状态机</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">问题定义 · 个性化学习的系统性断点</text>
+    <text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">03 / 20</text>
+  </g>
+</svg>

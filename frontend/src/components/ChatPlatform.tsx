@@ -141,14 +141,15 @@ export default function ChatPlatform() {
   // Chat state from persistent store (survives navigation)
   const currentChatId = useChatStore(s => s.currentChatId)
   const messages = useChatStore(s => s.messagesByChat[currentChatId ?? ''] || [])
-  const isLoading = useChatStore(s => s.isLoading)
+  // 仅反映"当前查看的会话"是否在生成中 — 其他会话的后台生成不影响当前界面
+  const isLoading = useChatStore(s => !!s.loadingByChat[s.currentChatId ?? ''])
   const enableThinking = useChatStore(s => s.enableThinking)
   const enableWebsearch = useChatStore(s => s.enableWebsearch)
   const storeSetCurrentChatId = useChatStore(s => s.setCurrentChatId)
   const storeAppendMessages = useChatStore(s => s.appendMessages)
   const storeUpdateLastAssistant = useChatStore(s => s.updateLastAssistant)
   const storeUpdateMessage = useChatStore(s => s.updateMessage)
-  const storeSetIsLoading = useChatStore(s => s.setIsLoading)
+  const storeSetChatLoading = useChatStore(s => s.setChatLoading)
   const storeSetEnableThinking = useChatStore(s => s.setEnableThinking)
   const storeSetEnableWebsearch = useChatStore(s => s.setEnableWebsearch)
   const storeResetChat = useChatStore(s => s.resetChat)
@@ -182,10 +183,9 @@ export default function ChatPlatform() {
   const [diagramOpen, setDiagramOpen] = useState(false)
   const [activeDiagramXml, setActiveDiagramXml] = useState<string | null>(null)
   const drawioRef = useRef<DrawioEditorHandle>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const sendingRef = useRef(false)
-  const sendingChatIdRef = useRef<string | null>(null)
-  const messagesRef = useRef<Message[]>([])
+  // 按会话管理的生成状态 — 切换会话时后台生成不中断
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
+  const sendingChatsRef = useRef<Set<string>>(new Set())
   const handleSendRef = useRef<typeof handleSend | null>(null)
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
   const [prefillInput, setPrefillInput] = useState('')
@@ -198,12 +198,10 @@ export default function ChatPlatform() {
   const [showMindmapAlert, setShowMindmapAlert] = useState(false)
   const [fileUploadTrigger, setFileUploadTrigger] = useState(0)
 
-  // Keep messagesRef in sync with messages
-  
-  useEffect(() => { messagesRef.current = useChatStore.getState().messagesByChat[currentChatId ?? ''] || [] }, [currentChatId])
-
   const handleStopGeneration = useCallback(() => {
-    abortRef.current?.abort()
+    // 只中断当前正在查看的会话的生成，不影响其他会话的后台生成
+    const id = useChatStore.getState().currentChatId
+    if (id) abortControllersRef.current.get(id)?.abort()
   }, [])
 
   const [favorites, setFavorites] = useState<Record<string, number>>(() => {
@@ -449,12 +447,14 @@ export default function ChatPlatform() {
   }
 
   const handleSend = async (message: string, model: ModelType, enableThinking: boolean, fileIds?: string[]) => {
-    if (isLoading || sendingRef.current) return
+    // 按会话防重：同一会话生成中不可重复发送；其他会话的后台生成不阻塞当前会话
+    const guardKey = currentChatId ?? '__new__'
+    if (sendingChatsRef.current.has(guardKey)) return
     if (noApiConfigured) {
       alert('请先在「API 设置」中配置 LLM 的 API Key 后再使用对话功能')
       return
     }
-    sendingRef.current = true
+    sendingChatsRef.current.add(guardKey)
     let activeChatId = currentChatId
     if (!activeChatId) {
       try {
@@ -472,8 +472,9 @@ export default function ChatPlatform() {
         }
       } catch (error) { console.error('创建会话失败:', error) }
     }
-    if (!activeChatId) { sendingRef.current = false; return }
-    sendingChatIdRef.current = activeChatId
+    if (!activeChatId) { sendingChatsRef.current.delete(guardKey); return }
+    sendingChatsRef.current.delete(guardKey)
+    sendingChatsRef.current.add(activeChatId)
 
     if (pastedFiles.length > 0) {
       try {
@@ -487,18 +488,20 @@ export default function ChatPlatform() {
 
     // 清除之前的意图检测状态
     setIrrelevantContentWarning(null)
+    // 在追加占位消息前捕获对话历史（发送给 LLM 的上下文）
+    const conversationHistory = (useChatStore.getState().getMessages(activeChatId) || []).map(msg => ({ role: msg.role, content: msg.content }))
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message, timestamp: new Date() }
     const assistantMessage: Message = { id: `assistant-${Date.now()}`, role: 'assistant', content: '', reasoning_content: '', timestamp: new Date() }
     if (activeChatId) { storeAppendMessages(activeChatId, [userMessage, { ...assistantMessage }]) }
-    storeSetIsLoading(true)
+    storeSetChatLoading(activeChatId, true)
     setSuggestedQuestions([])
     setPrefillInput('')
     let reasoningDone = false
     let fullContent = ''
+    let controller: AbortController | null = null
 
     try {
       await chatApi.saveMessage({ chat_id: activeChatId, role: 'user', content: message })
-      const conversationHistory = messagesRef.current.map(msg => ({ role: msg.role, content: msg.content }))
       const diagramContext = diagramOpen && activeDiagramXml ? `\n\n[Current diagram XML for modification reference:\n${activeDiagramXml}\n]` : ''
 
       // Build system prompt with auto chart/mindmap instructions
@@ -513,11 +516,12 @@ export default function ChatPlatform() {
         systemPrompt += '\n\n**自动思维导图模式已开启**：请在每次回复中使用 [MERMAID] 代码块生成一张思维导图（mindmap 格式），将回复内容的核心知识点以层级结构展示。示例格式：\n[MERMAID]\nmindmap\n  root((主题))\n    子主题1\n      细节A\n    子主题2\n[/MERMAID]'
       }
 
-      abortRef.current = new AbortController()
+      controller = new AbortController()
+      abortControllersRef.current.set(activeChatId, controller)
       const response = await fetch('/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-        signal: abortRef.current.signal,
+        signal: controller.signal,
         body: JSON.stringify({
           chat_id: activeChatId, model,
           messages: [
@@ -554,9 +558,11 @@ export default function ChatPlatform() {
               if (data === '[DONE]') continue
               try {
                 const parsed = JSON.parse(data)
-                // 意图检测事件：无关内容警告
+                // 意图检测事件：无关内容警告（仅当用户正在查看该会话时展示）
                 if (parsed.type === 'irrelevant_content') {
-                  setIrrelevantContentWarning(parsed.message)
+                  if (useChatStore.getState().currentChatId === activeChatId) {
+                    setIrrelevantContentWarning(parsed.message)
+                  }
                   continue
                 }
                 // 联网搜索状态事件
@@ -590,11 +596,13 @@ export default function ChatPlatform() {
                   const displayContent = stripDiagramDuringStreaming(fullContent)
                   if (activeChatId) { storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: displayContent })) }
 
-                  // Extract diagram XML from accumulated content
+                  // Extract diagram XML from accumulated content（仅当用户正在查看该会话时更新图表面板）
                   const detectedXml = extractDrawioXml(fullContent)
                   if (detectedXml && detectedXml !== lastDetectedXml) {
                     lastDetectedXml = detectedXml
-                    setActiveDiagramXml(detectedXml)
+                    if (useChatStore.getState().currentChatId === activeChatId) {
+                      setActiveDiagramXml(detectedXml)
+                    }
                   }
                 }
               } catch (e) { /* ignore parse errors */ }
@@ -634,7 +642,7 @@ export default function ChatPlatform() {
         }
         catch (error) { console.error('保存AI回复失败:', error) }
 
-        // 推演下次提问
+        // 推演下次提问（仅当用户仍在查看该会话时展示，避免后台生成污染其他会话的界面）
         if (fullContent && activeChatId) {
           try {
             const store = useChatStore.getState()
@@ -644,7 +652,7 @@ export default function ChatPlatform() {
               content: m.content || '',
             }))
             const qRes = await chatApi.getNextQuestions({ conversation_history: recentHistory })
-            if (qRes.data?.questions?.length) {
+            if (qRes.data?.questions?.length && useChatStore.getState().currentChatId === activeChatId) {
               setSuggestedQuestions(qRes.data.questions)
             }
           } catch { /* 静默 */ }
@@ -690,8 +698,9 @@ export default function ChatPlatform() {
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
+        // 用户主动点击"停止生成"：保留已生成的部分内容并持久化
         if (activeChatId) {
-          storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: (msg.content || '') + '\\n\\n**（已停止生成）**' }))
+          storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: (msg.content || '') + '\n\n**（已停止生成）**' }))
         }
         if (fullContent && activeChatId) {
           try {
@@ -705,7 +714,16 @@ export default function ChatPlatform() {
         console.error('发送消息失败:', error)
         if (activeChatId) { storeUpdateLastAssistant(activeChatId, msg => ({ ...msg, content: `发送消息失败: ${error.response?.data?.detail || error.message}` })) }
       }
-    } finally { storeSetIsLoading(false); abortRef.current = null; sendingRef.current = false; sendingChatIdRef.current = null }
+    } finally {
+      if (activeChatId) {
+        // 仅当没有更新的发送接管该会话时才清理状态（如回滚重发的场景）
+        if (!controller || abortControllersRef.current.get(activeChatId) === controller) {
+          storeSetChatLoading(activeChatId, false)
+          abortControllersRef.current.delete(activeChatId)
+          sendingChatsRef.current.delete(activeChatId)
+        }
+      }
+    }
   }
 
   // Keep handleSendRef in sync
@@ -828,7 +846,10 @@ export default function ChatPlatform() {
       setShowNewChatAlert(true)
       return
     }
-    storeResetChat(currentChatId)
+    // 正在后台生成的会话不清缓存，保证生成内容与实时进度不丢失
+    if (!sendingChatsRef.current.has(currentChatId)) {
+      storeResetChat(currentChatId)
+    }
     storeSetCurrentChatId(null)
     setPastedFiles([]); setIrrelevantContentWarning(null); setActiveDiagramXml(null); setDiagramOpen(false)
   }
@@ -837,15 +858,17 @@ export default function ChatPlatform() {
     if (!chatId) { handleNewChat(); return }
     // 如果正在向同一会话发送消息，不重复加载
     if (chatId === currentChatId) return
-    // 如果正在向其他会话发送消息，先中断再切换，避免竞态导致闪烁
-    if (sendingRef.current) {
-      abortRef.current?.abort()
-      storeSetIsLoading(false)
-      sendingRef.current = false
-      sendingChatIdRef.current = null
-    }
+    // 切换会话不中断后台生成：其他会话的流式请求继续进行，完成后自动保存
     storeSetCurrentChatId(chatId)
     setIrrelevantContentWarning(null)
+    // 目标会话正在后台生成中：store 里已有实时流式内容，直接展示，
+    // 不从后端重载消息（后端尚未保存完整回复，重载会覆盖流式内容）
+    if (sendingChatsRef.current.has(chatId)) {
+      setPastedFiles([])
+      setActiveDiagramXml(null)
+      setDiagramOpen(false)
+      return
+    }
     try {
       const response = await chatApi.getMessages(chatId)
       if (response.data.messages) {
@@ -901,11 +924,12 @@ export default function ChatPlatform() {
   }
 
   const handleRollback = useCallback((messageId: string) => {
-    // Stop generation if active
-    if (isLoading) {
-      abortRef.current?.abort()
-      storeSetIsLoading(false)
-      sendingRef.current = false
+    // Stop generation if active（仅中断当前会话的生成，并同步清理状态以便立即重发）
+    if (isLoading && currentChatId) {
+      abortControllersRef.current.get(currentChatId)?.abort()
+      abortControllersRef.current.delete(currentChatId)
+      sendingChatsRef.current.delete(currentChatId)
+      storeSetChatLoading(currentChatId, false)
     }
     if (currentChatId) {
       const prev = useChatStore.getState().messagesByChat[currentChatId] || []

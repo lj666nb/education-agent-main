@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <defs><marker id="feedbackArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#3D7EFF"/></marker></defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header"><text x="56" y="74" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">每次练习，都反哺下一次推荐</text><text x="58" y="118" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">评价不止给分，更要更新掌握度、易错标签与学习策略</text></g>
+  <g id="feedback-track" fill="none" stroke="#3D7EFF" stroke-width="3"><path d="M 278 256 C 360 180 488 168 566 228" marker-end="url(#feedbackArrow)"/><path d="M 704 228 C 798 166 920 194 982 272" marker-end="url(#feedbackArrow)"/><path d="M 1000 390 C 974 500 878 562 770 558" marker-end="url(#feedbackArrow)"/><path d="M 640 574 C 510 590 394 542 330 452" marker-end="url(#feedbackArrow)"/><path d="M 248 390 C 214 346 214 304 238 274" marker-end="url(#feedbackArrow)"/></g>
+  <g id="eval-practice"><circle cx="240" cy="330" r="88" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/><!-- icon: phosphor-duotone/question -->
+  <g transform="translate(208, 268) scale(0.25)" fill="#00B8D9">
+    <path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z" opacity="0.2"/>
+    <path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/>
+  </g><text x="240" y="372" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">练习 / 判题</text></g>
+  <g id="eval-cause"><circle cx="640" cy="238" r="88" fill="#0E2530" stroke="#FFD166" stroke-width="2"/><!-- icon: phosphor-duotone/magnifying-glass -->
+  <g transform="translate(608, 176) scale(0.25)" fill="#FFD166">
+    <path d="M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z" opacity="0.2"/>
+    <path d="M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
+  </g><text x="640" y="280" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">错因分析</text></g>
+  <g id="eval-mastery"><circle cx="1030" cy="330" r="88" fill="#0E2530" stroke="#52D6A2" stroke-width="2"/><!-- icon: phosphor-duotone/chart-line-up -->
+  <g transform="translate(998, 268) scale(0.25)" fill="#52D6A2">
+    <path d="M224,56V208H32V48H216A8,8,0,0,1,224,56Z" opacity="0.2"/>
+    <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0V156.69l50.34-50.35a8,8,0,0,1,11.32,0L128,132.69,180.69,80H160a8,8,0,0,1,0-16h40a8,8,0,0,1,8,8v40a8,8,0,0,1-16,0V91.31l-58.34,58.35a8,8,0,0,1-11.32,0L96,123.31l-56,56V200H224A8,8,0,0,1,232,208Z"/>
+  </g><text x="1030" y="372" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">掌握度更新</text></g>
+  <g id="eval-profile"><circle cx="790" cy="558" r="88" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/><!-- icon: phosphor-duotone/brain -->
+  <g transform="translate(758, 496) scale(0.25)" fill="#3D7EFF">
+    <path d="M240,124a48,48,0,0,1-32,45.27h0V176a40,40,0,0,1-80,0,40,40,0,0,1-80,0v-6.73h0a48,48,0,0,1,0-90.54V72a40,40,0,0,1,80,0,40,40,0,0,1,80,0v6.73A48,48,0,0,1,240,124Z" opacity="0.2"/>
+    <path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39a56,56,0,0,0,0,101.2V176a48,48,0,0,0,88,26.49A48,48,0,0,0,216,176v-1.41A56.09,56.09,0,0,0,248,124ZM88,208a32,32,0,0,1-31.81-28.56A55.87,55.87,0,0,0,64,180h8a8,8,0,0,0,0-16H64A40,40,0,0,1,50.67,86.27,8,8,0,0,0,56,78.73V72a32,32,0,0,1,64,0v68.26A47.8,47.8,0,0,0,88,128a8,8,0,0,0,0,16,32,32,0,0,1,0,64Zm104-44h-8a8,8,0,0,0,0,16h8a55.87,55.87,0,0,0,7.81-.56A32,32,0,1,1,168,144a8,8,0,0,0,0-16,47.8,47.8,0,0,0-32,12.26V72a32,32,0,0,1,64,0v6.73a8,8,0,0,0,5.33,7.54A40,40,0,0,1,192,164Zm16-52a8,8,0,0,1-8,8h-4a36,36,0,0,1-36-36V80a8,8,0,0,1,16,0v4a20,20,0,0,0,20,20h4A8,8,0,0,1,208,112ZM60,120H56a8,8,0,0,1,0-16h4A20,20,0,0,0,80,84V80a8,8,0,0,1,16,0v4A36,36,0,0,1,60,120Z"/>
+  </g><text x="790" y="600" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">画像更新</text></g>
+  <g id="eval-next"><circle cx="490" cy="558" r="88" fill="#0E2530" stroke="#FF7A90" stroke-width="2"/><!-- icon: phosphor-duotone/path -->
+  <g transform="translate(458, 496) scale(0.25)" fill="#FF7A90">
+    <path d="M224,200a24,24,0,1,1-24-24A24,24,0,0,1,224,200Z" opacity="0.2"/>
+    <path d="M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z"/>
+  </g><text x="490" y="600" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">下一步推荐</text></g>
+  <g id="feedback-center"><circle cx="640" cy="400" r="92" fill="#07131A" stroke="#1B4351" stroke-width="2"/><text x="640" y="390" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" font-weight="700" fill="#FFD166">LEARN</text><text x="640" y="432" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">结果驱动策略</text></g>
+  <g id="footer"><text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">实现基础：答题提交更新掌握度、易错标签与行为时间线</text><text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">15 / 20</text></g>
+</svg>

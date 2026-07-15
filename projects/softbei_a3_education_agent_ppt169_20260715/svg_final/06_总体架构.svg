@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header"><text x="56" y="74" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">四层协同，把生成能力变成可用系统</text><text x="58" y="118" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">交互体验、智能体编排、模型检索与数据状态各司其职</text></g>
+  <g id="layer-interaction">
+    <rect x="56" y="154" width="1168" height="106" rx="10" fill="#0E2530" stroke="#00B8D9" stroke-width="1"/>
+    <rect x="56" y="154" width="116" height="106" rx="10" fill="#00B8D9"/>
+    <text x="114" y="199" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#07131A">01</text><text x="114" y="231" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" font-weight="700" fill="#07131A">交互层</text>
+    <text x="206" y="194" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">React 18 + TypeScript + Vite</text>
+    <text x="206" y="232" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">流式对话 · Markdown · 多模态卡片 · 学习路径 · 任务进度</text>
+  </g>
+  <g id="layer-agent">
+    <rect x="56" y="276" width="1168" height="106" rx="10" fill="#0E2530" stroke="#FFD166" stroke-width="1"/>
+    <rect x="56" y="276" width="116" height="106" rx="10" fill="#FFD166"/>
+    <text x="114" y="321" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#07131A">02</text><text x="114" y="353" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" font-weight="700" fill="#07131A">编排层</text>
+    <text x="206" y="316" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">FastAPI + LangGraph StateGraph</text>
+    <text x="206" y="354" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">Scheduler · Profile · ResourceGen · PathPush · SSE / 取消 / 状态查询</text>
+  </g>
+  <g id="layer-ai">
+    <rect x="56" y="398" width="1168" height="106" rx="10" fill="#0E2530" stroke="#3D7EFF" stroke-width="1"/>
+    <rect x="56" y="398" width="116" height="106" rx="10" fill="#3D7EFF"/>
+    <text x="114" y="443" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#F0FAFF">03</text><text x="114" y="475" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" font-weight="700" fill="#F0FAFF">智能层</text>
+    <text x="206" y="438" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">LLM + RAG + Knowledge Graph</text>
+    <text x="206" y="476" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">DeepSeek / Qwen · 向量召回 · 知识依赖 · 内容生成与差距诊断</text>
+  </g>
+  <g id="layer-data">
+    <rect x="56" y="520" width="1168" height="106" rx="10" fill="#0E2530" stroke="#52D6A2" stroke-width="1"/>
+    <rect x="56" y="520" width="116" height="106" rx="10" fill="#52D6A2"/>
+    <text x="114" y="565" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#07131A">04</text><text x="114" y="597" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" font-weight="700" fill="#07131A">数据层</text>
+    <text x="206" y="560" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">PostgreSQL/pgvector · Neo4j · MongoDB · Redis</text>
+    <text x="206" y="598" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">业务关系 · 向量证据 · 图谱关系 · 行为轨迹 · 热状态与进度</text>
+  </g>
+  <g id="footer"><text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">实现证据：当前项目技术栈与服务编排</text><text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">06 / 20</text></g>
+</svg>

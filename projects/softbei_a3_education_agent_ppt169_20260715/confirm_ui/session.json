@@ -1,0 +1,18 @@
+{
+  "session_id": "2c78ac66ae28448499b81d06a0bbb9a7",
+  "status": "ready_user",
+  "current_stage": "stage3",
+  "stage_skip": false,
+  "expected_stage": "stage3",
+  "expected_stage_number": 3,
+  "recommendation_stage": "stage3",
+  "recommendation_stage_number": 3,
+  "recommendation_version": 1784102906.687207,
+  "recommendation_error": null,
+  "result_stage": "stage2",
+  "result_stage_number": 2,
+  "result_version": 1784102889.311439,
+  "server_port": 5050,
+  "event": "poll",
+  "updated_at": "2026-07-15T16:08:29"
+}

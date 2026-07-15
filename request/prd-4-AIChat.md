@@ -17,7 +17,7 @@
 | 功能编号 | 功能描述 | 阶段 | 完成 | 通过 | 用户反馈 | 备注 |
 |---------|---------|------|------|------|---------|------|
 | P0_basic_chat | 基础对话框架（布局、Sidebar折叠、消息流式显示、Markdown渲染、模型切换） | P0 | ✅ 是 | 🔴 否 | - | 已完成基础框架，包含ChatPlatform、Sidebar、MessageList、InputArea组件；支持Qwen和DeepSeek双模型切换；SSE流式响应；Markdown代码高亮 |
-| P0_chat_history | 对话历史（搜索、新建、切换、折叠） | P0 | ✅ 是 | 🔴 否 | - | 后端 /history API 支持标题和消息内容搜索；前端搜索交互已优化；使用 PostgreSQL 存储 |
+| P0_chat_history | 对话历史（搜索、新建、切换、折叠） | P0 | ✅ 是 | 🔴 否 | AI生成时切换到其它对话会被打断，消息保存失败 | 后端 /history API 支持标题和消息内容搜索；前端搜索交互已优化；使用 PostgreSQL 存储；2026-07-15 修复：切换会话不再中断 AI 生成，生成在后台继续并完整保存（store 改为按会话 loadingByChat，AbortController/发送状态按会话管理，切回生成中会话直接展示实时流式内容不从后端重载），Playwright E2E 全部通过 |
 | P1_rounds_anchor | 多轮对话锚点（右侧轮次锚点条，点击跳转） | P1 | 🔴 否 | 🔴 否 | - | 与虚拟滚动冲突，已回滚；需重新设计实现方案 |
 | P1_virtual_scroll | 虚拟滚动（支持超过1000条消息的对话流畅滚动） | P1 | 🔴 否 | 🔴 否 | - | 虚拟滚动实现与 flex 布局冲突导致显示异常；已回滚；需重新设计实现方案 |
 | P2_deep_think | 深度思考模式（展示可折叠思考过程卡片） | P2 | 🔴 否 | 🔴 否 | - | 需要后端支持thinking输出 |
@@ -49,8 +49,8 @@
       "description": "对话历史（搜索、新建、切换、折叠）",
       "completed": true,
       "passed": false,
-      "user_feedback": null,
-      "notes": "后端 /history API 支持标题和消息内容搜索；前端搜索交互已优化；使用 PostgreSQL 存储"
+      "user_feedback": "AI生成时切换到其它对话会被打断，消息保存失败",
+      "notes": "后端 /history API 支持标题和消息内容搜索；前端搜索交互已优化；使用 PostgreSQL 存储；2026-07-15 修复：切换会话不再中断 AI 生成，生成在后台继续并完整保存（store 改为按会话 loadingByChat，AbortController/发送状态按会话管理，切回生成中会话直接展示实时流式内容不从后端重载），Playwright E2E 全部通过"
     },
     "P1_rounds_anchor": {
       "description": "多轮对话锚点（右侧轮次锚点条，点击跳转）",

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <defs><radialGradient id="valueGlow" cx="50%" cy="52%" r="60%"><stop offset="0%" stop-color="#3D7EFF" stop-opacity="0.10"/><stop offset="100%" stop-color="#07131A" stop-opacity="0"/></radialGradient></defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header">
+    <text x="56" y="76" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">把一次回答，升级为持续学习服务</text>
+    <text x="58" y="122" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">价值不只在生成内容，更在让三方共同获得可持续收益</text>
+  </g>
+  <g id="stage-geometry">
+    <rect x="0" y="126" width="1280" height="506" fill="url(#valueGlow)"/>
+    <line x1="432" y1="186" x2="432" y2="592" stroke="#1B4351" stroke-width="2"/>
+    <line x1="848" y1="186" x2="848" y2="592" stroke="#1B4351" stroke-width="2"/>
+  </g>
+  <g id="student-value">
+    <circle cx="224" cy="226" r="62" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/student -->
+  <g transform="translate(190, 192) scale(0.265625)" fill="#00B8D9">
+    <path d="M224,64,128,96,32,64l96-32Z" opacity="0.2"/>
+    <path d="M226.53,56.41l-96-32a8,8,0,0,0-5.06,0l-96,32a8,8,0,0,0-5.4,6.75A5,5,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.59,86.29a64,64,0,0,0,20.65,88.05c-18,7.06-33.56,19.83-44.94,37.29a8,8,0,1,0,13.4,8.74C77.77,197.25,101.57,184,128,184s50.23,13.25,65.3,36.37a8,8,0,0,0,13.4-8.74c-11.38-17.46-27-30.23-44.94-37.29a64,64,0,0,0,20.65-88l44.12-14.7a8,8,0,0,0,0-15.18ZM176,120A48,48,0,1,1,89.35,91.55l36.12,12a8,8,0,0,0,5.06,0l36.12-12A47.89,47.89,0,0,1,176,120ZM128,87.57,57.3,64,128,40.43,198.7,64Z"/>
+  </g>
+    <text x="224" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#00B8D9">学生</text>
+    <text x="224" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">少走弯路</text>
+    <text x="224" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">资源匹配当前差距</text>
+    <text x="224" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">路径随学习结果更新</text>
+    <rect x="110" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="224" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">体验：更懂我</text>
+  </g>
+  <g id="teacher-value">
+    <circle cx="640" cy="226" r="62" fill="#0E2530" stroke="#FFD166" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/graduation-cap -->
+  <g transform="translate(606, 192) scale(0.265625)" fill="#FFD166">
+    <path d="M216,113.07v53.22a8,8,0,0,1-2,5.31c-11.3,12.59-38.9,36.4-86,36.4s-74.68-23.81-86-36.4a8,8,0,0,1-2-5.31V113.07L128,160Z" opacity="0.2"/>
+    <path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87v48.42a15.91,15.91,0,0,0,4.06,10.65C49.16,191.53,78.51,216,128,216a130,130,0,0,0,48-8.76V240a8,8,0,0,0,16,0V199.51a115.63,115.63,0,0,0,27.94-22.57A15.91,15.91,0,0,0,224,166.29V117.87l27.76-14.81a8,8,0,0,0,0-14.12ZM128,200c-43.27,0-68.72-21.14-80-33.71V126.4l76.24,40.66a8,8,0,0,0,7.52,0L176,143.47v46.34C163.4,195.69,147.52,200,128,200Zm80-33.75a97.83,97.83,0,0,1-16,14.25V134.93l16-8.53ZM188,118.94l-.22-.13-56-29.87a8,8,0,0,0-7.52,14.12L171,128l-43,22.93L25,96,128,41.07,231,96Z"/>
+  </g>
+    <text x="640" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#FFD166">教师</text>
+    <text x="640" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">降低重复劳动</text>
+    <text x="640" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">自动生成多模态资源</text>
+    <text x="640" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">快速定位共性与个体问题</text>
+    <rect x="526" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="640" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">效率：更省时</text>
+  </g>
+  <g id="platform-value">
+    <circle cx="1056" cy="226" r="62" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/>
+    <!-- icon: phosphor-duotone/database -->
+  <g transform="translate(1022, 192) scale(0.265625)" fill="#3D7EFF">
+    <path d="M216,80c0,26.51-39.4,48-88,48S40,106.51,40,80s39.4-48,88-48S216,53.49,216,80Z" opacity="0.2"/>
+    <path d="M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z"/>
+  </g>
+    <text x="1056" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#3D7EFF">平台</text>
+    <text x="1056" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">沉淀可解释资产</text>
+    <text x="1056" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">画像、知识图谱与任务轨迹</text>
+    <text x="1056" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">持续提升推荐质量</text>
+    <rect x="942" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="1056" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">资产：可复用</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">应用价值 · 学生 / 教师 / 平台</text>
+    <text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">04 / 20</text>
+  </g>
+</svg>

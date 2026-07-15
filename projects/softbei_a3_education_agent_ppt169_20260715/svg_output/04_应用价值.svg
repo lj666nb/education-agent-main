@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <defs><radialGradient id="valueGlow" cx="50%" cy="52%" r="60%"><stop offset="0%" stop-color="#3D7EFF" stop-opacity="0.10"/><stop offset="100%" stop-color="#07131A" stop-opacity="0"/></radialGradient></defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header">
+    <text x="56" y="76" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">把一次回答，升级为持续学习服务</text>
+    <text x="58" y="122" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">价值不只在生成内容，更在让三方共同获得可持续收益</text>
+  </g>
+  <g id="stage-geometry">
+    <rect x="0" y="126" width="1280" height="506" fill="url(#valueGlow)"/>
+    <line x1="432" y1="186" x2="432" y2="592" stroke="#1B4351" stroke-width="2"/>
+    <line x1="848" y1="186" x2="848" y2="592" stroke="#1B4351" stroke-width="2"/>
+  </g>
+  <g id="student-value">
+    <circle cx="224" cy="226" r="62" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/>
+    <use data-icon="phosphor-duotone/student" x="190" y="192" width="68" height="68" fill="#00B8D9"/>
+    <text x="224" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#00B8D9">学生</text>
+    <text x="224" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">少走弯路</text>
+    <text x="224" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">资源匹配当前差距</text>
+    <text x="224" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">路径随学习结果更新</text>
+    <rect x="110" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="224" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">体验：更懂我</text>
+  </g>
+  <g id="teacher-value">
+    <circle cx="640" cy="226" r="62" fill="#0E2530" stroke="#FFD166" stroke-width="2"/>
+    <use data-icon="phosphor-duotone/graduation-cap" x="606" y="192" width="68" height="68" fill="#FFD166"/>
+    <text x="640" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#FFD166">教师</text>
+    <text x="640" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">降低重复劳动</text>
+    <text x="640" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">自动生成多模态资源</text>
+    <text x="640" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">快速定位共性与个体问题</text>
+    <rect x="526" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="640" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">效率：更省时</text>
+  </g>
+  <g id="platform-value">
+    <circle cx="1056" cy="226" r="62" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/>
+    <use data-icon="phosphor-duotone/database" x="1022" y="192" width="68" height="68" fill="#3D7EFF"/>
+    <text x="1056" y="332" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="40" font-weight="700" fill="#3D7EFF">平台</text>
+    <text x="1056" y="382" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">沉淀可解释资产</text>
+    <text x="1056" y="430" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">画像、知识图谱与任务轨迹</text>
+    <text x="1056" y="465" text-anchor="middle" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">持续提升推荐质量</text>
+    <rect x="942" y="516" width="228" height="58" rx="8" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="1056" y="554" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">资产：可复用</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">应用价值 · 学生 / 教师 / 平台</text>
+    <text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">04 / 20</text>
+  </g>
+</svg>

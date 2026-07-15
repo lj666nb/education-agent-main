@@ -9,7 +9,8 @@ interface ChatState {
   /** messages keyed by chatId, for the currently active streaming chat */
   messagesByChat: Record<string, Message[]>
   currentChatId: string | null
-  isLoading: boolean
+  /** loading state keyed by chatId — generation continues in background when switching chats */
+  loadingByChat: Record<string, boolean>
 
   /* ── Settings — persisted to localStorage ── */
   enableThinking: boolean
@@ -25,7 +26,7 @@ interface ChatState {
   updateLastAssistant: (chatId: string, updater: (prev: Message) => Message) => void
   /** Update a specific message by ID */
   updateMessage: (chatId: string, messageId: string, updater: (prev: Message) => Message) => void
-  setIsLoading: (v: boolean) => void
+  setChatLoading: (chatId: string, v: boolean) => void
   setEnableThinking: (v: boolean) => void
   setEnableWebsearch: (v: boolean) => void
   /** Clear cache for a chat */
@@ -46,7 +47,7 @@ function saveBool(key: string, val: boolean) {
 export const useChatStore = create<ChatState>((set, get) => ({
   messagesByChat: {},
   currentChatId: null,
-  isLoading: false,
+  loadingByChat: {},
   enableThinking: loadBool(LS_THINKING),
   enableWebsearch: loadBool(LS_WEBSEARCH),
 
@@ -89,7 +90,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return { messagesByChat: { ...s.messagesByChat, [chatId]: updated } }
     }),
 
-  setIsLoading: (v) => set({ isLoading: v }),
+  setChatLoading: (chatId, v) =>
+    set((s) => ({ loadingByChat: { ...s.loadingByChat, [chatId]: v } })),
 
   setEnableThinking: (v) => {
     saveBool(LS_THINKING, v)
@@ -104,8 +106,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   resetChat: (chatId) =>
     set((s) => {
       const { [chatId]: _, ...rest } = s.messagesByChat
-      return { messagesByChat: rest }
+      const { [chatId]: __, ...restLoading } = s.loadingByChat
+      return { messagesByChat: rest, loadingByChat: restLoading }
     }),
 
-  resetAll: () => set({ messagesByChat: {}, currentChatId: null, isLoading: false }),
+  resetAll: () => set({ messagesByChat: {}, currentChatId: null, loadingByChat: {} }),
 }))

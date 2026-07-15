@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header">
+    <text x="56" y="76" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">80% 的分数，取决于“做出来”与“有新意”</text>
+    <text x="58" y="122" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">后续页面按评分项组织证据，而不是按技术栈罗列名词</text>
+  </g>
+  <g id="kpi-function">
+    <rect x="56" y="176" width="270" height="374" rx="14" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/>
+    <rect x="56" y="176" width="270" height="8" rx="4" fill="#00B8D9"/>
+    <text x="86" y="238" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#00B8D9">FUNCTION &amp; TECH</text>
+    <text x="86" y="330" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="64" font-weight="700" fill="#F0FAFF">45%</text>
+    <text x="86" y="382" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">功能与技术</text>
+    <text x="86" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">核心功能完整性</text>
+    <text x="86" y="464" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">系统实现与体验</text>
+    <use data-icon="phosphor-duotone/check-circle" x="244" y="484" width="48" height="48" fill="#52D6A2"/>
+  </g>
+  <g id="kpi-innovation">
+    <rect x="356" y="176" width="270" height="374" rx="14" fill="#0E2530" stroke="#FFD166" stroke-width="2"/>
+    <rect x="356" y="176" width="270" height="8" rx="4" fill="#FFD166"/>
+    <text x="386" y="238" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#FFD166">INNOVATION</text>
+    <text x="386" y="330" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="64" font-weight="700" fill="#F0FAFF">35%</text>
+    <text x="386" y="382" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">创新与实用</text>
+    <text x="386" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">多智能体融合</text>
+    <text x="386" y="464" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">教育场景可落地</text>
+    <use data-icon="phosphor-duotone/sparkle" x="544" y="484" width="48" height="48" fill="#FFD166"/>
+  </g>
+  <g id="kpi-docs">
+    <rect x="656" y="176" width="270" height="374" rx="14" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/>
+    <rect x="656" y="176" width="270" height="8" rx="4" fill="#3D7EFF"/>
+    <text x="686" y="238" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#3D7EFF">DOCUMENTS</text>
+    <text x="686" y="330" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="64" font-weight="700" fill="#F0FAFF">10%</text>
+    <text x="686" y="382" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">文档质量</text>
+    <text x="686" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">架构与实现说明</text>
+    <text x="686" y="464" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">完整交付材料</text>
+    <use data-icon="phosphor-duotone/file-doc" x="844" y="484" width="48" height="48" fill="#3D7EFF"/>
+  </g>
+  <g id="kpi-presentation">
+    <rect x="956" y="176" width="270" height="374" rx="14" fill="#0E2530" stroke="#1B4351" stroke-width="2"/>
+    <rect x="956" y="176" width="270" height="8" rx="4" fill="#A9C4CF"/>
+    <text x="986" y="238" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#A9C4CF">PRESENTATION</text>
+    <text x="986" y="330" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="64" font-weight="700" fill="#F0FAFF">10%</text>
+    <text x="986" y="382" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">视频与 PPT</text>
+    <text x="986" y="430" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">逻辑与演示表达</text>
+    <text x="986" y="464" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">项目价值可视化</text>
+    <use data-icon="phosphor-duotone/monitor-play" x="1144" y="484" width="48" height="48" fill="#A9C4CF"/>
+  </g>
+  <g id="weight-summary">
+    <rect x="356" y="580" width="570" height="58" rx="8" fill="#0E2530" stroke="#FFD166" stroke-width="1"/>
+    <text x="641" y="619" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#FFD166">45% + 35% = 80% · 重点证据区</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">来源：cnsoftbei.com/content-3-1286-1.html</text>
+    <text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">05 / 20</text>
+  </g>
+</svg>

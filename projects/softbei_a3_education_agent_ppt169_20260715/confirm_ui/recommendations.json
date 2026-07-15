@@ -1,0 +1,14 @@
+{
+  "stage": "stage3",
+  "lang": "zh",
+  "recommend": {
+    "image_usage": ["provided"],
+    "generation_mode": "continuous"
+  },
+  "image_notes": {
+    "value": "以仓库中的真实产品截图为证据素材，重点展示首页、AI 对话/多智能体进度、知识图谱、学习路径、资源与代码练习；架构图、流程图和价值图全部使用可编辑原生 SVG，不使用装饰性 AI 插画，以免削弱竞赛可信度。"
+  },
+  "refine_spec": {
+    "value": false
+  }
+}

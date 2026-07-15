@@ -1,0 +1,49 @@
+{
+  "stage": "final",
+  "canvas": "ppt169",
+  "audience": "中国软件杯 A3 初赛评审专家、科大讯飞技术评委与教育应用评委",
+  "content_divergence": "",
+  "mode": "pyramid",
+  "visual_style": "dark-tech",
+  "page_count": "20",
+  "color": {
+    "name": "深空青蓝",
+    "palette": {
+      "background": "#07131A",
+      "secondary_bg": "#0E2530",
+      "primary": "#00B8D9",
+      "accent": "#FFD166",
+      "secondary_accent": "#3D7EFF",
+      "body_text": "#F0FAFF"
+    }
+  },
+  "icons": "phosphor-duotone",
+  "typography": {
+    "name": "技术终端感",
+    "heading": {
+      "cjk": "SimHei",
+      "css": "Consolas,SimHei,'Microsoft YaHei',monospace",
+      "latin": "Consolas"
+    },
+    "body": {
+      "cjk": "Microsoft YaHei",
+      "css": "'Microsoft YaHei','Segoe UI',Arial,sans-serif",
+      "latin": "Segoe UI"
+    },
+    "body_size": 32,
+    "sizes": {
+      "annotation": 24,
+      "subtitle": 40,
+      "title": 56
+    },
+    "body_size_unit": "px"
+  },
+  "formula_policy": "text-only",
+  "delivery_purpose": "presentation",
+  "image_usage": ["provided"],
+  "image_notes": "唯一图片来源为 C:\\Users\\daiyu\\Desktop\\教育智能体项目截图_2026-07-15。只使用该目录中的 10 张真实产品页面截图，不混用仓库其他图片、网络图片、AI 插画、课程插图或生成图表；架构与流程使用可编辑原生 SVG。",
+  "generation_mode": "continuous",
+  "refine_spec": false,
+  "status": "confirmed",
+  "confirmed_at": "2026-07-15T16:42:40+08:00"
+}

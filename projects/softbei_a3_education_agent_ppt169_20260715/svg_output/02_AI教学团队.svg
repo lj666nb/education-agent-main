@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <defs>
+    <linearGradient id="leftScrim" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#07131A" stop-opacity="0.98"/><stop offset="76%" stop-color="#07131A" stop-opacity="0.82"/><stop offset="100%" stop-color="#07131A" stop-opacity="0.08"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="dialog-product-view">
+    <image x="180" y="74" width="1040" height="585" href="../images/src_02_02-AI对话.png" preserveAspectRatio="xMidYMid meet"/>
+    <rect x="180" y="74" width="1040" height="585" fill="#07131A" fill-opacity="0.16"/>
+  </g>
+  <g id="thesis-scrim">
+    <rect x="0" y="0" width="760" height="720" fill="url(#leftScrim)"/>
+    <rect x="56" y="50" width="166" height="32" rx="5" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <text x="74" y="73" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="18" font-weight="700" fill="#00B8D9">核心判断 / 01</text>
+  </g>
+  <g id="thesis-copy">
+    <text x="56" y="170" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">不是“会聊天”</text>
+    <text x="56" y="242" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#00B8D9">而是“会协作”</text>
+    <text x="56" y="314" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">的 AI 教学团队</text>
+    <text x="58" y="378" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">一次对话触发画像理解、资源生成</text>
+    <text x="58" y="423" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">路径规划与学习效果回写</text>
+  </g>
+  <g id="collaboration-proof">
+    <rect x="56" y="478" width="590" height="116" rx="10" fill="#0E2530" stroke="#1B4351" stroke-width="1"/>
+    <use data-icon="phosphor-duotone/brain" x="82" y="510" width="48" height="48" fill="#FFD166"/>
+    <text x="152" y="526" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#FFD166">感知</text>
+    <text x="152" y="561" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#F0FAFF">动态画像</text>
+    <text x="284" y="546" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" fill="#3D7EFF">→</text>
+    <text x="348" y="526" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#00B8D9">协作</text>
+    <text x="348" y="561" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#F0FAFF">四智能体</text>
+    <text x="470" y="546" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="36" fill="#3D7EFF">→</text>
+    <text x="530" y="526" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">进化</text>
+    <text x="530" y="561" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#F0FAFF">持续闭环</text>
+  </g>
+  <g id="page-footer">
+    <text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">真实产品页面：AI 对话</text>
+    <text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">02 / 20</text>
+  </g>
+</svg>

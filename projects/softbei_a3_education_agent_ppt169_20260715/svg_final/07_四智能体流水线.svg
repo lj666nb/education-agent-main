@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" data-pptx-page-role="content">
+  <rect x="0" y="0" width="1280" height="720" fill="#07131A"/>
+  <g id="header"><text x="56" y="74" font-family="Consolas, SimHei, 'Microsoft YaHei', monospace" font-size="56" font-weight="700" fill="#F0FAFF">四智能体流水线：每一步都有明确产物</text><text x="58" y="118" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" fill="#A9C4CF">共享状态贯穿编排、画像、资源与路径，避免重复理解用户</text></g>
+  <g id="pipeline-track"><line x1="164" y1="298" x2="1116" y2="298" stroke="#1B4351" stroke-width="10" stroke-linecap="round"/><circle cx="182" cy="298" r="9" fill="#00B8D9"/><circle cx="488" cy="298" r="9" fill="#FFD166"/><circle cx="794" cy="298" r="9" fill="#3D7EFF"/><circle cx="1100" cy="298" r="9" fill="#52D6A2"/></g>
+  <g id="stage-scheduler">
+    <rect x="56" y="168" width="268" height="374" rx="12" fill="#0E2530" stroke="#00B8D9" stroke-width="2"/>
+    <text x="82" y="214" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#00B8D9">01 / SCHEDULER</text>
+    <!-- icon: phosphor-duotone/flow-arrow -->
+  <g transform="translate(82, 244) scale(0.210938)" fill="#00B8D9">
+    <path d="M80,176a32,32,0,1,1-32-32A32,32,0,0,1,80,176Z" opacity="0.2"/>
+    <path d="M245.66,74.34l-32-32a8,8,0,0,0-11.32,11.32L220.69,72H192a74.49,74.49,0,0,0-28.35,6.73c-13.62,6.29-30.83,19.71-35.54,48-5.32,31.93-29.1,39.22-41,40.86a40,40,0,1,0,.18,16.06A71.65,71.65,0,0,0,108.13,178C121.75,172,139,158.6,143.89,129.31,150.65,88.77,190.34,88,192,88h28.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l32-32A8,8,0,0,0,245.66,74.34ZM48,200a24,24,0,1,1,24-24A24,24,0,0,1,48,200Z"/>
+  </g>
+    <text x="82" y="352" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">任务编排</text>
+    <text x="82" y="398" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">解析目标与上下文</text>
+    <text x="82" y="432" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">决定执行顺序</text>
+    <rect x="82" y="468" width="216" height="48" rx="7" fill="#07131A" stroke="#1B4351" stroke-width="1"/>
+    <text x="190" y="500" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">OUTPUT · 任务计划</text>
+  </g>
+  <g id="stage-profile">
+    <rect x="362" y="168" width="268" height="374" rx="12" fill="#0E2530" stroke="#FFD166" stroke-width="2"/>
+    <text x="388" y="214" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#FFD166">02 / PROFILE</text>
+    <!-- icon: phosphor-duotone/brain -->
+  <g transform="translate(388, 244) scale(0.210938)" fill="#FFD166">
+    <path d="M240,124a48,48,0,0,1-32,45.27h0V176a40,40,0,0,1-80,0,40,40,0,0,1-80,0v-6.73h0a48,48,0,0,1,0-90.54V72a40,40,0,0,1,80,0,40,40,0,0,1,80,0v6.73A48,48,0,0,1,240,124Z" opacity="0.2"/>
+    <path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39a56,56,0,0,0,0,101.2V176a48,48,0,0,0,88,26.49A48,48,0,0,0,216,176v-1.41A56.09,56.09,0,0,0,248,124ZM88,208a32,32,0,0,1-31.81-28.56A55.87,55.87,0,0,0,64,180h8a8,8,0,0,0,0-16H64A40,40,0,0,1,50.67,86.27,8,8,0,0,0,56,78.73V72a32,32,0,0,1,64,0v68.26A47.8,47.8,0,0,0,88,128a8,8,0,0,0,0,16,32,32,0,0,1,0,64Zm104-44h-8a8,8,0,0,0,0,16h8a55.87,55.87,0,0,0,7.81-.56A32,32,0,1,1,168,144a8,8,0,0,0,0-16,47.8,47.8,0,0,0-32,12.26V72a32,32,0,0,1,64,0v6.73a8,8,0,0,0,5.33,7.54A40,40,0,0,1,192,164Zm16-52a8,8,0,0,1-8,8h-4a36,36,0,0,1-36-36V80a8,8,0,0,1,16,0v4a20,20,0,0,0,20,20h4A8,8,0,0,1,208,112ZM60,120H56a8,8,0,0,1,0-16h4A20,20,0,0,0,80,84V80a8,8,0,0,1,16,0v4A36,36,0,0,1,60,120Z"/>
+  </g>
+    <text x="388" y="352" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">画像理解</text>
+    <text x="388" y="398" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">融合掌握度与行为</text>
+    <text x="388" y="432" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">形成个性化约束</text>
+    <rect x="388" y="468" width="216" height="48" rx="7" fill="#07131A" stroke="#1B4351" stroke-width="1"/>
+    <text x="496" y="500" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">OUTPUT · 画像快照</text>
+  </g>
+  <g id="stage-resource">
+    <rect x="668" y="168" width="268" height="374" rx="12" fill="#0E2530" stroke="#3D7EFF" stroke-width="2"/>
+    <text x="694" y="214" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#3D7EFF">03 / RESOURCEGEN</text>
+    <!-- icon: phosphor-duotone/books -->
+  <g transform="translate(694, 244) scale(0.210938)" fill="#3D7EFF">
+    <path d="M48,72h64V184H48ZM190.64,38.39a8,8,0,0,0-9.5-6.21l-46.81,10a8.07,8.07,0,0,0-6.15,9.57L139.79,107l62.46-13.42Z" opacity="0.2"/>
+    <path d="M231.65,194.55,198.46,36.75a16,16,0,0,0-19-12.39L132.65,34.42a16.08,16.08,0,0,0-12.3,19l33.19,157.8A16,16,0,0,0,169.16,224a16.25,16.25,0,0,0,3.38-.36l46.81-10.06A16.09,16.09,0,0,0,231.65,194.55ZM136,50.15c0-.06,0-.09,0-.09l46.8-10,3.33,15.87L139.33,66Zm6.62,31.47,46.82-10.05,3.34,15.9L146,97.53Zm6.64,31.57,46.82-10.06,13.3,63.24-46.82,10.06ZM216,197.94l-46.8,10-3.33-15.87L212.67,182,216,197.85C216,197.91,216,197.94,216,197.94ZM104,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32ZM56,48h48V64H56Zm0,32h48v96H56Zm48,128H56V192h48v16Z"/>
+  </g>
+    <text x="694" y="352" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">资源生成</text>
+    <text x="694" y="398" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">五类内容并发生成</text>
+    <text x="694" y="432" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">按画像调整难度</text>
+    <rect x="694" y="468" width="216" height="48" rx="7" fill="#07131A" stroke="#1B4351" stroke-width="1"/>
+    <text x="802" y="500" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">OUTPUT · 资源包</text>
+  </g>
+  <g id="stage-pathpush">
+    <rect x="974" y="168" width="250" height="374" rx="12" fill="#0E2530" stroke="#52D6A2" stroke-width="2"/>
+    <text x="1000" y="214" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">04 / PATHPUSH</text>
+    <!-- icon: phosphor-duotone/path -->
+  <g transform="translate(1000, 244) scale(0.210938)" fill="#52D6A2">
+    <path d="M224,200a24,24,0,1,1-24-24A24,24,0,0,1,224,200Z" opacity="0.2"/>
+    <path d="M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z"/>
+  </g>
+    <text x="1000" y="352" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" fill="#F0FAFF">路径推送</text>
+    <text x="1000" y="398" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">阶段化排序知识点</text>
+    <text x="1000" y="432" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="24" fill="#A9C4CF">绑定精准资源</text>
+    <rect x="1000" y="468" width="198" height="48" rx="7" fill="#07131A" stroke="#1B4351" stroke-width="1"/>
+    <text x="1099" y="500" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700" fill="#52D6A2">OUTPUT · 学习路径</text>
+  </g>
+  <g id="shared-state"><rect x="236" y="576" width="808" height="58" rx="29" fill="#0E2530" stroke="#00B8D9" stroke-width="1"/><text x="640" y="615" text-anchor="middle" font-family="Consolas, SimHei, 'Microsoft YaHei', sans-serif" font-size="32" font-weight="700" fill="#00B8D9">LANGGRAPH SHARED STATE · MEMORY SAVER</text></g>
+  <g id="footer"><text x="56" y="686" font-family="'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="18" fill="#6F8D98">实现证据：app/services/multi_agent/workflow.py</text><text x="1224" y="686" text-anchor="end" font-family="Consolas, 'Microsoft YaHei', monospace" font-size="18" fill="#6F8D98">07 / 20</text></g>
+</svg>
