@@ -191,8 +191,17 @@ const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect,
         </div>
       </div>
     ) : (
-      <div style={{ padding:'0 28px 24px', display:'flex', flexDirection:'column', gap:10 }}>
-        {filtered.map(p => (
+      <div style={{ padding:'0 28px 24px', display:'flex', flexDirection:'column', gap:10, flex:1, minHeight:200 }}>
+        {filtered.length === 0 ? (
+          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:40 }}>
+            <div style={{ textAlign:'center' }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>🔍</div>
+              <p style={{ fontSize:14, color:T2, margin:0 }}>没有匹配的学习路径</p>
+              <p style={{ fontSize:12, color:T3, margin:'4px 0 0' }}>试试调整搜索条件或筛选器</p>
+            </div>
+          </div>
+        ) : (
+        <>{filtered.map(p => (
           <div key={p.state_id} onClick={()=>onSelect(p.state_id)} style={{ position:'relative', background:'#fff', borderRadius:14, border:'1px solid '+BL, padding:'18px 20px', cursor:'pointer', transition:'all 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.02)' }}
             onMouseEnter={e=>{e.currentTarget.style.borderColor=BRAND;e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 6px 20px rgba(22,119,232,0.08)';setHoverId(p.state_id)}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=BL;e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.02)';setHoverId(null)}}>
@@ -248,6 +257,20 @@ const PathSelectScreen = memo(function PSS({ paths, loading, onCreate, onSelect,
             </div>}
           </div>
         ))}
+          {/* ── 底部结束标记 ── */}
+          <div style={{ padding:'20px 0 8px', textAlign:'center' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+              <div style={{ flex:1, height:1, background:`linear-gradient(90deg,transparent,${BL})` }}/>
+              <span style={{ fontSize:11, color:T3, fontWeight:500, whiteSpace:'nowrap' }}>
+                {filtered.length === paths.length
+                  ? `— 共 ${paths.length} 条学习路径 —`
+                  : `— 显示 ${filtered.length} / ${paths.length} 条 —`
+                }
+              </span>
+              <div style={{ flex:1, height:1, background:`linear-gradient(90deg,${BL},transparent)` }}/>
+            </div>
+          </div>
+        </>)}
       </div>
     )}
   </div>
